@@ -10,6 +10,7 @@ import static io.github.joachimvn.core.model.Wall.Orientation.VERTICAL;
 
 public class MoveValidator {
     private static final int[][] DIRS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+    private static final int MAX_WALL_ANCHOR = GameState.BOARD_SIZE - 2;
     private final PathChecker pathChecker = new PathChecker();
 
     public List<PawnMove> getLegalPawnMoves(GameState state) {
@@ -46,8 +47,9 @@ public class MoveValidator {
     }
 
     public boolean isWallLegal(GameState state, Wall wall) {
-        if (state.getWallCount(state.getCurrentPlayer()) == 0) return false;
-        if (wall.row() < 0 || wall.row() > 7 || wall.col() < 0 || wall.col() > 7) return false;
+        if (state.getWallCount(state.getCurrentPlayer()) <= 0) return false;
+        if (wall.row() < 0 || wall.row() > MAX_WALL_ANCHOR
+            || wall.col() < 0 || wall.col() > MAX_WALL_ANCHOR) return false;
         if (state.hasWall(wall) || wallHasOverlap(state, wall)) return false;
         return pathChecker.bothPlayersHavePath(state.withWallMove(wall));
     }
@@ -67,10 +69,10 @@ public class MoveValidator {
 
     public List<WallMove> getLegalWallMoves(GameState state) {
         List<WallMove> moves = new ArrayList<>();
-        if (state.getWallCount(state.getCurrentPlayer()) == 0) return moves;
+        if (state.getWallCount(state.getCurrentPlayer()) <= 0) return moves;
         for (Wall.Orientation o : Wall.Orientation.values()) {
-            for (int r = 0; r <= 7; r++) {
-                for (int c = 0; c <= 7; c++) {
+            for (int r = 0; r <= MAX_WALL_ANCHOR; r++) {
+                for (int c = 0; c <= MAX_WALL_ANCHOR; c++) {
                     Wall wall = new Wall(o, r, c);
                     if (isWallLegal(state, wall)) moves.add(new WallMove(wall));
                 }

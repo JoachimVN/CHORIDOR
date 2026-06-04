@@ -8,6 +8,6 @@ public enum Player {
     }
 
     public int goalRow() {
-        return this == ONE ? 0 : 8;
+        return this == ONE ? 0 : GameState.BOARD_SIZE - 1;
     }
 }
