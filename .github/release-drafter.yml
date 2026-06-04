@@ -1,0 +1,28 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - title: 'Features'
+    labels: [backend]
+  - title: 'Bug Fixes'
+    label: 'bug'
+  - title: 'Tests'
+    labels: [tests]
+  - title: 'CI / Dependencies'
+    labels: [ci, dependencies]
+
+version-resolver:
+  major:
+    labels: ['breaking']
+  minor:
+    labels: [backend]
+  patch:
+    labels: ['bug', tests, ci, dependencies]
+  default: patch
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: $PREVIOUS_TAG...v$RESOLVED_VERSION

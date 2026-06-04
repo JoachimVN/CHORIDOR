@@ -1,0 +1,15 @@
+backend:
+  - changed-files:
+    - any-glob-to-any-file: 'src/main/java/**'
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file: 'src/test/**'
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file: 'pom.xml'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file: '.github/**'
