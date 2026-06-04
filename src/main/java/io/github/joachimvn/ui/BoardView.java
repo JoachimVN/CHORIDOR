@@ -24,6 +24,8 @@ public class BoardView extends Canvas {
     private static final Color BOARD_BG      = Color.web("#6B3F1A");
     private static final Color CELL_COLOR    = Color.web("#F0D9B5");
     private static final Color LEGAL_TINT    = Color.rgb(50, 200, 50, 0.38);
+    private static final Color P1_GOAL_TINT  = Color.rgb(217, 48, 32, 0.22);
+    private static final Color P2_GOAL_TINT  = Color.rgb(32, 80, 208, 0.22);
     private static final Color WALL_COLOR    = Color.web("#1C0A00");
     private static final Color PREVIEW_COLOR = Color.web("#1C0A00", 0.45);
     private static final Color P1_COLOR      = Color.web("#D93020");
@@ -52,6 +54,13 @@ public class BoardView extends Canvas {
                 double x = c * STEP, y = r * STEP;
                 gc.setFill(CELL_COLOR);
                 gc.fillRect(x, y, CELL, CELL);
+                if (r == Player.ONE.goalRow()) {
+                    gc.setFill(P1_GOAL_TINT);
+                    gc.fillRect(x, y, CELL, CELL);
+                } else if (r == Player.TWO.goalRow()) {
+                    gc.setFill(P2_GOAL_TINT);
+                    gc.fillRect(x, y, CELL, CELL);
+                }
                 final int fr = r, fc = c;
                 if (legal.stream().anyMatch(m -> m.target().row() == fr && m.target().col() == fc)) {
                     gc.setFill(LEGAL_TINT);
