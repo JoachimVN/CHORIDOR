@@ -4,6 +4,8 @@ import io.github.joachimvn.core.model.*;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.TextAlignment;
 
 import java.util.List;
 
@@ -65,6 +67,31 @@ public class BoardView extends Canvas {
 
         paintPawn(gc, state.getPawnPosition(Player.ONE), P1_COLOR);
         paintPawn(gc, state.getPawnPosition(Player.TWO), P2_COLOR);
+
+        if (ctrl.isGameOver()) paintWinOverlay(gc, ctrl.getStatusText());
+    }
+
+    private void paintWinOverlay(GraphicsContext gc, String winText) {
+        gc.setFill(Color.rgb(0, 0, 0, 0.55));
+        gc.fillRect(0, 0, SIZE, SIZE);
+
+        double cx = SIZE / 2.0;
+        double cy = SIZE / 2.0;
+
+        gc.setFill(Color.web("#3a1f0a", 0.92));
+        gc.fillRoundRect(cx - 160, cy - 55, 320, 110, 18, 18);
+        gc.setStroke(Color.web("#f0d9b5", 0.8));
+        gc.setLineWidth(2);
+        gc.strokeRoundRect(cx - 160, cy - 55, 320, 110, 18, 18);
+
+        gc.setFill(Color.web("#f0d9b5"));
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setFont(Font.font("System", javafx.scene.text.FontWeight.BOLD, 28));
+        gc.fillText(winText, cx, cy - 5);
+
+        gc.setFont(Font.font("System", 16));
+        gc.setFill(Color.web("#c8a87a"));
+        gc.fillText("Press New Game to play again", cx, cy + 28);
     }
 
     private void paintWall(GraphicsContext gc, Wall wall, Color color) {
