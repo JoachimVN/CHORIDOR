@@ -63,6 +63,7 @@ public final class GameState {
     public boolean isEdgeBlocked(Position from, Position to) {
         int dr = to.row() - from.row();
         int dc = to.col() - from.col();
+        if (Math.abs(dr) + Math.abs(dc) != 1) return false;
         if (dc == 0) { // vertical movement — blocked by H walls
             int edgeRow = Math.min(from.row(), to.row());
             return walls.contains(new Wall(HORIZONTAL, edgeRow, from.col()))
