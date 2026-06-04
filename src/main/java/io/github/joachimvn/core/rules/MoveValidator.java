@@ -48,18 +48,21 @@ public class MoveValidator {
     public boolean isWallLegal(GameState state, Wall wall) {
         if (state.getWallCount(state.getCurrentPlayer()) == 0) return false;
         if (wall.row() < 0 || wall.row() > 7 || wall.col() < 0 || wall.col() > 7) return false;
-        if (state.hasWall(wall)) return false;
-        if (wall.orientation() == HORIZONTAL) {
-            // Adjacent H walls share an edge; H and V at same anchor cross
-            if (state.hasWall(new Wall(HORIZONTAL, wall.row(), wall.col() - 1))) return false;
-            if (state.hasWall(new Wall(HORIZONTAL, wall.row(), wall.col() + 1))) return false;
-            if (state.hasWall(new Wall(VERTICAL,   wall.row(), wall.col())))     return false;
-        } else {
-            if (state.hasWall(new Wall(VERTICAL,   wall.row() - 1, wall.col()))) return false;
-            if (state.hasWall(new Wall(VERTICAL,   wall.row() + 1, wall.col()))) return false;
-            if (state.hasWall(new Wall(HORIZONTAL, wall.row(),     wall.col()))) return false;
-        }
+        if (state.hasWall(wall) || wallHasOverlap(state, wall)) return false;
         return pathChecker.bothPlayersHavePath(state.withWallMove(wall));
+    }
+
+    // Adjacent/crossing walls that would share an edge or cross at the same anchor.
+    private boolean wallHasOverlap(GameState state, Wall wall) {
+        if (wall.orientation() == HORIZONTAL) {
+            return state.hasWall(new Wall(HORIZONTAL, wall.row(), wall.col() - 1))
+                || state.hasWall(new Wall(HORIZONTAL, wall.row(), wall.col() + 1))
+                || state.hasWall(new Wall(VERTICAL,   wall.row(), wall.col()));
+        } else {
+            return state.hasWall(new Wall(VERTICAL,   wall.row() - 1, wall.col()))
+                || state.hasWall(new Wall(VERTICAL,   wall.row() + 1, wall.col()))
+                || state.hasWall(new Wall(HORIZONTAL, wall.row(),     wall.col()));
+        }
     }
 
     public List<WallMove> getLegalWallMoves(GameState state) {
