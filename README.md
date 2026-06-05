@@ -29,6 +29,14 @@ Walls must never completely seal off a player's route, keeping every game solvab
 - Pull Requests: https://github.com/JoachimVN/Choridor/pulls
 - Milestones: https://github.com/JoachimVN/Choridor/milestones
 
+## Screenshots
+
+<p align="center">
+    <img src="src/main/resources/images/logos/screenshots/Board_Example.png" alt="Choridor Board"/>
+    <br>
+    <em>In-game board</em>
+</p>
+
 ## Why This Project
 
 A personal project built to explore:
