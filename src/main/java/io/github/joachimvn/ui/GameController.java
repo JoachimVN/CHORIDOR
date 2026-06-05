@@ -3,6 +3,7 @@ package io.github.joachimvn.ui;
 import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.core.rules.GameEngine;
 import io.github.joachimvn.core.rules.MoveValidator;
+import javafx.scene.media.AudioClip;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -21,6 +22,8 @@ public class GameController {
     private boolean gameOver;
     private final List<Runnable> listeners = new ArrayList<>();
     private final Map<Wall, Player> wallOwners = new LinkedHashMap<>();
+    private final AudioClip moveSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Move.wav").toExternalForm());
 
     public GameController() {
         refreshLegalMoves();
@@ -82,6 +85,7 @@ public class GameController {
     }
 
     private void afterMove() {
+        moveSound.play();
         gameOver = engine.isGameOver(state);
         refreshLegalMoves();
         notifyListeners();
