@@ -12,6 +12,7 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
@@ -81,6 +82,10 @@ public class App extends Application {
         newGame.getStyleClass().add("new-game-button");
         newGame.setOnAction(e -> ctrl.reset());
 
+        ToggleButton aiToggle = new ToggleButton("vs AI");
+        aiToggle.getStyleClass().add("ai-toggle-button");
+        aiToggle.setOnAction(e -> ctrl.setVsAi(aiToggle.isSelected()));
+
         FontIcon muteIcon = new FontIcon(FontAwesomeSolid.VOLUME_UP);
         muteIcon.getStyleClass().add("mute-icon");
         Button muteButton = new Button();
@@ -94,7 +99,7 @@ public class App extends Application {
         Region botSpacer = new Region();
         HBox.setHgrow(botSpacer, Priority.ALWAYS);
 
-        HBox bottomBar = new HBox(statusLabel, botSpacer, muteButton, newGame);
+        HBox bottomBar = new HBox(statusLabel, botSpacer, aiToggle, muteButton, newGame);
         bottomBar.getStyleClass().add("chrome-bar");
         bottomBar.setAlignment(Pos.CENTER_LEFT);
         scaleB.addListener((obs, old, nw) -> {
@@ -104,6 +109,9 @@ public class App extends Application {
                 10*s, 14*s, 10*s, 14*s, 12*s));
             statusLabel.setStyle(String.format(Locale.ROOT, "-fx-font-size: %.1fpx;", 13*s));
             newGame.setStyle(String.format(Locale.ROOT,
+                "-fx-font-size: %.1fpx; -fx-padding: %.1f %.1f %.1f %.1f;",
+                12*s, 5*s, 16*s, 5*s, 16*s));
+            aiToggle.setStyle(String.format(Locale.ROOT,
                 "-fx-font-size: %.1fpx; -fx-padding: %.1f %.1f %.1f %.1f;",
                 12*s, 5*s, 16*s, 5*s, 16*s));
             muteIcon.setIconSize((int)(13 * s));
@@ -247,8 +255,11 @@ public class App extends Application {
     }
 
     private void updateStatus(Label label, GameController ctrl) {
-        label.getStyleClass().removeAll("player1", "player2", "gameover");
-        if (ctrl.isGameOver()) {
+        label.getStyleClass().removeAll("player1", "player2", "gameover", "thinking");
+        if (ctrl.isAiThinking()) {
+            label.setText("Thinking...");
+            label.getStyleClass().add("thinking");
+        } else if (ctrl.isGameOver()) {
             label.setText(ctrl.getStatusText());
             label.getStyleClass().add("gameover");
         } else {
