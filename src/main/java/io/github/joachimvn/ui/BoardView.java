@@ -59,8 +59,11 @@ public class BoardView extends Canvas {
     private static final double HOVER_BG_ALPHA  = 0.12;
 
     private final GameController ctrl;
-    private int hoverRow = -1;
-    private int hoverCol = -1;
+    private int   hoverRow = -1;
+    private int   hoverCol = -1;
+    private Color legalDot = Color.WHITE;
+    private Color hoverDot = Color.WHITE;
+    private Color hoverBg  = Color.WHITE;
 
     public BoardView(GameController ctrl) {
         super(SIZE, SIZE);
@@ -115,16 +118,16 @@ public class BoardView extends Canvas {
         List<PawnMove> legal = ctrl.getLegalPawnMoves();
 
         Color playerColor = state.getCurrentPlayer() == Player.ONE ? P1_COLOR : P2_COLOR;
-        Color legalDot = playerColor.deriveColor(0, 1, 1, LEGAL_DOT_ALPHA);
-        Color hoverDot = playerColor.deriveColor(0, 1, 1, HOVER_DOT_ALPHA);
-        Color hoverBg  = playerColor.deriveColor(0, 1, 1, HOVER_BG_ALPHA);
+        legalDot = playerColor.deriveColor(0, 1, 1, LEGAL_DOT_ALPHA);
+        hoverDot = playerColor.deriveColor(0, 1, 1, HOVER_DOT_ALPHA);
+        hoverBg  = playerColor.deriveColor(0, 1, 1, HOVER_BG_ALPHA);
 
         gc.setFill(BG);
         gc.fillRect(0, 0, size, size);
 
         for (int r = 0; r < GameState.BOARD_SIZE; r++) {
             for (int c = 0; c < GameState.BOARD_SIZE; c++) {
-                drawCell(gc, r, c, legal, step, cell, legalDot, hoverDot, hoverBg);
+                drawCell(gc, r, c, legal, step, cell);
             }
         }
 
@@ -146,7 +149,7 @@ public class BoardView extends Canvas {
     }
 
     private void drawCell(GraphicsContext gc, int r, int c, List<PawnMove> legal,
-                          double step, double cell, Color legalDot, Color hoverDot, Color hoverBg) {
+                          double step, double cell) {
         double x = c * step;
         double y = r * step;
         final int fr = r;
