@@ -18,7 +18,7 @@ public class GameController {
     private List<PawnMove> legalPawnMoves;
     private Wall previewWall;
     private Wall lastCandidate;
-    private boolean gameOver = false;
+    private boolean gameOver;
     private final List<Runnable> listeners = new ArrayList<>();
     private final Map<Wall, Player> wallOwners = new LinkedHashMap<>();
 
@@ -50,7 +50,7 @@ public class GameController {
         Wall valid = (candidate != null && validator.isWallLegal(state, candidate)) ? candidate : null;
         if (!Objects.equals(valid, previewWall)) {
             previewWall = valid;
-            notify_();
+            notifyListeners();
         }
     }
 
@@ -78,13 +78,13 @@ public class GameController {
         wallOwners.clear();
         clearPreview();
         refreshLegalMoves();
-        notify_();
+        notifyListeners();
     }
 
     private void afterMove() {
         gameOver = engine.isGameOver(state);
         refreshLegalMoves();
-        notify_();
+        notifyListeners();
     }
 
     private void clearPreview() {
@@ -96,7 +96,7 @@ public class GameController {
         legalPawnMoves = gameOver ? List.of() : validator.getLegalPawnMoves(state);
     }
 
-    private void notify_() {
+    private void notifyListeners() {
         listeners.forEach(Runnable::run);
     }
 

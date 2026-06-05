@@ -19,8 +19,8 @@ public final class GameState {
 
     public GameState() {
         pawns = new EnumMap<>(Player.class);
-        pawns.put(Player.ONE, new Position(8, 4));
-        pawns.put(Player.TWO, new Position(0, 4));
+        pawns.put(Player.ONE, new Position(BOARD_SIZE - 1, BOARD_SIZE / 2));
+        pawns.put(Player.TWO, new Position(0,             BOARD_SIZE / 2));
         walls = new HashSet<>();
         wallCounts = new EnumMap<>(Player.class);
         wallCounts.put(Player.ONE, WALLS_PER_PLAYER);
