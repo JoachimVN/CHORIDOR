@@ -4,11 +4,15 @@ prerelease: false
 
 categories:
   - title: 'Features'
-    labels: [backend]
+    labels: [backend, ui]
   - title: 'Bug Fixes'
     label: 'bug'
+  - title: 'Assets & Styling'
+    labels: [assets]
   - title: 'Tests'
     labels: [tests]
+  - title: 'Documentation'
+    labels: [docs]
   - title: 'CI / Dependencies'
     labels: [ci, dependencies]
 
@@ -16,9 +20,9 @@ version-resolver:
   major:
     labels: ['breaking']
   minor:
-    labels: [backend]
+    labels: [backend, ui]
   patch:
-    labels: ['bug', tests, ci, dependencies]
+    labels: ['bug', tests, ci, dependencies, assets, docs]
   default: patch
 
 template: |

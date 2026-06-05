@@ -6,10 +6,10 @@
 
   <groupId>io.github.joachimvn</groupId>
   <artifactId>choridor</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 
-  <name>Choridor</name>
-  <url>https://github.com/JoachimVN/Choridor</url>
+  <name>CHORIDOR</name>
+  <url>https://github.com/JoachimVN/CHORIDOR</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -220,6 +220,7 @@
                       <arg value="--app-version"/><arg value="${jpackage.version}"/>
                       <arg value="--vendor"/><arg value="JoachimVN"/>
                       <arg value="--description"/><arg value="Choridor"/>
+                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/Choridor_Logo_Square_White.ico"/>
                       <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
                       <arg value="--main-jar"/><arg value="app-fat.jar"/>
                       <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
@@ -312,6 +313,7 @@
                       <arg value="--app-version"/><arg value="${jpackage.version}"/>
                       <arg value="--vendor"/><arg value="JoachimVN"/>
                       <arg value="--description"/><arg value="Choridor"/>
+                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/Choridor_Logo_Square_White.png"/>
                       <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
                       <arg value="--main-jar"/><arg value="app-fat.jar"/>
                       <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
@@ -397,6 +399,7 @@
                       <arg value="--app-version"/><arg value="${jpackage.version}"/>
                       <arg value="--vendor"/><arg value="JoachimVN"/>
                       <arg value="--description"/><arg value="Choridor"/>
+                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/Choridor_Logo_Square_White.icns"/>
                       <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
                       <arg value="--main-jar"/><arg value="app-fat.jar"/>
                       <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
