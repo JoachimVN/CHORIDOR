@@ -32,7 +32,7 @@ Walls must never completely seal off a player's route, keeping every game solvab
 ## Screenshots
 
 <p align="center">
-    <img src="src/main/resources/images/logos/screenshots/Board_Example.png" alt="Choridor Board"/>
+    <img src="docs/screenshots/Board_Example.png" alt="Choridor Board"/>
     <br>
     <em>In-game board</em>
 </p>
