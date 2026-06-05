@@ -18,9 +18,10 @@
     <a href="https://github.com/JoachimVN/CHORIDOR/commits/main">Commits</a>
 </p>
 
-Choridor is a desktop implementation of Quoridor — a two-player strategy board game played on a 9×9 grid.
+Choridor is a desktop implementation of Quoridor, which is a two-player strategy board game played on a 9×9 grid.
 Each player races to reach the opposite side of the board while placing walls to block their opponent's path.
 Walls must never completely seal off a player's route, keeping every game solvable until the final move.
+
 ## Screenshots
 
 <p align="center">
@@ -60,7 +61,9 @@ A personal project built to explore:
 - Visual Studio Code
 - Git
 - GitHub
-- Figma
+- Photopea
+- Soundation
+- Audacity
 
 ## Getting Started
 
@@ -94,7 +97,7 @@ mvn verify
 Pushing a `v*` tag triggers the release workflow, which builds and uploads all distribution artifacts automatically:
 
 | Asset | Platform |
-|---|---|
+| --- | --- |
 | `Choridor-<version>-windows.exe` | Windows installer (bundles JRE) |
 | `Choridor-<version>-linux.zip` | Linux app-image |
 | `Choridor-<version>-macos.dmg` | macOS disk image (Apple Silicon) |
