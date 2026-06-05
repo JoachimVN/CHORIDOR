@@ -24,6 +24,8 @@ public class GameController {
     private final Map<Wall, Player> wallOwners = new LinkedHashMap<>();
     private final AudioClip moveSound = new AudioClip(
         getClass().getResource("/audio/sfx/Move.wav").toExternalForm());
+    private final AudioClip wallSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Wall.wav").toExternalForm());
 
     public GameController() {
         refreshLegalMoves();
@@ -64,6 +66,7 @@ public class GameController {
         if (!legal) return;
         state = engine.applyMove(state, new PawnMove(target));
         clearPreview();
+        moveSound.play();
         afterMove();
     }
 
@@ -72,6 +75,7 @@ public class GameController {
         wallOwners.put(previewWall, state.getCurrentPlayer());
         state = engine.applyMove(state, new WallMove(previewWall));
         clearPreview();
+        wallSound.play();
         afterMove();
     }
 
@@ -85,7 +89,6 @@ public class GameController {
     }
 
     private void afterMove() {
-        moveSound.play();
         gameOver = engine.isGameOver(state);
         refreshLegalMoves();
         notifyListeners();
