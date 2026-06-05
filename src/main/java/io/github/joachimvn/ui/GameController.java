@@ -3,6 +3,7 @@ package io.github.joachimvn.ui;
 import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.core.rules.GameEngine;
 import io.github.joachimvn.core.rules.MoveValidator;
+import javafx.scene.media.AudioClip;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -21,6 +22,19 @@ public class GameController {
     private boolean gameOver;
     private final List<Runnable> listeners = new ArrayList<>();
     private final Map<Wall, Player> wallOwners = new LinkedHashMap<>();
+    private final AudioClip moveSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Move.wav").toExternalForm());
+    private final AudioClip wallSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Wall.wav").toExternalForm());
+    private final AudioClip jumpSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Jump.wav").toExternalForm());
+    private final AudioClip winSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Win.wav").toExternalForm());
+    private final AudioClip lossSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Loss.wav").toExternalForm());
+    private final AudioClip selectSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Select.wav").toExternalForm());
+    private boolean muted = false;
 
     public GameController() {
         refreshLegalMoves();
@@ -59,8 +73,11 @@ public class GameController {
         Position target = new Position(row, col);
         boolean legal = legalPawnMoves.stream().anyMatch(m -> m.target().equals(target));
         if (!legal) return;
+        Position from = state.getPawnPosition(state.getCurrentPlayer());
+        boolean isJump = Math.abs(target.row() - from.row()) + Math.abs(target.col() - from.col()) > 1;
         state = engine.applyMove(state, new PawnMove(target));
         clearPreview();
+        play(isJump ? jumpSound : moveSound);
         afterMove();
     }
 
@@ -69,10 +86,12 @@ public class GameController {
         wallOwners.put(previewWall, state.getCurrentPlayer());
         state = engine.applyMove(state, new WallMove(previewWall));
         clearPreview();
+        play(wallSound);
         afterMove();
     }
 
     public void reset() {
+        play(selectSound);
         state = new GameState();
         gameOver = false;
         wallOwners.clear();
@@ -83,6 +102,7 @@ public class GameController {
 
     private void afterMove() {
         gameOver = engine.isGameOver(state);
+        if (gameOver) play(winSound);
         refreshLegalMoves();
         notifyListeners();
     }
@@ -95,6 +115,22 @@ public class GameController {
     private void refreshLegalMoves() {
         legalPawnMoves = gameOver ? List.of() : validator.getLegalPawnMoves(state);
     }
+
+    public boolean isMuted() { return muted; }
+
+    public void toggleMute() {
+        if (muted) {
+            muted = false;
+            selectSound.play();
+        } else {
+            selectSound.play();
+            muted = true;
+        }
+    }
+
+    public void playLossSound() { play(lossSound); }
+
+    private void play(AudioClip clip) { if (!muted) clip.play(); }
 
     private void notifyListeners() {
         listeners.forEach(Runnable::run);

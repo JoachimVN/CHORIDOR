@@ -13,6 +13,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
+import org.kordamp.ikonli.javafx.FontIcon;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -78,10 +81,20 @@ public class App extends Application {
         newGame.getStyleClass().add("new-game-button");
         newGame.setOnAction(e -> ctrl.reset());
 
+        FontIcon muteIcon = new FontIcon(FontAwesomeSolid.VOLUME_UP);
+        muteIcon.getStyleClass().add("mute-icon");
+        Button muteButton = new Button();
+        muteButton.setGraphic(muteIcon);
+        muteButton.getStyleClass().add("mute-button");
+        muteButton.setOnAction(e -> {
+            ctrl.toggleMute();
+            muteIcon.setIconCode(ctrl.isMuted() ? FontAwesomeSolid.VOLUME_MUTE : FontAwesomeSolid.VOLUME_UP);
+        });
+
         Region botSpacer = new Region();
         HBox.setHgrow(botSpacer, Priority.ALWAYS);
 
-        HBox bottomBar = new HBox(statusLabel, botSpacer, newGame);
+        HBox bottomBar = new HBox(statusLabel, botSpacer, muteButton, newGame);
         bottomBar.getStyleClass().add("chrome-bar");
         bottomBar.setAlignment(Pos.CENTER_LEFT);
         scaleB.addListener((obs, old, nw) -> {
@@ -93,6 +106,10 @@ public class App extends Application {
             newGame.setStyle(String.format(Locale.ROOT,
                 "-fx-font-size: %.1fpx; -fx-padding: %.1f %.1f %.1f %.1f;",
                 12*s, 5*s, 16*s, 5*s, 16*s));
+            muteIcon.setIconSize((int)(13 * s));
+            muteButton.setStyle(String.format(Locale.ROOT,
+                "-fx-padding: %.1f %.1f %.1f %.1f;",
+                5*s, 9*s, 5*s, 9*s));
         });
 
         // ── Wiring ───────────────────────────────────────────────────────────
@@ -116,6 +133,11 @@ public class App extends Application {
         scene.getStylesheets().add(
             getClass().getResource("/css/app.css").toExternalForm()
         );
+        scene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.F11) {
+                stage.setFullScreen(!stage.isFullScreen());
+            }
+        });
 
         stage.getIcons().add(new Image(getClass().getResourceAsStream(
             "/images/logos/Choridor_Logo_Square_White.png")));
