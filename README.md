@@ -7,15 +7,15 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/JoachimVN/Choridor/releases">Releases</a>
+    <a href="https://github.com/JoachimVN/CHORIDOR/releases">Releases</a>
     |
-    <a href="https://github.com/JoachimVN/Choridor/issues">Issues</a>
+    <a href="https://github.com/JoachimVN/CHORIDOR/issues">Issues</a>
     |
-    <a href="https://github.com/JoachimVN/Choridor/pulls">Pull Requests</a>
+    <a href="https://github.com/JoachimVN/CHORIDOR/pulls">Pull Requests</a>
     |
-    <a href="https://github.com/JoachimVN/Choridor/milestones">Milestones</a>
+    <a href="https://github.com/JoachimVN/CHORIDOR/milestones">Milestones</a>
     |
-    <a href="https://github.com/JoachimVN/Choridor/commits/main">Commits</a>
+    <a href="https://github.com/JoachimVN/CHORIDOR/commits/main">Commits</a>
 </p>
 
 Choridor is a desktop implementation of Quoridor — a two-player strategy board game played on a 9×9 grid.
@@ -23,11 +23,11 @@ Each player races to reach the opposite side of the board while placing walls to
 Walls must never completely seal off a player's route, keeping every game solvable until the final move.
 
 ## Project Links
-- Repository: https://github.com/JoachimVN/Choridor
-- Releases: https://github.com/JoachimVN/Choridor/releases
-- Issues: https://github.com/JoachimVN/Choridor/issues
-- Pull Requests: https://github.com/JoachimVN/Choridor/pulls
-- Milestones: https://github.com/JoachimVN/Choridor/milestones
+- Repository: https://github.com/JoachimVN/CHORIDOR
+- Releases: https://github.com/JoachimVN/CHORIDOR/releases
+- Issues: https://github.com/JoachimVN/CHORIDOR/issues
+- Pull Requests: https://github.com/JoachimVN/CHORIDOR/pulls
+- Milestones: https://github.com/JoachimVN/CHORIDOR/milestones
 
 ## Screenshots
 

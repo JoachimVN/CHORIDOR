@@ -1,16 +1,5 @@
-@font-face {
-    font-family: 'ADLaM Display';
-    src: url('/fonts/ADLAMDISPLAY-REGULAR.TTF');
-}
-
 .root {
     -fx-background-color: #0F1117;
-}
-
-.app-title {
-    -fx-font-family: 'ADLaM Display';
-    -fx-font-size: 24px;
-    -fx-text-fill: #C8CCDC;
 }
 
 .chrome-bar {
