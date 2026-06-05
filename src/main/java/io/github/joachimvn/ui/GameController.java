@@ -26,6 +26,8 @@ public class GameController {
         getClass().getResource("/audio/sfx/Move.wav").toExternalForm());
     private final AudioClip wallSound = new AudioClip(
         getClass().getResource("/audio/sfx/Wall.wav").toExternalForm());
+    private final AudioClip jumpSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Jump.wav").toExternalForm());
     private final AudioClip winSound = new AudioClip(
         getClass().getResource("/audio/sfx/Win.wav").toExternalForm());
     private final AudioClip lossSound = new AudioClip(
@@ -68,9 +70,11 @@ public class GameController {
         Position target = new Position(row, col);
         boolean legal = legalPawnMoves.stream().anyMatch(m -> m.target().equals(target));
         if (!legal) return;
+        Position from = state.getPawnPosition(state.getCurrentPlayer());
+        boolean isJump = Math.abs(target.row() - from.row()) + Math.abs(target.col() - from.col()) > 1;
         state = engine.applyMove(state, new PawnMove(target));
         clearPreview();
-        moveSound.play();
+        (isJump ? jumpSound : moveSound).play();
         afterMove();
     }
 
