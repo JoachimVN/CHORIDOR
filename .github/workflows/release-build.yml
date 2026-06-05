@@ -63,7 +63,7 @@ jobs:
 
       - name: Rename JAR
         shell: pwsh
-        run: Rename-Item -Path "target/choridor-$env:APP_VERSION-jar-with-dependencies.jar" -NewName "Choridor-$env:APP_VERSION.jar"
+        run: Rename-Item -Path "target/choridor-$env:APP_VERSION-jar-with-dependencies.jar" -NewName "Choridor-$env:APP_VERSION-portable.jar"
 
       - name: Add WiX to PATH
         shell: pwsh
@@ -87,7 +87,7 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ env.PRE_RELEASE == 'true' }}
           files: |
-            target/Choridor-${{ env.APP_VERSION }}.jar
+            target/Choridor-${{ env.APP_VERSION }}-portable.jar
             target/dist/Choridor-${{ env.APP_VERSION }}-windows.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
