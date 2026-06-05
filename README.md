@@ -21,14 +21,6 @@
 Choridor is a desktop implementation of Quoridor — a two-player strategy board game played on a 9×9 grid.
 Each player races to reach the opposite side of the board while placing walls to block their opponent's path.
 Walls must never completely seal off a player's route, keeping every game solvable until the final move.
-
-## Project Links
-- Repository: https://github.com/JoachimVN/CHORIDOR
-- Releases: https://github.com/JoachimVN/CHORIDOR/releases
-- Issues: https://github.com/JoachimVN/CHORIDOR/issues
-- Pull Requests: https://github.com/JoachimVN/CHORIDOR/pulls
-- Milestones: https://github.com/JoachimVN/CHORIDOR/milestones
-
 ## Screenshots
 
 <p align="center">
