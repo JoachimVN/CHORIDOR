@@ -215,7 +215,10 @@ public class BoardView extends Canvas {
         boolean inVGap = offX >= CELL && col < GameState.BOARD_SIZE - 1;
         boolean inHGap = offY >= CELL && row < GameState.BOARD_SIZE - 1;
         if (!inHGap && !inVGap) ctrl.clickCell(row, col);
-        else ctrl.clickWall();
+        else {
+            ctrl.updatePreviewWall(wallCandidate(x, y));
+            ctrl.clickWall();
+        }
     }
 
     private Wall wallCandidate(double x, double y) {

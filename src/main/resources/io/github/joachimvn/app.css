@@ -11,7 +11,7 @@
 }
 
 /* Top bar has border below, not above */
-.chrome-bar:first-child {
+.chrome-bar-top {
     -fx-border-width: 0 0 1 0;
 }
 

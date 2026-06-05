@@ -41,7 +41,7 @@ public class App extends Application {
         HBox.setHgrow(topSpacer, Priority.ALWAYS);
 
         HBox topBar = new HBox(p1Side, topSpacer, p2Side);
-        topBar.getStyleClass().add("chrome-bar");
+        topBar.getStyleClass().addAll("chrome-bar", "chrome-bar-top");
         topBar.setAlignment(Pos.CENTER);
 
         // ── Bottom bar ───────────────────────────────────────────────────────
