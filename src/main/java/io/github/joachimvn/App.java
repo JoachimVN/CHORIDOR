@@ -13,6 +13,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -116,6 +117,11 @@ public class App extends Application {
         scene.getStylesheets().add(
             getClass().getResource("/css/app.css").toExternalForm()
         );
+        scene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.F11) {
+                stage.setFullScreen(!stage.isFullScreen());
+            }
+        });
 
         stage.getIcons().add(new Image(getClass().getResourceAsStream(
             "/images/logos/Choridor_Logo_Square_White.png")));
