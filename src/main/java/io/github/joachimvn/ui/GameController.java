@@ -26,6 +26,10 @@ public class GameController {
         getClass().getResource("/audio/sfx/Move.wav").toExternalForm());
     private final AudioClip wallSound = new AudioClip(
         getClass().getResource("/audio/sfx/Wall.wav").toExternalForm());
+    private final AudioClip winSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Win.wav").toExternalForm());
+    private final AudioClip lossSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Loss.wav").toExternalForm());
 
     public GameController() {
         refreshLegalMoves();
@@ -90,6 +94,7 @@ public class GameController {
 
     private void afterMove() {
         gameOver = engine.isGameOver(state);
+        if (gameOver) winSound.play();
         refreshLegalMoves();
         notifyListeners();
     }
