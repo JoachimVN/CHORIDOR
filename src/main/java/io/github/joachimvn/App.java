@@ -3,7 +3,6 @@ package io.github.joachimvn;
 import io.github.joachimvn.ui.BoardView;
 import io.github.joachimvn.ui.GameController;
 import javafx.application.Application;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -21,16 +20,15 @@ public class App extends Application {
         BoardView board = new BoardView(ctrl);
 
         Label status = new Label();
-        status.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #f0d9b5;");
+        status.getStyleClass().add("status-label");
 
         Button newGame = new Button("New Game");
+        newGame.getStyleClass().add("new-game-button");
         newGame.setOnAction(e -> ctrl.reset());
 
         HBox bar = new HBox(status, newGame);
+        bar.getStyleClass().add("status-bar");
         bar.setAlignment(Pos.CENTER_LEFT);
-        bar.setSpacing(16);
-        bar.setPadding(new Insets(8, 12, 8, 12));
-        bar.setStyle("-fx-background-color: #3a1f0a;");
         HBox.setHgrow(status, Priority.ALWAYS);
 
         ctrl.addListener(() -> {
@@ -44,8 +42,13 @@ public class App extends Application {
         board.refresh();
         status.setText(ctrl.getStatusText());
 
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add(
+            getClass().getResource("/io/github/joachimvn/app.css").toExternalForm()
+        );
+
         stage.setTitle("Choridor");
-        stage.setScene(new Scene(root));
+        stage.setScene(scene);
         stage.setResizable(false);
         stage.show();
     }

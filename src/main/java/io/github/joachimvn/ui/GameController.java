@@ -5,7 +5,9 @@ import io.github.joachimvn.core.rules.GameEngine;
 import io.github.joachimvn.core.rules.MoveValidator;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class GameController {
@@ -18,6 +20,7 @@ public class GameController {
     private Wall lastCandidate;
     private boolean gameOver = false;
     private final List<Runnable> listeners = new ArrayList<>();
+    private final Map<Wall, Player> wallOwners = new LinkedHashMap<>();
 
     public GameController() {
         refreshLegalMoves();
@@ -29,6 +32,7 @@ public class GameController {
     public List<PawnMove> getLegalPawnMoves(){ return legalPawnMoves; }
     public Wall getPreviewWall()             { return previewWall; }
     public boolean isGameOver()              { return gameOver; }
+    public Player getWallOwner(Wall wall)    { return wallOwners.get(wall); }
 
     public String getStatusText() {
         if (gameOver) {
@@ -62,6 +66,7 @@ public class GameController {
 
     public void clickWall() {
         if (gameOver || previewWall == null) return;
+        wallOwners.put(previewWall, state.getCurrentPlayer());
         state = engine.applyMove(state, new WallMove(previewWall));
         clearPreview();
         afterMove();
@@ -70,6 +75,7 @@ public class GameController {
     public void reset() {
         state = new GameState();
         gameOver = false;
+        wallOwners.clear();
         clearPreview();
         refreshLegalMoves();
         notify_();
