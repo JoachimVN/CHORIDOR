@@ -1,0 +1,156 @@
+name: Build And Publish Release
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release, for example v1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    outputs:
+      tag_name:    ${{ steps.version.outputs.tag_name }}
+      app_version: ${{ steps.version.outputs.app_version }}
+      pre_release: ${{ steps.version.outputs.pre_release }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Resolve version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.ref_name }}" }
+          if (-not $tag.StartsWith("v")) { throw "Tag must start with v. Got: $tag" }
+          $version    = $tag.Substring(1)
+          $preRelease = if ($tag.Contains("-")) { "true" } else { "false" }
+          "TAG_NAME=$tag"         | Out-File -FilePath $env:GITHUB_ENV    -Append
+          "APP_VERSION=$version"  | Out-File -FilePath $env:GITHUB_ENV    -Append
+          "PRE_RELEASE=$preRelease" | Out-File -FilePath $env:GITHUB_ENV  -Append
+          "tag_name=$tag"         | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "app_version=$version"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "pre_release=$preRelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Set Maven version
+        shell: pwsh
+        run: mvn --batch-mode versions:set "-DnewVersion=${{ env.APP_VERSION }}" "-DgenerateBackupPoms=false"
+
+      - name: Build portable JAR
+        shell: pwsh
+        run: mvn --batch-mode package -Pportable-jar -DskipTests
+
+      - name: Rename JAR
+        shell: pwsh
+        run: Rename-Item -Path "target/choridor-$env:APP_VERSION-jar-with-dependencies.jar" -NewName "Choridor-$env:APP_VERSION.jar"
+
+      - name: Add WiX to PATH
+        shell: pwsh
+        run: |
+          $wixDir = Get-ChildItem "C:\Program Files (x86)" -Filter "WiX Toolset*" -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+          if ($wixDir) { "$($wixDir.FullName)\bin" | Out-File -FilePath $env:GITHUB_PATH -Append }
+          else { throw "WiX Toolset v3 not found — required for jpackage EXE build" }
+
+      - name: Build Windows EXE
+        shell: pwsh
+        run: mvn --batch-mode package -Pexe -DskipTests
+
+      - name: Rename Windows EXE
+        shell: pwsh
+        run: Rename-Item -Path "target/dist/Choridor-$env:APP_VERSION.exe" -NewName "Choridor-$env:APP_VERSION-windows.exe"
+
+      - name: Publish release with Windows assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          generate_release_notes: true
+          prerelease: ${{ env.PRE_RELEASE == 'true' }}
+          files: |
+            target/Choridor-${{ env.APP_VERSION }}.jar
+            target/dist/Choridor-${{ env.APP_VERSION }}-windows.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    needs: build-windows
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Set Maven version
+        run: mvn --batch-mode versions:set -DnewVersion="${{ needs.build-windows.outputs.app_version }}" -DgenerateBackupPoms=false
+
+      - name: Build Linux app image
+        run: mvn --batch-mode package -Plinux -DskipTests
+
+      - name: Upload Linux asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build-windows.outputs.tag_name }}
+          files: target/dist/Choridor-${{ needs.build-windows.outputs.app_version }}-linux.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-macos:
+    needs: build-windows
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Set Maven version
+        run: mvn --batch-mode versions:set -DnewVersion="${{ needs.build-windows.outputs.app_version }}" -DgenerateBackupPoms=false
+
+      - name: Build macOS DMG
+        run: mvn --batch-mode package -Pmac -DskipTests
+
+      - name: Rename macOS DMG
+        run: mv "target/dist/Choridor-${{ needs.build-windows.outputs.app_version }}.dmg" "target/dist/Choridor-${{ needs.build-windows.outputs.app_version }}-macos.dmg"
+
+      - name: Upload macOS asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build-windows.outputs.tag_name }}
+          files: target/dist/Choridor-${{ needs.build-windows.outputs.app_version }}-macos.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

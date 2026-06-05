@@ -7,6 +7,7 @@ on:
 jobs:
   assign-and-review:
     runs-on: ubuntu-latest
+    if: ${{ !endsWith(github.event.pull_request.user.login, '[bot]') }}
     permissions:
       pull-requests: write
 
@@ -22,13 +23,5 @@ jobs:
               assignees: [context.payload.pull_request.user.login]
             });
 
-      - name: Request Copilot review
-        uses: actions/github-script@v9
-        with:
-          script: |
-            await github.rest.pulls.requestReviewers({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              reviewers: ['copilot-pull-request-reviewer']
-            });
+      # Copilot review is triggered via Settings → Copilot → Code review (automatic review).
+      # The reviewer API does not support bot/app reviewers and will 422 if called here.

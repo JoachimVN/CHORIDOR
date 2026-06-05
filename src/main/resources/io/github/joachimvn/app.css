@@ -1,0 +1,59 @@
+.root {
+    -fx-background-color: #0F1117;
+}
+
+.chrome-bar {
+    -fx-background-color: #13151F;
+    -fx-border-color: #1E2130;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 10 14 10 14;
+    -fx-spacing: 12;
+}
+
+/* Top bar has border below, not above */
+.chrome-bar-top {
+    -fx-border-width: 0 0 1 0;
+}
+
+.player-label {
+    -fx-font-family: "System";
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8890A8;
+}
+
+.status-label {
+    -fx-font-family: "System";
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #C8CCDC;
+}
+
+.status-label.player1 { -fx-text-fill: #9E4A40; }
+.status-label.player2 { -fx-text-fill: #3E68A8; }
+.status-label.gameover { -fx-text-fill: #C8CCDC; }
+
+.new-game-button {
+    -fx-background-color: #1E2130;
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 16 5 16;
+    -fx-background-radius: 4;
+    -fx-border-color: #2E3250;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.new-game-button:hover {
+    -fx-background-color: #252840;
+    -fx-text-fill: #C8CCDC;
+    -fx-border-color: #3E4470;
+}
+
+.new-game-button:pressed {
+    -fx-background-color: #3E68A8;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #2E508A;
+}
