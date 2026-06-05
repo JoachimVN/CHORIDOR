@@ -32,6 +32,8 @@ public class GameController {
         getClass().getResource("/audio/sfx/Win.wav").toExternalForm());
     private final AudioClip lossSound = new AudioClip(
         getClass().getResource("/audio/sfx/Loss.wav").toExternalForm());
+    private final AudioClip selectSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Select.wav").toExternalForm());
 
     public GameController() {
         refreshLegalMoves();
@@ -88,6 +90,7 @@ public class GameController {
     }
 
     public void reset() {
+        selectSound.play();
         state = new GameState();
         gameOver = false;
         wallOwners.clear();
