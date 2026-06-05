@@ -34,6 +34,7 @@ public class GameController {
         getClass().getResource("/audio/sfx/Loss.wav").toExternalForm());
     private final AudioClip selectSound = new AudioClip(
         getClass().getResource("/audio/sfx/Select.wav").toExternalForm());
+    private boolean muted = false;
 
     public GameController() {
         refreshLegalMoves();
@@ -76,7 +77,7 @@ public class GameController {
         boolean isJump = Math.abs(target.row() - from.row()) + Math.abs(target.col() - from.col()) > 1;
         state = engine.applyMove(state, new PawnMove(target));
         clearPreview();
-        (isJump ? jumpSound : moveSound).play();
+        play(isJump ? jumpSound : moveSound);
         afterMove();
     }
 
@@ -85,12 +86,12 @@ public class GameController {
         wallOwners.put(previewWall, state.getCurrentPlayer());
         state = engine.applyMove(state, new WallMove(previewWall));
         clearPreview();
-        wallSound.play();
+        play(wallSound);
         afterMove();
     }
 
     public void reset() {
-        selectSound.play();
+        play(selectSound);
         state = new GameState();
         gameOver = false;
         wallOwners.clear();
@@ -101,7 +102,7 @@ public class GameController {
 
     private void afterMove() {
         gameOver = engine.isGameOver(state);
-        if (gameOver) winSound.play();
+        if (gameOver) play(winSound);
         refreshLegalMoves();
         notifyListeners();
     }
@@ -114,6 +115,22 @@ public class GameController {
     private void refreshLegalMoves() {
         legalPawnMoves = gameOver ? List.of() : validator.getLegalPawnMoves(state);
     }
+
+    public boolean isMuted() { return muted; }
+
+    public void toggleMute() {
+        if (muted) {
+            muted = false;
+            selectSound.play();
+        } else {
+            selectSound.play();
+            muted = true;
+        }
+    }
+
+    public void playLossSound() { play(lossSound); }
+
+    private void play(AudioClip clip) { if (!muted) clip.play(); }
 
     private void notifyListeners() {
         listeners.forEach(Runnable::run);

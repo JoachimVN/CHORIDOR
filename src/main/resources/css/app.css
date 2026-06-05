@@ -57,3 +57,31 @@
     -fx-text-fill: #FFFFFF;
     -fx-border-color: #2E508A;
 }
+
+.mute-button {
+    -fx-background-color: #1E2130;
+    -fx-background-radius: 4;
+    -fx-border-color: #2E3250;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-padding: 5 9 5 9;
+}
+
+.mute-button:hover {
+    -fx-background-color: #252840;
+    -fx-border-color: #3E4470;
+}
+
+.mute-button:pressed {
+    -fx-background-color: #3E68A8;
+    -fx-border-color: #2E508A;
+}
+
+.mute-icon {
+    -fx-icon-color: #8890A8;
+}
+
+.mute-button:hover .mute-icon {
+    -fx-icon-color: #C8CCDC;
+}
