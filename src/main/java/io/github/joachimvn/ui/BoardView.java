@@ -45,7 +45,6 @@ public class BoardView extends Canvas {
     private static final double OVERLAY_TITLE_Y_FRAC = 0.42;
     private static final double OVERLAY_HINT_Y_FRAC  = 0.72;
     private static final String FONT_NAME            = "System";
-    private static final String WHITE_HEX            = "#FFFFFF";
 
     // Public colours — App uses these as the single source of truth
     public static final Color P1_COLOR = Color.web("#9E4A40");
@@ -55,9 +54,9 @@ public class BoardView extends Canvas {
     private static final Color CELL_CLR  = Color.web("#191C2A");
     private static final Color P1_STRIP  = P1_COLOR.deriveColor(0, 1, 1, STRIP_OPACITY);
     private static final Color P2_STRIP  = P2_COLOR.deriveColor(0, 1, 1, STRIP_OPACITY);
-    private static final Color LEGAL_DOT = Color.web(WHITE_HEX, 0.18);
-    private static final Color HOVER_DOT = Color.web(WHITE_HEX, 0.38);
-    private static final Color HOVER_BG  = Color.web(WHITE_HEX, 0.06);
+    private static final double LEGAL_DOT_ALPHA = 0.50;
+    private static final double HOVER_DOT_ALPHA = 0.85;
+    private static final double HOVER_BG_ALPHA  = 0.12;
 
     private final GameController ctrl;
     private int hoverRow = -1;
@@ -115,12 +114,17 @@ public class BoardView extends Canvas {
         GameState state      = ctrl.getState();
         List<PawnMove> legal = ctrl.getLegalPawnMoves();
 
+        Color playerColor = state.getCurrentPlayer() == Player.ONE ? P1_COLOR : P2_COLOR;
+        Color legalDot = playerColor.deriveColor(0, 1, 1, LEGAL_DOT_ALPHA);
+        Color hoverDot = playerColor.deriveColor(0, 1, 1, HOVER_DOT_ALPHA);
+        Color hoverBg  = playerColor.deriveColor(0, 1, 1, HOVER_BG_ALPHA);
+
         gc.setFill(BG);
         gc.fillRect(0, 0, size, size);
 
         for (int r = 0; r < GameState.BOARD_SIZE; r++) {
             for (int c = 0; c < GameState.BOARD_SIZE; c++) {
-                drawCell(gc, r, c, legal, step, cell);
+                drawCell(gc, r, c, legal, step, cell, legalDot, hoverDot, hoverBg);
             }
         }
 
@@ -142,7 +146,7 @@ public class BoardView extends Canvas {
     }
 
     private void drawCell(GraphicsContext gc, int r, int c, List<PawnMove> legal,
-                          double step, double cell) {
+                          double step, double cell, Color legalDot, Color hoverDot, Color hoverBg) {
         double x = c * step;
         double y = r * step;
         final int fr = r;
@@ -164,14 +168,14 @@ public class BoardView extends Canvas {
 
         if (isLegal) {
             if (isHovered) {
-                gc.setFill(HOVER_BG);
+                gc.setFill(hoverBg);
                 gc.fillRect(x, y, cell, cell);
                 double d = cell * HOVER_DOT_RATIO;
-                gc.setFill(HOVER_DOT);
+                gc.setFill(hoverDot);
                 gc.fillOval(x + (cell - d) / 2, y + (cell - d) / 2, d, d);
             } else {
                 double d = cell * LEGAL_DOT_RATIO;
-                gc.setFill(LEGAL_DOT);
+                gc.setFill(legalDot);
                 gc.fillOval(x + (cell - d) / 2, y + (cell - d) / 2, d, d);
             }
         }
