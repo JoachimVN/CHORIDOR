@@ -60,6 +60,30 @@
           <mainClass>io.github.joachimvn.App</mainClass>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.8.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+            <configuration>
+              <archive>
+                <manifest>
+                  <mainClass>io.github.joachimvn.Launcher</mainClass>
+                </manifest>
+                <manifestEntries>
+                  <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+                </manifestEntries>
+              </archive>
+              <descriptorRefs>
+                <descriptorRef>jar-with-dependencies</descriptorRef>
+              </descriptorRefs>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
     <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
       <plugins>
@@ -110,4 +134,291 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <profiles>
+    <!--
+      Cross-platform portable JAR (all three OS JavaFX natives bundled).
+      Enable with: -Pportable-jar
+    -->
+    <profile>
+      <id>portable-jar</id>
+      <dependencies>
+        <dependency><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId><version>25.0.1</version><classifier>win</classifier></dependency>
+        <dependency><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId><version>25.0.1</version><classifier>linux</classifier></dependency>
+        <dependency><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId><version>25.0.1</version><classifier>mac-aarch64</classifier></dependency>
+        <dependency><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId><version>25.0.1</version><classifier>win</classifier></dependency>
+        <dependency><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId><version>25.0.1</version><classifier>linux</classifier></dependency>
+        <dependency><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId><version>25.0.1</version><classifier>mac-aarch64</classifier></dependency>
+        <dependency><groupId>org.openjfx</groupId><artifactId>javafx-media</artifactId><version>25.0.1</version><classifier>win</classifier></dependency>
+        <dependency><groupId>org.openjfx</groupId><artifactId>javafx-media</artifactId><version>25.0.1</version><classifier>linux</classifier></dependency>
+        <dependency><groupId>org.openjfx</groupId><artifactId>javafx-media</artifactId><version>25.0.1</version><classifier>mac-aarch64</classifier></dependency>
+      </dependencies>
+    </profile>
+
+    <!-- Windows EXE via jpackage. Enable with: -Pexe -->
+    <profile>
+      <id>exe</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.6.0</version>
+            <executions>
+              <execution>
+                <id>strip-version-qualifier</id>
+                <phase>validate</phase>
+                <goals><goal>regex-property</goal></goals>
+                <configuration>
+                  <name>jpackage.version</name>
+                  <value>${project.version}</value>
+                  <regex>^(\d+\.\d+\.\d+).*$</regex>
+                  <replacement>$1</replacement>
+                  <failIfNoMatch>false</failIfNoMatch>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>3.8.1</version>
+            <executions>
+              <execution>
+                <id>copy-javafx-mods</id>
+                <phase>package</phase>
+                <goals><goal>copy</goal></goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-base</artifactId><version>25.0.1</version><classifier>win</classifier><destFileName>javafx-base-25.0.1-win.jar</destFileName></artifactItem>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId><version>25.0.1</version><classifier>win</classifier><destFileName>javafx-graphics-25.0.1-win.jar</destFileName></artifactItem>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId><version>25.0.1</version><classifier>win</classifier><destFileName>javafx-controls-25.0.1-win.jar</destFileName></artifactItem>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-media</artifactId><version>25.0.1</version><classifier>win</classifier><destFileName>javafx-media-25.0.1-win.jar</destFileName></artifactItem>
+                  </artifactItems>
+                  <outputDirectory>${project.build.directory}/javafx-mods</outputDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>build-exe</id>
+                <phase>package</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <mkdir dir="${project.build.directory}/jpackage-input"/>
+                    <copy file="${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar"
+                          tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
+                    <exec executable="jpackage" failonerror="true">
+                      <arg value="--type"/><arg value="exe"/>
+                      <arg value="--name"/><arg value="Choridor"/>
+                      <arg value="--app-version"/><arg value="${jpackage.version}"/>
+                      <arg value="--vendor"/><arg value="JoachimVN"/>
+                      <arg value="--description"/><arg value="Choridor"/>
+                      <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
+                      <arg value="--main-jar"/><arg value="app-fat.jar"/>
+                      <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
+                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods"/>
+                      <arg value="--add-modules"/><arg value="javafx.controls,javafx.media"/>
+                      <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
+                      <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
+                      <arg value="--win-dir-chooser"/>
+                      <arg value="--win-shortcut"/>
+                      <arg value="--win-menu"/>
+                      <arg value="--win-menu-group"/><arg value="Choridor"/>
+                    </exec>
+                    <condition property="exe.rename.needed">
+                      <not><equals arg1="${jpackage.version}" arg2="${project.version}"/></not>
+                    </condition>
+                    <move file="${project.build.directory}/dist/Choridor-${jpackage.version}.exe"
+                          tofile="${project.build.directory}/dist/Choridor-${project.version}.exe"
+                          failonerror="true" xmlns:if="ant:if" if:set="exe.rename.needed"/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- Linux app-image via jpackage, zipped. Enable with: -Plinux -->
+    <profile>
+      <id>linux</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.6.0</version>
+            <executions>
+              <execution>
+                <id>strip-version-qualifier</id>
+                <phase>validate</phase>
+                <goals><goal>regex-property</goal></goals>
+                <configuration>
+                  <name>jpackage.version</name>
+                  <value>${project.version}</value>
+                  <regex>^(\d+\.\d+\.\d+).*$</regex>
+                  <replacement>$1</replacement>
+                  <failIfNoMatch>false</failIfNoMatch>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>3.8.1</version>
+            <executions>
+              <execution>
+                <id>copy-javafx-mods-linux</id>
+                <phase>package</phase>
+                <goals><goal>copy</goal></goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-base</artifactId><version>25.0.1</version><classifier>linux</classifier><destFileName>javafx-base-25.0.1-linux.jar</destFileName></artifactItem>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId><version>25.0.1</version><classifier>linux</classifier><destFileName>javafx-graphics-25.0.1-linux.jar</destFileName></artifactItem>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId><version>25.0.1</version><classifier>linux</classifier><destFileName>javafx-controls-25.0.1-linux.jar</destFileName></artifactItem>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-media</artifactId><version>25.0.1</version><classifier>linux</classifier><destFileName>javafx-media-25.0.1-linux.jar</destFileName></artifactItem>
+                  </artifactItems>
+                  <outputDirectory>${project.build.directory}/javafx-mods</outputDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>build-linux</id>
+                <phase>package</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <mkdir dir="${project.build.directory}/jpackage-input"/>
+                    <copy file="${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar"
+                          tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
+                    <exec executable="jpackage" failonerror="true">
+                      <arg value="--type"/><arg value="app-image"/>
+                      <arg value="--name"/><arg value="Choridor"/>
+                      <arg value="--app-version"/><arg value="${jpackage.version}"/>
+                      <arg value="--vendor"/><arg value="JoachimVN"/>
+                      <arg value="--description"/><arg value="Choridor"/>
+                      <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
+                      <arg value="--main-jar"/><arg value="app-fat.jar"/>
+                      <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
+                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods"/>
+                      <arg value="--add-modules"/><arg value="javafx.controls,javafx.media"/>
+                      <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
+                      <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
+                    </exec>
+                    <zip destfile="${project.build.directory}/dist/Choridor-${project.version}-linux.zip">
+                      <zipfileset dir="${project.build.directory}/dist/Choridor" prefix="Choridor"/>
+                    </zip>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- macOS DMG via jpackage. Enable with: -Pmac -->
+    <profile>
+      <id>mac</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.6.0</version>
+            <executions>
+              <execution>
+                <id>strip-version-qualifier</id>
+                <phase>validate</phase>
+                <goals><goal>regex-property</goal></goals>
+                <configuration>
+                  <name>jpackage.version</name>
+                  <value>${project.version}</value>
+                  <regex>^(\d+\.\d+\.\d+).*$</regex>
+                  <replacement>$1</replacement>
+                  <failIfNoMatch>false</failIfNoMatch>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>3.8.1</version>
+            <executions>
+              <execution>
+                <id>copy-javafx-mods-mac</id>
+                <phase>package</phase>
+                <goals><goal>copy</goal></goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-base</artifactId><version>25.0.1</version><classifier>mac-aarch64</classifier><destFileName>javafx-base-25.0.1-mac-aarch64.jar</destFileName></artifactItem>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId><version>25.0.1</version><classifier>mac-aarch64</classifier><destFileName>javafx-graphics-25.0.1-mac-aarch64.jar</destFileName></artifactItem>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId><version>25.0.1</version><classifier>mac-aarch64</classifier><destFileName>javafx-controls-25.0.1-mac-aarch64.jar</destFileName></artifactItem>
+                    <artifactItem><groupId>org.openjfx</groupId><artifactId>javafx-media</artifactId><version>25.0.1</version><classifier>mac-aarch64</classifier><destFileName>javafx-media-25.0.1-mac-aarch64.jar</destFileName></artifactItem>
+                  </artifactItems>
+                  <outputDirectory>${project.build.directory}/javafx-mods</outputDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>build-mac</id>
+                <phase>package</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <mkdir dir="${project.build.directory}/jpackage-input"/>
+                    <copy file="${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar"
+                          tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
+                    <exec executable="jpackage" failonerror="true">
+                      <arg value="--type"/><arg value="dmg"/>
+                      <arg value="--name"/><arg value="Choridor"/>
+                      <arg value="--app-version"/><arg value="${jpackage.version}"/>
+                      <arg value="--vendor"/><arg value="JoachimVN"/>
+                      <arg value="--description"/><arg value="Choridor"/>
+                      <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
+                      <arg value="--main-jar"/><arg value="app-fat.jar"/>
+                      <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
+                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods"/>
+                      <arg value="--add-modules"/><arg value="javafx.controls,javafx.media"/>
+                      <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
+                      <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
+                    </exec>
+                    <condition property="dmg.rename.needed">
+                      <not><equals arg1="${jpackage.version}" arg2="${project.version}"/></not>
+                    </condition>
+                    <move file="${project.build.directory}/dist/Choridor-${jpackage.version}.dmg"
+                          tofile="${project.build.directory}/dist/Choridor-${project.version}.dmg"
+                          failonerror="true" xmlns:if="ant:if" if:set="dmg.rename.needed"/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
 </project>
