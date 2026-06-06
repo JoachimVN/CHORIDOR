@@ -68,7 +68,8 @@ public class GameController {
             return "Player " + label(winner) + " wins!";
         }
         Player p = state.getCurrentPlayer();
-        return "Player " + label(p) + "'s turn  —  Walls: " + state.getWallCount(p);
+        String name = (aiStrategy != null && p == humanPlayer.opponent()) ? "AI" : "Player " + label(p);
+        return name + "'s turn  —  Walls: " + state.getWallCount(p);
     }
 
     public void setVsAi(boolean vsAi) {

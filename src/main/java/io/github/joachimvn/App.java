@@ -315,7 +315,8 @@ public class App extends Application {
             label.getStyleClass().add("gameover");
         } else {
             Player p = ctrl.getState().getCurrentPlayer();
-            label.setText("Player " + (p == Player.ONE ? "1" : "2") + "'s turn");
+            boolean isAiTurn = ctrl.isVsAi() && p != ctrl.getHumanPlayer();
+            label.setText((isAiTurn ? "AI" : "Player " + (p == Player.ONE ? "1" : "2")) + "'s turn");
             label.getStyleClass().add(p == Player.ONE ? "player1" : "player2");
         }
     }
