@@ -27,7 +27,7 @@ public class TacticalStrategy implements Strategy {
     }
 
     @Override public String displayName() { return "Tactical"; }
-    @Override public String description()   { return "Prunes the wall search space to go much deeper — prioritises blocking over advancing"; }
+    @Override public String description()   { return "Prunes the wall search space to go much deeper, prioritises blocking over advancing"; }
 
     @Override
     public Move decide(GameState state) {
