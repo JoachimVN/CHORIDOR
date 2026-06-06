@@ -57,8 +57,6 @@
     -fx-border-color: #2E508A;
 }
 
-.status-label.thinking { -fx-text-fill: #8890A8; }
-
 .color-pick-button {
     -fx-background-radius: 50%;
     -fx-border-radius: 50%;

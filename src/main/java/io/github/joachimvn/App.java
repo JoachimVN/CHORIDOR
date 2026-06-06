@@ -323,7 +323,7 @@ public class App extends Application {
     }
 
     private void updateStatus(Label label, GameController ctrl) {
-        label.getStyleClass().removeAll(CSS_PLAYER1, CSS_PLAYER2, "gameover");
+        label.getStyleClass().removeAll(CSS_PLAYER1, CSS_PLAYER2);
         if (ctrl.isAiThinking()) {
             Player aiPlayer = ctrl.getHumanPlayer().opponent();
             label.setText("AI is thinking...");

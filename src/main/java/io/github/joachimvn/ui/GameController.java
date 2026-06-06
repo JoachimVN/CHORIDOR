@@ -142,7 +142,10 @@ public class GameController {
 
     private void afterMove() {
         gameOver = engine.isGameOver(state);
-        if (gameOver) play(winSound);
+        if (gameOver) {
+            Player winner = engine.getWinner(state).orElseThrow();
+            play(aiStrategy != null && winner == humanPlayer.opponent() ? lossSound : winSound);
+        }
         refreshLegalMoves();
         notifyListeners();
         scheduleAiMove();
@@ -154,8 +157,9 @@ public class GameController {
         notifyListeners();
         int gen = generation.get();
         GameState snapshot = state;
+        Strategy strategySnapshot = aiStrategy;
         Thread t = new Thread(() -> {
-            Move move = aiStrategy.decide(snapshot);
+            Move move = strategySnapshot.decide(snapshot);
             Platform.runLater(() -> {
                 if (generation.get() != gen) return;
                 aiThinking = false;
