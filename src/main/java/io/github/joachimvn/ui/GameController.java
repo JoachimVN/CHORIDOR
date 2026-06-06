@@ -86,6 +86,8 @@ public class GameController {
         return prefix + " turn";
     }
 
+    public void replay() { reset(); }
+
     public void startGame(Strategy p1Strategy, Strategy p2Strategy, Player humanPlayer,
                           String p1Name, String p2Name) {
         playerStrategies[0] = p1Strategy;

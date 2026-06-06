@@ -16,7 +16,10 @@ public enum Difficulty {
              p -> new MinimaxStrategy(p, 1000)),
 
     TACTICAL("Tactical", "Prunes the wall search space to go much deeper — prioritises blocking over advancing",
-             p -> new TacticalStrategy(p));
+             p -> new TacticalStrategy(p)),
+
+    RUSHER  ("Rusher",   "Same deep search as Tactical, but races toward the goal rather than blocking",
+             p -> new RusherStrategy(p));
 
     private final String              displayName;
     private final String              description;

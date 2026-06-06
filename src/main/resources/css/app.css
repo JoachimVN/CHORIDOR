@@ -198,9 +198,10 @@
     -fx-border-color: #2E508A;
 }
 
-/* Strategy list */
+/* Strategy combo */
 
-.strategy-list {
+/* The combo button itself */
+.strategy-combo {
     -fx-background-color: #191C2A;
     -fx-border-color: #1E2130;
     -fx-border-radius: 4;
@@ -208,91 +209,117 @@
     -fx-border-width: 1;
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
-    -fx-padding: 3 0 3 0;
 }
 
-.strategy-list .list-cell {
+.strategy-combo:hover {
+    -fx-border-color: #2E3250;
+}
+
+.strategy-combo > .combo-box-base {
     -fx-background-color: transparent;
-    -fx-background-insets: 0;
-    -fx-padding: 7 12 7 12;
-    -fx-cursor: hand;
-    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 8 10 8 10;
+}
+
+.strategy-combo > .combo-box-base > .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 6 0 0;
+}
+
+.strategy-combo > .combo-box-base > .arrow-button > .arrow {
+    -fx-background-color: #3A3F58;
+    -fx-padding: 3 4 3 4;
+}
+
+.strategy-combo > .combo-box-base > .label {
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* The dropdown popup */
+.strategy-combo .combo-box-popup > .list-view {
+    -fx-background-color: #191C2A;
+    -fx-border-color: #2E3250;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-effect: dropshadow(gaussian, #000000, 16, 0.4, 0, 4);
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.strategy-combo .combo-box-popup .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 8 12 8 12;
     -fx-border-width: 0 0 0 2;
-    -fx-border-insets: 0;
+    -fx-border-color: transparent;
 }
 
-.strategy-list .list-cell:odd {
+.strategy-combo .combo-box-popup .list-cell:odd {
     -fx-background-color: transparent;
 }
 
-.strategy-list .list-cell:hover {
+.strategy-combo .combo-box-popup .list-cell:hover {
     -fx-background-color: #1E2130;
+    -fx-border-color: transparent;
 }
 
-.strategy-list .list-cell:selected,
-.strategy-list:focused .list-cell:selected {
+.strategy-combo .combo-box-popup .list-cell:selected,
+.strategy-combo .combo-box-popup .list-cell:focused:selected {
     -fx-background-color: #141E30;
     -fx-border-color: #3E68A8;
 }
 
-.strategy-list .list-cell:focused {
-    -fx-background-color: transparent;
-}
-
-.strategy-list .list-cell .strategy-name {
+.strategy-name {
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-text-fill: #505878;
+    -fx-text-fill: #606880;
 }
 
-.strategy-list .list-cell:selected .strategy-name,
-.strategy-list:focused .list-cell:selected .strategy-name {
+.strategy-combo .combo-box-popup .list-cell:selected .strategy-name {
     -fx-text-fill: #5A84C4;
 }
 
-.strategy-list .list-cell .strategy-desc {
+.strategy-desc {
     -fx-font-size: 10px;
     -fx-text-fill: #343850;
 }
 
-.strategy-list .list-cell:selected .strategy-desc,
-.strategy-list:focused .list-cell:selected .strategy-desc {
+.strategy-combo .combo-box-popup .list-cell:selected .strategy-desc {
     -fx-text-fill: #505878;
 }
 
-/* Scrollbar */
-
-.strategy-list .scroll-bar {
+/* Scrollbar in popup */
+.strategy-combo .combo-box-popup .list-view .scroll-bar {
     -fx-background-color: #191C2A;
     -fx-pref-width: 6;
 }
 
-.strategy-list .scroll-bar > .track {
+.strategy-combo .combo-box-popup .list-view .scroll-bar > .track {
     -fx-background-color: #13151F;
     -fx-background-radius: 3;
-    -fx-border-color: transparent;
 }
 
-.strategy-list .scroll-bar > .thumb {
+.strategy-combo .combo-box-popup .list-view .scroll-bar > .thumb {
     -fx-background-color: #2A2E48;
     -fx-background-radius: 3;
 }
 
-.strategy-list .scroll-bar > .thumb:hover {
+.strategy-combo .combo-box-popup .list-view .scroll-bar > .thumb:hover {
     -fx-background-color: #3E4470;
 }
 
-.strategy-list .scroll-bar > .increment-button,
-.strategy-list .scroll-bar > .decrement-button {
+.strategy-combo .combo-box-popup .list-view .scroll-bar > .increment-button,
+.strategy-combo .combo-box-popup .list-view .scroll-bar > .decrement-button {
     -fx-background-color: transparent;
-    -fx-padding: 0;
     -fx-pref-height: 0;
     -fx-min-height: 0;
     -fx-max-height: 0;
 }
 
-.strategy-list .scroll-bar > .increment-button > .increment-arrow,
-.strategy-list .scroll-bar > .decrement-button > .decrement-arrow {
+.strategy-combo .combo-box-popup .list-view .scroll-bar > .increment-button > .increment-arrow,
+.strategy-combo .combo-box-popup .list-view .scroll-bar > .decrement-button > .decrement-arrow {
     -fx-shape: "";
     -fx-padding: 0;
 }
