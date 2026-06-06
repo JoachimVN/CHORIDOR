@@ -13,23 +13,33 @@ public class PathChecker {
     private static final int[][] DIRS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
     public boolean hasPath(GameState state, Player player) {
+        return shortestPath(state, player) < Integer.MAX_VALUE;
+    }
+
+    public int shortestPath(GameState state, Player player) {
         Position start = state.getPawnPosition(player);
         int goalRow = player.goalRow();
+        if (start.row() == goalRow) return 0;
         Set<Position> visited = new HashSet<>();
         Queue<Position> queue = new ArrayDeque<>();
         queue.add(start);
         visited.add(start);
+        int dist = 0;
         while (!queue.isEmpty()) {
-            Position curr = queue.poll();
-            if (curr.row() == goalRow) return true;
-            for (int[] d : DIRS) {
-                Position next = curr.offset(d[0], d[1]);
-                if (!next.isOnBoard() || visited.contains(next) || state.isEdgeBlocked(curr, next)) continue;
-                visited.add(next);
-                queue.add(next);
+            dist++;
+            int size = queue.size();
+            for (int i = 0; i < size; i++) {
+                Position curr = queue.poll();
+                for (int[] d : DIRS) {
+                    Position next = curr.offset(d[0], d[1]);
+                    if (!next.isOnBoard() || visited.contains(next) || state.isEdgeBlocked(curr, next)) continue;
+                    if (next.row() == goalRow) return dist;
+                    visited.add(next);
+                    queue.add(next);
+                }
             }
         }
-        return false;
+        return Integer.MAX_VALUE;
     }
 
     public boolean bothPlayersHavePath(GameState state) {

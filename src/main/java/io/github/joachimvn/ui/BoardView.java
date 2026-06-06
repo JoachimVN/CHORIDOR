@@ -64,13 +64,20 @@ public class BoardView extends Canvas {
     private Color legalDot = Color.WHITE;
     private Color hoverDot = Color.WHITE;
     private Color hoverBg  = Color.WHITE;
+    private boolean flipped = false;
+
+    public void setFlipped(boolean flipped) {
+        this.flipped = flipped;
+        refresh();
+    }
 
     public BoardView(GameController ctrl) {
         super(SIZE, SIZE);
         this.ctrl = ctrl;
         setOnMouseMoved(e -> {
-            boolean changed = updateHoverCell(e.getX(), e.getY());
-            ctrl.updatePreviewWall(wallCandidate(e.getX(), e.getY()));
+            double x = unflip(e.getX()), y = unflip(e.getY());
+            boolean changed = updateHoverCell(x, y);
+            ctrl.updatePreviewWall(wallCandidate(x, y));
             if (changed) refresh();
         });
         setOnMouseExited(e -> {
@@ -80,7 +87,11 @@ public class BoardView extends Canvas {
             ctrl.updatePreviewWall(null);
             if (changed) refresh();
         });
-        setOnMouseClicked(e -> handleClick(e.getX(), e.getY()));
+        setOnMouseClicked(e -> handleClick(unflip(e.getX()), unflip(e.getY())));
+    }
+
+    private double unflip(double coord) {
+        return flipped ? getWidth() - coord : coord;
     }
 
     // ── Resize contract ──────────────────────────────────────────────────────
@@ -115,7 +126,7 @@ public class BoardView extends Canvas {
 
         GraphicsContext gc   = getGraphicsContext2D();
         GameState state      = ctrl.getState();
-        List<PawnMove> legal = ctrl.getLegalPawnMoves();
+        List<PawnMove> legal = ctrl.isAiThinking() ? List.of() : ctrl.getLegalPawnMoves();
 
         Color playerColor = state.getCurrentPlayer() == Player.ONE ? P1_COLOR : P2_COLOR;
         legalDot = playerColor.deriveColor(0, 1, 1, LEGAL_DOT_ALPHA);
@@ -124,6 +135,12 @@ public class BoardView extends Canvas {
 
         gc.setFill(BG);
         gc.fillRect(0, 0, size, size);
+
+        if (flipped) {
+            gc.save();
+            gc.translate(size, size);
+            gc.scale(-1, -1);
+        }
 
         for (int r = 0; r < GameState.BOARD_SIZE; r++) {
             for (int c = 0; c < GameState.BOARD_SIZE; c++) {
@@ -145,7 +162,13 @@ public class BoardView extends Canvas {
         paintPawn(gc, state.getPawnPosition(Player.ONE), P1_COLOR, step, cell);
         paintPawn(gc, state.getPawnPosition(Player.TWO), P2_COLOR, step, cell);
 
-        if (ctrl.isGameOver()) paintWinOverlay(gc, ctrl.getStatusText(), s);
+        if (flipped) gc.restore();
+
+        if (ctrl.isGameOver()) {
+            Player winner = ctrl.getWinner();
+            Color winColor = winner == Player.ONE ? P1_COLOR : P2_COLOR;
+            paintWinOverlay(gc, ctrl.getStatusText(), s, winColor);
+        }
     }
 
     private void drawCell(GraphicsContext gc, int r, int c, List<PawnMove> legal,
@@ -204,7 +227,7 @@ public class BoardView extends Canvas {
         gc.fillOval(x, y, d, d);
     }
 
-    private void paintWinOverlay(GraphicsContext gc, String winText, double s) {
+    private void paintWinOverlay(GraphicsContext gc, String winText, double s, Color winnerColor) {
         double size = getWidth();
         gc.setFill(Color.rgb(0, 0, 0, OVERLAY_OPACITY));
         gc.fillRect(0, 0, size, size);
@@ -225,7 +248,7 @@ public class BoardView extends Canvas {
 
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setFont(Font.font(FONT_NAME, FontWeight.BOLD, OVERLAY_TITLE_SZ * s));
-        gc.setFill(Color.WHITE);
+        gc.setFill(winnerColor);
         gc.fillText(winText, cx, oy + h * OVERLAY_TITLE_Y_FRAC);
 
         gc.setFont(Font.font(FONT_NAME, FontWeight.NORMAL, OVERLAY_HINT_SZ * s));

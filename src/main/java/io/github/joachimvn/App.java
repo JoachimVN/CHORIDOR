@@ -12,8 +12,11 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 import javafx.scene.layout.BorderPane;
@@ -21,6 +24,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.FillRule;
 import javafx.scene.shape.Rectangle;
@@ -39,8 +43,11 @@ public class App extends Application {
     private static final double SVG_WIDTH          = 2048;
     private static final double SVG_HEIGHT         = 460;
     // SVG palette
-    private static final Color  LOGO_RED   = Color.web("#9d493f");
-    private static final Color  LOGO_BLUE  = Color.web("#3e67a7");
+    private static final Color  LOGO_RED    = Color.web("#9d493f");
+    private static final Color  LOGO_BLUE   = Color.web("#3e67a7");
+    private static final String CSS_PLAYER1 = "player1";
+    private static final String CSS_PLAYER2 = "player2";
+    private static final String PADDING_FMT = "-fx-padding: %.1f %.1f %.1f %.1f;";
 
     @Override
     public void start(Stage stage) {
@@ -53,24 +60,29 @@ public class App extends Application {
         List<Rectangle> p1WallBoxes = buildWallBoxes(BoardView.P1_COLOR, scaleB);
         List<Rectangle> p2WallBoxes = buildWallBoxes(BoardView.P2_COLOR, scaleB);
 
-        HBox p1Side = playerSide(Player.ONE, p1WallBoxes, Pos.CENTER_LEFT, scaleB);
-        HBox p2Side = playerSide(Player.TWO, p2WallBoxes, Pos.CENTER_RIGHT, scaleB);
+        Label p1Name = new Label("Player 1");
+        Label p2Name = new Label("Player 2");
+        HBox p1Side = playerSide(Player.ONE, p1WallBoxes, Pos.CENTER_LEFT, scaleB, p1Name);
+        HBox p2Side = playerSide(Player.TWO, p2WallBoxes, Pos.CENTER_RIGHT, scaleB, p2Name);
 
         Pane logo = buildLogo(scaleB);
 
-        Region topSpacerLeft  = new Region();
-        Region topSpacerRight = new Region();
-        HBox.setHgrow(topSpacerLeft,  Priority.ALWAYS);
-        HBox.setHgrow(topSpacerRight, Priority.ALWAYS);
+        Region topSpacer = new Region();
+        HBox.setHgrow(topSpacer, Priority.ALWAYS);
+        HBox sidesRow = new HBox(p1Side, topSpacer, p2Side);
+        sidesRow.setMaxWidth(Double.MAX_VALUE);
+        sidesRow.setAlignment(Pos.CENTER);
 
-        HBox topBar = new HBox(p1Side, topSpacerLeft, logo, topSpacerRight, p2Side);
+        StackPane topBar = new StackPane(sidesRow, logo);
+        StackPane.setAlignment(logo, Pos.CENTER);
         topBar.getStyleClass().addAll("chrome-bar", "chrome-bar-top");
-        topBar.setAlignment(Pos.CENTER);
         scaleB.addListener((obs, old, nw) -> {
             double s = nw.doubleValue();
             topBar.setStyle(String.format(Locale.ROOT,
-                "-fx-padding: %.1f %.1f %.1f %.1f; -fx-spacing: %.1f;",
-                10*s, 14*s, 10*s, 14*s, 12*s));
+                PADDING_FMT,
+                10*s, 14*s, 10*s, 14*s));
+            sidesRow.setStyle(String.format(Locale.ROOT,
+                "-fx-spacing: %.1f;", 12*s));
         });
 
         // ── Bottom bar ───────────────────────────────────────────────────────
@@ -81,8 +93,49 @@ public class App extends Application {
         newGame.getStyleClass().add("new-game-button");
         newGame.setOnAction(e -> ctrl.reset());
 
+        FontIcon flipIcon = new FontIcon(FontAwesomeSolid.SYNC_ALT);
+        flipIcon.getStyleClass().add("bar-icon");
+        ToggleButton flipButton = new ToggleButton();
+        flipButton.setGraphic(flipIcon);
+        flipButton.getStyleClass().add("mute-button");
+        flipButton.setOnAction(e -> board.setFlipped(flipButton.isSelected()));
+
+        ToggleGroup colorGroup = new ToggleGroup();
+        ToggleButton pickP1 = new ToggleButton();
+        pickP1.getStyleClass().addAll("color-pick-button", "color-pick-p1");
+        pickP1.setToggleGroup(colorGroup);
+        pickP1.setSelected(true);
+        pickP1.setOnAction(e -> {
+            ctrl.setHumanPlayer(Player.ONE);
+            board.setFlipped(false);
+            flipButton.setSelected(false);
+        });
+
+        ToggleButton pickP2 = new ToggleButton();
+        pickP2.getStyleClass().addAll("color-pick-button", "color-pick-p2");
+        pickP2.setToggleGroup(colorGroup);
+        pickP2.setOnAction(e -> {
+            ctrl.setHumanPlayer(Player.TWO);
+            board.setFlipped(true);
+            flipButton.setSelected(true);
+        });
+
+        for (ToggleButton btn : List.of(pickP1, pickP2)) {
+            btn.setPrefSize(20, 20);
+            btn.setMinSize(20, 20);
+            btn.setMaxSize(20, 20);
+        }
+        HBox colorPicker = new HBox(4, pickP1, pickP2);
+        colorPicker.setAlignment(Pos.CENTER);
+        colorPicker.setVisible(false);
+        colorPicker.setManaged(false);
+
+        ToggleButton aiToggle = new ToggleButton("vs AI");
+        aiToggle.getStyleClass().add("ai-toggle-button");
+        aiToggle.setOnAction(e -> ctrl.setVsAi(aiToggle.isSelected()));
+
         FontIcon muteIcon = new FontIcon(FontAwesomeSolid.VOLUME_UP);
-        muteIcon.getStyleClass().add("mute-icon");
+        muteIcon.getStyleClass().add("bar-icon");
         Button muteButton = new Button();
         muteButton.setGraphic(muteIcon);
         muteButton.getStyleClass().add("mute-button");
@@ -94,21 +147,35 @@ public class App extends Application {
         Region botSpacer = new Region();
         HBox.setHgrow(botSpacer, Priority.ALWAYS);
 
-        HBox bottomBar = new HBox(statusLabel, botSpacer, muteButton, newGame);
+        HBox bottomBar = new HBox(statusLabel, botSpacer, colorPicker, aiToggle, flipButton, muteButton, newGame);
         bottomBar.getStyleClass().add("chrome-bar");
         bottomBar.setAlignment(Pos.CENTER_LEFT);
         scaleB.addListener((obs, old, nw) -> {
             double s = nw.doubleValue();
             bottomBar.setStyle(String.format(Locale.ROOT,
-                "-fx-padding: %.1f %.1f %.1f %.1f; -fx-spacing: %.1f;",
+                PADDING_FMT + " -fx-spacing: %.1f;",
                 10*s, 14*s, 10*s, 14*s, 12*s));
             statusLabel.setStyle(String.format(Locale.ROOT, "-fx-font-size: %.1fpx;", 13*s));
             newGame.setStyle(String.format(Locale.ROOT,
-                "-fx-font-size: %.1fpx; -fx-padding: %.1f %.1f %.1f %.1f;",
+                "-fx-font-size: %.1fpx; " + PADDING_FMT,
                 12*s, 5*s, 16*s, 5*s, 16*s));
+            aiToggle.setStyle(String.format(Locale.ROOT,
+                "-fx-font-size: %.1fpx; " + PADDING_FMT,
+                12*s, 5*s, 16*s, 5*s, 16*s));
+            double sz = 20 * s;
+            for (ToggleButton btn : List.of(pickP1, pickP2)) {
+                btn.setPrefSize(sz, sz);
+                btn.setMinSize(sz, sz);
+                btn.setMaxSize(sz, sz);
+            }
+            colorPicker.setSpacing(4 * s);
             muteIcon.setIconSize((int)(13 * s));
             muteButton.setStyle(String.format(Locale.ROOT,
-                "-fx-padding: %.1f %.1f %.1f %.1f;",
+                PADDING_FMT,
+                5*s, 9*s, 5*s, 9*s));
+            flipIcon.setIconSize((int)(13 * s));
+            flipButton.setStyle(String.format(Locale.ROOT,
+                PADDING_FMT,
                 5*s, 9*s, 5*s, 9*s));
         });
 
@@ -118,6 +185,13 @@ public class App extends Application {
             updateWallBoxes(p1WallBoxes, ctrl.getState(), Player.ONE);
             updateWallBoxes(p2WallBoxes, ctrl.getState(), Player.TWO);
             updateStatus(statusLabel, ctrl);
+            aiToggle.setSelected(ctrl.isVsAi());
+            colorPicker.setVisible(ctrl.isVsAi());
+            colorPicker.setManaged(ctrl.isVsAi());
+            pickP1.setSelected(ctrl.getHumanPlayer() == Player.ONE);
+            pickP2.setSelected(ctrl.getHumanPlayer() == Player.TWO);
+            p1Name.setText(ctrl.getPlayerName(Player.ONE));
+            p2Name.setText(ctrl.getPlayerName(Player.TWO));
         });
 
         board.refresh();
@@ -133,9 +207,13 @@ public class App extends Application {
         scene.getStylesheets().add(
             getClass().getResource("/css/app.css").toExternalForm()
         );
-        scene.setOnKeyPressed(e -> {
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
             if (e.getCode() == KeyCode.F11) {
                 stage.setFullScreen(!stage.isFullScreen());
+                e.consume();
+            } else if (e.getCode() == KeyCode.ENTER && ctrl.isGameOver()) {
+                ctrl.reset();
+                e.consume();
             }
         });
 
@@ -207,9 +285,8 @@ public class App extends Application {
         return boxes;
     }
 
-    private HBox playerSide(Player player, List<Rectangle> boxes, Pos alignment, DoubleBinding scaleB) {
+    private HBox playerSide(Player player, List<Rectangle> boxes, Pos alignment, DoubleBinding scaleB, Label name) {
         Color color = player == Player.ONE ? BoardView.P1_COLOR : BoardView.P2_COLOR;
-        String label = "Player " + (player == Player.ONE ? "1" : "2");
 
         Rectangle dot = new Rectangle();
         dot.widthProperty().bind(scaleB.multiply(8));
@@ -218,7 +295,6 @@ public class App extends Application {
         dot.arcHeightProperty().bind(scaleB.multiply(8));
         dot.setFill(color);
 
-        Label name = new Label(label);
         name.getStyleClass().add("player-label");
         scaleB.addListener((obs, old, nw) ->
             name.setStyle(String.format(Locale.ROOT, "-fx-font-size: %.1fpx;", 12 * nw.doubleValue())));
@@ -247,14 +323,19 @@ public class App extends Application {
     }
 
     private void updateStatus(Label label, GameController ctrl) {
-        label.getStyleClass().removeAll("player1", "player2", "gameover");
-        if (ctrl.isGameOver()) {
+        label.getStyleClass().removeAll(CSS_PLAYER1, CSS_PLAYER2);
+        if (ctrl.isAiThinking()) {
+            Player aiPlayer = ctrl.getHumanPlayer().opponent();
+            label.setText("AI is thinking...");
+            label.getStyleClass().add(aiPlayer == Player.ONE ? CSS_PLAYER1 : CSS_PLAYER2);
+        } else if (ctrl.isGameOver()) {
+            Player winner = ctrl.getWinner();
             label.setText(ctrl.getStatusText());
-            label.getStyleClass().add("gameover");
+            label.getStyleClass().add(winner == Player.ONE ? CSS_PLAYER1 : CSS_PLAYER2);
         } else {
             Player p = ctrl.getState().getCurrentPlayer();
-            label.setText("Player " + (p == Player.ONE ? "1" : "2") + "'s turn");
-            label.getStyleClass().add(p == Player.ONE ? "player1" : "player2");
+            label.setText(ctrl.getStatusText());
+            label.getStyleClass().add(p == Player.ONE ? CSS_PLAYER1 : CSS_PLAYER2);
         }
     }
 
