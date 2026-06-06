@@ -31,7 +31,6 @@
 
 .status-label.player1 { -fx-text-fill: #9E4A40; }
 .status-label.player2 { -fx-text-fill: #3E68A8; }
-.status-label.gameover { -fx-text-fill: #C8CCDC; }
 
 .new-game-button {
     -fx-background-color: #1E2130;

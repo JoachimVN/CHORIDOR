@@ -324,8 +324,9 @@ public class App extends Application {
             label.setText("AI is thinking...");
             label.getStyleClass().add(aiPlayer == Player.ONE ? CSS_PLAYER1 : CSS_PLAYER2);
         } else if (ctrl.isGameOver()) {
+            Player winner = ctrl.getWinner();
             label.setText(ctrl.getStatusText());
-            label.getStyleClass().add("gameover");
+            label.getStyleClass().add(winner == Player.ONE ? CSS_PLAYER1 : CSS_PLAYER2);
         } else {
             Player p = ctrl.getState().getCurrentPlayer();
             label.setText(ctrl.getStatusText());
