@@ -43,7 +43,7 @@ A personal project built to explore:
 
 - Pawn moves with jump logic, wall placement with path-check enforcement
 - Human vs Human local play
-- Human VS AI
+- Human vs AI
 - Dark-slate themed board with legal-move dot indicators and hover-preview for walls
 - Changing sides, flipping boards, and win overlay
 - Sound Effects for moves, jumps, wall placements, wins, and more
