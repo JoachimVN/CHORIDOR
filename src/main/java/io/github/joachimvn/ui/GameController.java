@@ -3,7 +3,6 @@ package io.github.joachimvn.ui;
 import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.core.rules.GameEngine;
 import io.github.joachimvn.core.rules.MoveValidator;
-import io.github.joachimvn.strategy.MinimaxStrategy;
 import io.github.joachimvn.strategy.Strategy;
 import javafx.application.Platform;
 import javafx.scene.media.AudioClip;
@@ -86,25 +85,10 @@ public class GameController {
         return prefix + " turn";
     }
 
-    public void setVsAi(boolean vsAi) {
-        playerStrategies[0] = null;
-        playerStrategies[1] = null;
-        if (vsAi) playerStrategies[humanPlayer.opponent().ordinal()] = new MinimaxStrategy(humanPlayer.opponent());
-        reset();
-    }
-
-    public void setAiVsAi(boolean aiVsAi) {
-        playerStrategies[0] = aiVsAi ? new MinimaxStrategy(Player.ONE) : null;
-        playerStrategies[1] = aiVsAi ? new MinimaxStrategy(Player.TWO) : null;
-        reset();
-    }
-
-    public void setHumanPlayer(Player human) {
-        humanPlayer = human;
-        if (isVsAi() && !isAiVsAi()) {
-            playerStrategies[human.ordinal()] = null;
-            playerStrategies[human.opponent().ordinal()] = new MinimaxStrategy(human.opponent());
-        }
+    public void startGame(Strategy p1Strategy, Strategy p2Strategy, Player humanPlayer) {
+        playerStrategies[0] = p1Strategy;
+        playerStrategies[1] = p2Strategy;
+        this.humanPlayer = humanPlayer;
         reset();
     }
 
@@ -141,7 +125,7 @@ public class GameController {
         afterMove();
     }
 
-    public void reset() {
+    private void reset() {
         generation.incrementAndGet();
         aiThinking = false;
         play(selectSound);

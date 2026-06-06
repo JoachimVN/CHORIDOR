@@ -129,3 +129,93 @@
 .mute-button:hover .bar-icon {
     -fx-icon-color: #C8CCDC;
 }
+
+/* ── Setup overlay ─────────────────────────────────────────────────────── */
+
+.setup-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.78);
+}
+
+.setup-card {
+    -fx-background-color: #13151F;
+    -fx-padding: 36 44 36 44;
+    -fx-background-radius: 12;
+    -fx-border-color: #2E3250;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+}
+
+.setup-section-label {
+    -fx-font-family: "System";
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #606880;
+}
+
+.mode-button {
+    -fx-background-color: #1E2130;
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 22 10 22;
+    -fx-background-radius: 6;
+    -fx-border-color: #2E3250;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.mode-button:hover {
+    -fx-background-color: #252840;
+    -fx-text-fill: #C8CCDC;
+    -fx-border-color: #3E4470;
+}
+
+.mode-button:selected {
+    -fx-background-color: #2A3F6A;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #3E68A8;
+}
+
+.difficulty-button {
+    -fx-background-color: #1E2130;
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 16 6 16;
+    -fx-background-radius: 4;
+    -fx-border-color: #2E3250;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.difficulty-button:hover {
+    -fx-background-color: #252840;
+    -fx-text-fill: #C8CCDC;
+    -fx-border-color: #3E4470;
+}
+
+.difficulty-button:selected {
+    -fx-background-color: #2A3F6A;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #3E68A8;
+}
+
+.start-button {
+    -fx-background-color: #3E68A8;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 36 12 36;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.start-button:hover {
+    -fx-background-color: #5A84C4;
+}
+
+.start-button:pressed {
+    -fx-background-color: #2A508A;
+}

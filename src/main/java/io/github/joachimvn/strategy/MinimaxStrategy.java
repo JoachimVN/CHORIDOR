@@ -18,21 +18,36 @@ public class MinimaxStrategy implements Strategy {
     // scales correctly if BOARD_SIZE ever changes.
     private static final int WIN = GameState.BOARD_SIZE * GameState.BOARD_SIZE + 1;
 
-    private final Player aiPlayer;
+    private final Player      aiPlayer;
+    private final long        timeLimitMs;
     private final MoveValidator validator   = new MoveValidator();
     private final PathChecker   pathChecker = new PathChecker();
+    private long deadline;
 
-    public MinimaxStrategy(Player aiPlayer) {
-        this.aiPlayer = aiPlayer;
+    public MinimaxStrategy(Player aiPlayer, long timeLimitMs) {
+        this.aiPlayer    = aiPlayer;
+        this.timeLimitMs = timeLimitMs;
     }
 
     @Override
     public Move decide(GameState state) {
+        deadline = System.currentTimeMillis() + timeLimitMs;
         List<Move> moves = allMoves(state);
         Move best = moves.get(0);
+        for (int depth = 1; depth <= DEPTH; depth++) {
+            if (System.currentTimeMillis() >= deadline) break;
+            Move candidate = searchDepth(state, moves, depth);
+            if (candidate != null) best = candidate;
+        }
+        return best;
+    }
+
+    private Move searchDepth(GameState state, List<Move> moves, int depth) {
+        Move best = null;
         int bestScore = Integer.MIN_VALUE;
         for (Move move : moves) {
-            int score = minimax(apply(state, move), DEPTH - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
+            if (System.currentTimeMillis() >= deadline) break;
+            int score = minimax(apply(state, move), depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
             if (score > bestScore) {
                 bestScore = score;
                 best = move;
@@ -43,7 +58,7 @@ public class MinimaxStrategy implements Strategy {
 
     private int minimax(GameState state, int depth, int alpha, int beta, boolean maximizing) {
         int score = evaluate(state);
-        if (Math.abs(score) >= WIN || depth == 0) return score;
+        if (Math.abs(score) >= WIN || depth == 0 || System.currentTimeMillis() >= deadline) return score;
 
         List<Move> moves = allMoves(state);
         if (maximizing) {
@@ -68,8 +83,8 @@ public class MinimaxStrategy implements Strategy {
     private int evaluate(GameState state) {
         int myDist  = pathChecker.shortestPath(state, aiPlayer);
         int oppDist = pathChecker.shortestPath(state, aiPlayer.opponent());
-        if (myDist  == 0)             return  WIN;
-        if (oppDist == 0)             return -WIN;
+        if (myDist  == 0)                 return  WIN;
+        if (oppDist == 0)                 return -WIN;
         if (myDist  == Integer.MAX_VALUE) return -WIN;
         if (oppDist == Integer.MAX_VALUE) return  WIN;
         return oppDist - myDist;
