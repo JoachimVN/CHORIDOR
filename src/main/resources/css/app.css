@@ -110,10 +110,10 @@
     -fx-border-color: #2E508A;
 }
 
-.mute-icon {
+.bar-icon {
     -fx-icon-color: #8890A8;
 }
 
-.mute-button:hover .mute-icon {
+.mute-button:hover .bar-icon {
     -fx-icon-color: #C8CCDC;
 }

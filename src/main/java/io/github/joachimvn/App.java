@@ -88,14 +88,14 @@ public class App extends Application {
         aiToggle.setOnAction(e -> ctrl.setVsAi(aiToggle.isSelected()));
 
         FontIcon flipIcon = new FontIcon(FontAwesomeSolid.SYNC_ALT);
-        flipIcon.getStyleClass().add("mute-icon");
+        flipIcon.getStyleClass().add("bar-icon");
         ToggleButton flipButton = new ToggleButton();
         flipButton.setGraphic(flipIcon);
         flipButton.getStyleClass().add("mute-button");
         flipButton.setOnAction(e -> board.setFlipped(flipButton.isSelected()));
 
         FontIcon muteIcon = new FontIcon(FontAwesomeSolid.VOLUME_UP);
-        muteIcon.getStyleClass().add("mute-icon");
+        muteIcon.getStyleClass().add("bar-icon");
         Button muteButton = new Button();
         muteButton.setGraphic(muteIcon);
         muteButton.getStyleClass().add("mute-button");
