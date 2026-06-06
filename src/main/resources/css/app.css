@@ -198,28 +198,59 @@
     -fx-border-color: #2E508A;
 }
 
-.difficulty-button {
+/* Strategy list */
+
+.strategy-list {
     -fx-background-color: #191C2A;
-    -fx-text-fill: #606880;
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-padding: 7 16 7 16;
-    -fx-background-radius: 4;
     -fx-border-color: #1E2130;
     -fx-border-radius: 4;
+    -fx-background-radius: 4;
     -fx-border-width: 1;
+    -fx-padding: 2 0 2 0;
+}
+
+.strategy-list > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 6 10 6 10;
     -fx-cursor: hand;
 }
 
-.difficulty-button:hover {
-    -fx-text-fill: #8890A8;
-    -fx-border-color: #2E3250;
+.strategy-list > .virtual-flow > .clipped-container > .sheet > .list-cell:hover {
+    -fx-background-color: #1E2130;
 }
 
-.difficulty-button:selected {
+.strategy-list > .virtual-flow > .clipped-container > .sheet > .list-cell:selected {
     -fx-background-color: #141E30;
-    -fx-text-fill: #5A84C4;
     -fx-border-color: #2E508A;
+    -fx-border-width: 0 0 0 2;
+}
+
+.strategy-list > .virtual-flow > .scroll-bar:vertical > .track {
+    -fx-background-color: #13151F;
+}
+
+.strategy-list > .virtual-flow > .scroll-bar:vertical > .thumb {
+    -fx-background-color: #2E3250;
+    -fx-background-radius: 2;
+}
+
+.strategy-list .list-cell .strategy-name {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #606880;
+}
+
+.strategy-list .list-cell:selected .strategy-name {
+    -fx-text-fill: #5A84C4;
+}
+
+.strategy-list .list-cell .strategy-desc {
+    -fx-font-size: 10px;
+    -fx-text-fill: #3A3F58;
+}
+
+.strategy-list .list-cell:selected .strategy-desc {
+    -fx-text-fill: #505878;
 }
 
 .start-button {

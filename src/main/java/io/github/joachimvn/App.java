@@ -28,6 +28,8 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.FillRule;
@@ -206,15 +208,15 @@ public class App extends Application {
         // AI 1 strategy
         Label ai1Label = new Label("AI");
         ai1Label.getStyleClass().add(SECTION_LABEL_CSS);
-        ToggleGroup strat1Group = new ToggleGroup();
-        VBox ai1Box = new VBox(8, ai1Label, diffRow(strat1Group));
+        ListView<Difficulty> strat1List = strategyList();
+        VBox ai1Box = new VBox(8, ai1Label, strat1List);
         ai1Box.setAlignment(Pos.CENTER);
 
         // AI 2 strategy (AI vs AI only)
         Label ai2Label = new Label("BLUE AI");
         ai2Label.getStyleClass().add(SECTION_LABEL_CSS);
-        ToggleGroup strat2Group = new ToggleGroup();
-        VBox ai2Box = new VBox(8, ai2Label, diffRow(strat2Group));
+        ListView<Difficulty> strat2List = strategyList();
+        VBox ai2Box = new VBox(8, ai2Label, strat2List);
         ai2Box.setAlignment(Pos.CENTER);
         ai2Box.setVisible(false);
         ai2Box.setManaged(false);
@@ -268,13 +270,13 @@ public class App extends Application {
             Strategy s2 = null;
             Player human = Player.ONE;
             if (sel == modeHvAI) {
-                Difficulty d = selectedDifficulty(strat1Group);
+                Difficulty d = selectedDifficulty(strat1List);
                 human = pickBlue.isSelected() ? Player.TWO : Player.ONE;
                 if (human == Player.ONE) s2 = d.createStrategy(Player.TWO);
                 else                     s1 = d.createStrategy(Player.ONE);
             } else if (sel == modeAiVsAi) {
-                s1 = selectedDifficulty(strat1Group).createStrategy(Player.ONE);
-                s2 = selectedDifficulty(strat2Group).createStrategy(Player.TWO);
+                s1 = selectedDifficulty(strat1List).createStrategy(Player.ONE);
+                s2 = selectedDifficulty(strat2List).createStrategy(Player.TWO);
             }
             ctrl.startGame(s1, s2, human);
             boolean flip = sel == modeHvAI && human == Player.TWO;
@@ -287,6 +289,7 @@ public class App extends Application {
         card.getStyleClass().add("setup-card");
         card.setAlignment(Pos.CENTER);
         card.setMaxWidth(480);
+        card.setMaxHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
 
         overlay.getChildren().add(card);
         return overlay;
@@ -299,20 +302,28 @@ public class App extends Application {
         return btn;
     }
 
-    private HBox diffRow(ToggleGroup group) {
-        List<ToggleButton> btns = new ArrayList<>();
-        for (Difficulty d : Difficulty.values()) {
-            ToggleButton btn = new ToggleButton(d.displayName());
-            btn.setToggleGroup(group);
-            btn.setUserData(d);
-            btn.getStyleClass().add("difficulty-button");
-            btns.add(btn);
-        }
-        btns.getLast().setSelected(true);
-        HBox row = new HBox(6);
-        row.getChildren().addAll(btns);
-        row.setAlignment(Pos.CENTER);
-        return row;
+    private ListView<Difficulty> strategyList() {
+        ListView<Difficulty> list = new ListView<>();
+        list.getItems().addAll(Difficulty.values());
+        list.getStyleClass().add("strategy-list");
+        list.setFixedCellSize(40);
+        list.setPrefHeight(list.getFixedCellSize() * 3 + 2);
+        list.setMaxHeight(list.getPrefHeight());
+        list.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(Difficulty d, boolean empty) {
+                super.updateItem(d, empty);
+                if (empty || d == null) { setGraphic(null); return; }
+                Label name = new Label(d.displayName());
+                name.getStyleClass().add("strategy-name");
+                Label desc = new Label(d.description());
+                desc.getStyleClass().add("strategy-desc");
+                desc.setWrapText(true);
+                setGraphic(new VBox(2, name, desc));
+            }
+        });
+        list.getSelectionModel().selectLast();
+        return list;
     }
 
     private ToggleButton colorBtn(String colorClass, ToggleGroup group) {
@@ -325,8 +336,8 @@ public class App extends Application {
         return btn;
     }
 
-    private static Difficulty selectedDifficulty(ToggleGroup group) {
-        return (Difficulty) group.getSelectedToggle().getUserData();
+    private static Difficulty selectedDifficulty(ListView<Difficulty> list) {
+        return list.getSelectionModel().getSelectedItem();
     }
 
     // ── Logo ─────────────────────────────────────────────────────────────────
