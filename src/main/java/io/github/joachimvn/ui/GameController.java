@@ -3,8 +3,7 @@ package io.github.joachimvn.ui;
 import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.core.rules.GameEngine;
 import io.github.joachimvn.core.rules.MoveValidator;
-import io.github.joachimvn.strategy.MinimaxStrategy;
-import io.github.joachimvn.strategy.Strategy;
+import io.github.joachimvn.ai.Strategy;
 import javafx.application.Platform;
 import javafx.scene.media.AudioClip;
 
@@ -17,7 +16,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class GameController {
 
-    private Player humanPlayer = Player.ONE;
+    // Index by Player.ordinal(). null = human.
+    private final Strategy[] playerStrategies = new Strategy[2];
+    private final String[]   playerNames      = {"Player 1", "Player 2"};
 
     private GameState state = new GameState();
     private final MoveValidator validator = new MoveValidator();
@@ -42,7 +43,6 @@ public class GameController {
         getClass().getResource("/audio/sfx/Select.wav").toExternalForm());
     private boolean muted = false;
 
-    private Strategy aiStrategy = null;
     private volatile boolean aiThinking = false;
     private final AtomicInteger generation = new AtomicInteger(0);
 
@@ -57,15 +57,16 @@ public class GameController {
     public Wall getPreviewWall()             { return previewWall; }
     public boolean isGameOver()              { return gameOver; }
     public boolean isAiThinking()            { return aiThinking; }
-    public boolean isVsAi()                  { return aiStrategy != null; }
-    public Player  getHumanPlayer()          { return humanPlayer; }
+    public boolean isVsAi()                  { return !isHuman(Player.ONE) || !isHuman(Player.TWO); }
+    public boolean isAiVsAi()               { return !isHuman(Player.ONE) && !isHuman(Player.TWO); }
     public Player  getWallOwner(Wall wall)   { return wallOwners.get(wall); }
     public Player  getWinner()               { return engine.getWinner(state).orElse(null); }
 
+    private boolean isHuman(Player p) { return playerStrategies[p.ordinal()] == null; }
+
     public String getPlayerName(Player player) {
-        if (aiStrategy != null) {
-            return player == humanPlayer ? "You" : "AI";
-        }
+        if (isAiVsAi()) return playerNames[player.ordinal()];
+        if (isVsAi())   return isHuman(player) ? "You" : "AI";
         return "Player " + label(player);
     }
 
@@ -81,14 +82,13 @@ public class GameController {
         return prefix + " turn";
     }
 
-    public void setVsAi(boolean vsAi) {
-        aiStrategy = vsAi ? new MinimaxStrategy(humanPlayer.opponent()) : null;
-        reset();
-    }
+    public void replay() { reset(); }
 
-    public void setHumanPlayer(Player human) {
-        humanPlayer = human;
-        if (aiStrategy != null) aiStrategy = new MinimaxStrategy(humanPlayer.opponent());
+    public void startGame(Strategy p1Strategy, Strategy p2Strategy, String p1Name, String p2Name) {
+        playerStrategies[0] = p1Strategy;
+        playerStrategies[1] = p2Strategy;
+        playerNames[0] = p1Name;
+        playerNames[1] = p2Name;
         reset();
     }
 
@@ -104,8 +104,7 @@ public class GameController {
     }
 
     public void clickCell(int row, int col) {
-        if (gameOver || aiThinking) return;
-        if (aiStrategy != null && state.getCurrentPlayer() == humanPlayer.opponent()) return;
+        if (gameOver || aiThinking || !isHuman(state.getCurrentPlayer())) return;
         Position target = new Position(row, col);
         boolean legal = legalPawnMoves.stream().anyMatch(m -> m.target().equals(target));
         if (!legal) return;
@@ -118,8 +117,7 @@ public class GameController {
     }
 
     public void clickWall() {
-        if (gameOver || aiThinking || previewWall == null) return;
-        if (aiStrategy != null && state.getCurrentPlayer() == humanPlayer.opponent()) return;
+        if (gameOver || aiThinking || previewWall == null || !isHuman(state.getCurrentPlayer())) return;
         wallOwners.put(previewWall, state.getCurrentPlayer());
         state = engine.applyMove(state, new WallMove(previewWall));
         clearPreview();
@@ -127,7 +125,7 @@ public class GameController {
         afterMove();
     }
 
-    public void reset() {
+    private void reset() {
         generation.incrementAndGet();
         aiThinking = false;
         play(selectSound);
@@ -144,7 +142,8 @@ public class GameController {
         gameOver = engine.isGameOver(state);
         if (gameOver) {
             Player winner = engine.getWinner(state).orElseThrow();
-            play(aiStrategy != null && winner == humanPlayer.opponent() ? lossSound : winSound);
+            boolean humanLost = isVsAi() && !isAiVsAi() && !isHuman(winner);
+            play(humanLost ? lossSound : winSound);
         }
         refreshLegalMoves();
         notifyListeners();
@@ -152,14 +151,16 @@ public class GameController {
     }
 
     private void scheduleAiMove() {
-        if (gameOver || aiStrategy == null || state.getCurrentPlayer() != humanPlayer.opponent()) return;
+        if (gameOver) return;
+        Player current = state.getCurrentPlayer();
+        Strategy strategy = playerStrategies[current.ordinal()];
+        if (strategy == null) return;
         aiThinking = true;
         notifyListeners();
         int gen = generation.get();
         GameState snapshot = state;
-        Strategy strategySnapshot = aiStrategy;
         Thread t = new Thread(() -> {
-            Move move = strategySnapshot.decide(snapshot);
+            Move move = strategy.decide(snapshot);
             Platform.runLater(() -> {
                 if (generation.get() != gen) return;
                 aiThinking = false;
@@ -211,8 +212,6 @@ public class GameController {
             muted = true;
         }
     }
-
-    public void playLossSound() { play(lossSound); }
 
     private void play(AudioClip clip) { if (!muted) clip.play(); }
 

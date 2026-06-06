@@ -1,4 +1,6 @@
-package io.github.joachimvn.strategy;
+package io.github.joachimvn.ai.strategies;
+
+import io.github.joachimvn.ai.Strategy;
 
 import io.github.joachimvn.core.model.GameState;
 import io.github.joachimvn.core.model.Move;
@@ -19,6 +21,9 @@ public class RandomStrategy implements Strategy {
 
     public RandomStrategy() { this.rng = new Random(); }
     public RandomStrategy(long seed) { this.rng = new Random(seed); }
+
+    @Override public String displayName() { return "Random"; }
+    @Override public String description()   { return "Makes completely random moves, never plans ahead"; }
 
     @Override
     public Move decide(GameState state) {

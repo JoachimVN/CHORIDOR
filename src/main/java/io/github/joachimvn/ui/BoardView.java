@@ -75,7 +75,8 @@ public class BoardView extends Canvas {
         super(SIZE, SIZE);
         this.ctrl = ctrl;
         setOnMouseMoved(e -> {
-            double x = unflip(e.getX()), y = unflip(e.getY());
+            double x = unflip(e.getX());
+            double y = unflip(e.getY());
             boolean changed = updateHoverCell(x, y);
             ctrl.updatePreviewWall(wallCandidate(x, y));
             if (changed) refresh();
@@ -142,22 +143,8 @@ public class BoardView extends Canvas {
             gc.scale(-1, -1);
         }
 
-        for (int r = 0; r < GameState.BOARD_SIZE; r++) {
-            for (int c = 0; c < GameState.BOARD_SIZE; c++) {
-                drawCell(gc, r, c, legal, step, cell);
-            }
-        }
-
-        for (Wall wall : state.getWalls()) {
-            Player owner = ctrl.getWallOwner(wall);
-            paintWall(gc, wall, owner == Player.ONE ? P1_COLOR : P2_COLOR, 1.0, step, cell, gap);
-        }
-
-        Wall preview = ctrl.getPreviewWall();
-        if (preview != null) {
-            Color base = state.getCurrentPlayer() == Player.ONE ? P1_COLOR : P2_COLOR;
-            paintWall(gc, preview, base, PREVIEW_OPACITY, step, cell, gap);
-        }
+        drawCells(gc, legal, step, cell);
+        drawWalls(gc, state, step, cell, gap);
 
         paintPawn(gc, state.getPawnPosition(Player.ONE), P1_COLOR, step, cell);
         paintPawn(gc, state.getPawnPosition(Player.TWO), P2_COLOR, step, cell);
@@ -168,6 +155,26 @@ public class BoardView extends Canvas {
             Player winner = ctrl.getWinner();
             Color winColor = winner == Player.ONE ? P1_COLOR : P2_COLOR;
             paintWinOverlay(gc, ctrl.getStatusText(), s, winColor);
+        }
+    }
+
+    private void drawCells(GraphicsContext gc, List<PawnMove> legal, double step, double cell) {
+        for (int r = 0; r < GameState.BOARD_SIZE; r++) {
+            for (int c = 0; c < GameState.BOARD_SIZE; c++) {
+                drawCell(gc, r, c, legal, step, cell);
+            }
+        }
+    }
+
+    private void drawWalls(GraphicsContext gc, GameState state, double step, double cell, double gap) {
+        for (Wall wall : state.getWalls()) {
+            Player owner = ctrl.getWallOwner(wall);
+            paintWall(gc, wall, owner == Player.ONE ? P1_COLOR : P2_COLOR, 1.0, step, cell, gap);
+        }
+        Wall preview = ctrl.getPreviewWall();
+        if (preview != null) {
+            Color base = state.getCurrentPlayer() == Player.ONE ? P1_COLOR : P2_COLOR;
+            paintWall(gc, preview, base, PREVIEW_OPACITY, step, cell, gap);
         }
     }
 
