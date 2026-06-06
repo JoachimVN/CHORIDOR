@@ -44,8 +44,8 @@ public class App extends Application {
     // SVG palette
     private static final Color  LOGO_RED    = Color.web("#9d493f");
     private static final Color  LOGO_BLUE   = Color.web("#3e67a7");
-    private static final String CSS_PLAYER1 = CSS_PLAYER1;
-    private static final String CSS_PLAYER2 = CSS_PLAYER2;
+    private static final String CSS_PLAYER1 = "player1";
+    private static final String CSS_PLAYER2 = "player2";
 
     @Override
     public void start(Stage stage) {
