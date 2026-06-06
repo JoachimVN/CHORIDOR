@@ -225,13 +225,35 @@
     -fx-border-width: 0 0 0 2;
 }
 
-.strategy-list > .virtual-flow > .scroll-bar:vertical > .track {
-    -fx-background-color: #13151F;
+.strategy-list .scroll-bar:vertical {
+    -fx-background-color: #191C2A;
+    -fx-pref-width: 6;
 }
 
-.strategy-list > .virtual-flow > .scroll-bar:vertical > .thumb {
+.strategy-list .scroll-bar:vertical > .track {
+    -fx-background-color: #13151F;
+    -fx-background-radius: 3;
+}
+
+.strategy-list .scroll-bar:vertical > .thumb {
     -fx-background-color: #2E3250;
-    -fx-background-radius: 2;
+    -fx-background-radius: 3;
+}
+
+.strategy-list .scroll-bar:vertical > .thumb:hover {
+    -fx-background-color: #3E4470;
+}
+
+.strategy-list .scroll-bar > .increment-button,
+.strategy-list .scroll-bar > .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.strategy-list .scroll-bar > .increment-button > .increment-arrow,
+.strategy-list .scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-shape: "";
+    -fx-padding: 0;
 }
 
 .strategy-list .list-cell .strategy-name {

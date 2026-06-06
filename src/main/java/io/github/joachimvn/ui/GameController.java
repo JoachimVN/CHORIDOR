@@ -18,6 +18,7 @@ public class GameController {
 
     // Index by Player.ordinal(). null = human.
     private final Strategy[] playerStrategies = new Strategy[2];
+    private final String[]   playerNames      = {"Player 1", "Player 2"};
 
     // Which player the human controls — only meaningful in HvAI mode.
     private Player humanPlayer = Player.ONE;
@@ -68,7 +69,7 @@ public class GameController {
     private boolean isHuman(Player p) { return playerStrategies[p.ordinal()] == null; }
 
     public String getPlayerName(Player player) {
-        if (isAiVsAi()) return "Player " + label(player);
+        if (isAiVsAi()) return playerNames[player.ordinal()];
         if (isVsAi())   return isHuman(player) ? "You" : "AI";
         return "Player " + label(player);
     }
@@ -85,10 +86,13 @@ public class GameController {
         return prefix + " turn";
     }
 
-    public void startGame(Strategy p1Strategy, Strategy p2Strategy, Player humanPlayer) {
+    public void startGame(Strategy p1Strategy, Strategy p2Strategy, Player humanPlayer,
+                          String p1Name, String p2Name) {
         playerStrategies[0] = p1Strategy;
         playerStrategies[1] = p2Strategy;
         this.humanPlayer = humanPlayer;
+        playerNames[0] = p1Name;
+        playerNames[1] = p2Name;
         reset();
     }
 

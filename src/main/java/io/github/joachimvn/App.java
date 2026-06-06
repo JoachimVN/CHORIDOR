@@ -269,16 +269,22 @@ public class App extends Application {
             Strategy s1 = null;
             Strategy s2 = null;
             Player human = Player.ONE;
+            String p1Name = "Player 1";
+            String p2Name = "Player 2";
             if (sel == modeHvAI) {
                 Difficulty d = selectedDifficulty(strat1List);
                 human = pickBlue.isSelected() ? Player.TWO : Player.ONE;
                 if (human == Player.ONE) s2 = d.createStrategy(Player.TWO);
                 else                     s1 = d.createStrategy(Player.ONE);
             } else if (sel == modeAiVsAi) {
-                s1 = selectedDifficulty(strat1List).createStrategy(Player.ONE);
-                s2 = selectedDifficulty(strat2List).createStrategy(Player.TWO);
+                Difficulty d1 = selectedDifficulty(strat1List);
+                Difficulty d2 = selectedDifficulty(strat2List);
+                s1 = d1.createStrategy(Player.ONE);
+                s2 = d2.createStrategy(Player.TWO);
+                p1Name = d1.displayName();
+                p2Name = d2.displayName();
             }
-            ctrl.startGame(s1, s2, human);
+            ctrl.startGame(s1, s2, human, p1Name, p2Name);
             boolean flip = sel == modeHvAI && human == Player.TWO;
             board.setFlipped(flip);
             flipButton.setSelected(flip);
