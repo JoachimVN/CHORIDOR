@@ -213,6 +213,9 @@ public class GameController {
         }
     }
 
+    /** Play the selection click, e.g. for setup-screen controls. Honours the mute toggle. */
+    public void playSelect() { play(selectSound); }
+
     private void play(AudioClip clip) { if (!muted) clip.play(); }
 
     private void notifyListeners() {

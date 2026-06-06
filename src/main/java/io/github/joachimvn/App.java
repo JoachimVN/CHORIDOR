@@ -148,7 +148,7 @@ public class App extends Application {
         StackPane overlay = buildSetupOverlay(ctrl, board, flipButton);
 
         newGame.setOnAction(e -> ctrl.replay());
-        changeMode.setOnAction(e -> overlay.setVisible(true));
+        changeMode.setOnAction(e -> { ctrl.playSelect(); overlay.setVisible(true); });
 
         // ── Wiring ───────────────────────────────────────────────────────────
         ctrl.addListener(() -> {
@@ -218,6 +218,7 @@ public class App extends Application {
         Label ai1Label = new Label("AI");
         ai1Label.getStyleClass().add(SECTION_LABEL_CSS);
         ComboBox<Difficulty> strat1List = strategyCombo();
+        strat1List.valueProperty().addListener((obs, old, sel) -> { if (sel != null) ctrl.playSelect(); });
         VBox ai1Box = new VBox(10, ai1Label, strat1List);
         ai1Box.setAlignment(Pos.CENTER);
 
@@ -225,6 +226,7 @@ public class App extends Application {
         Label ai2Label = new Label("BLUE AI");
         ai2Label.getStyleClass().add(SECTION_LABEL_CSS);
         ComboBox<Difficulty> strat2List = strategyCombo();
+        strat2List.valueProperty().addListener((obs, old, sel) -> { if (sel != null) ctrl.playSelect(); });
         VBox ai2Box = new VBox(10, ai2Label, strat2List);
         ai2Box.setAlignment(Pos.CENTER);
         ai2Box.setVisible(false);
@@ -235,6 +237,7 @@ public class App extends Application {
         ToggleButton pickRed  = colorBtn("color-pick-p1", colorGroup);
         ToggleButton pickBlue = colorBtn("color-pick-p2", colorGroup);
         pickRed.setSelected(true);
+        colorGroup.selectedToggleProperty().addListener((obs, old, sel) -> { if (sel != null) ctrl.playSelect(); });
         Label colorLabel = new Label("PLAY AS");
         colorLabel.getStyleClass().add(SECTION_LABEL_CSS);
         HBox colorRow = new HBox(12, pickRed, pickBlue);
@@ -255,6 +258,7 @@ public class App extends Application {
         aiSection.setManaged(false);
 
         modeGroup.selectedToggleProperty().addListener((obs, old, sel) -> {
+            if (sel != null) ctrl.playSelect();
             boolean vsAI   = sel == modeHvAI;
             boolean aiVsAi = sel == modeAiVsAi;
             boolean hasAi  = vsAI || aiVsAi;
