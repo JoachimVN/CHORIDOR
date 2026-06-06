@@ -96,7 +96,12 @@ public class App extends Application {
         pickP2.setToggleGroup(colorGroup);
         pickP2.setOnAction(e -> ctrl.setHumanPlayer(Player.TWO));
 
-        HBox colorPicker = new HBox(pickP1, pickP2);
+        for (ToggleButton btn : List.of(pickP1, pickP2)) {
+            btn.setPrefSize(20, 20);
+            btn.setMinSize(20, 20);
+            btn.setMaxSize(20, 20);
+        }
+        HBox colorPicker = new HBox(4, pickP1, pickP2);
         colorPicker.setAlignment(Pos.CENTER);
 
         ToggleButton aiToggle = new ToggleButton("vs AI");

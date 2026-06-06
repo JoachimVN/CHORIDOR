@@ -127,6 +127,7 @@ public class GameController {
         clearPreview();
         refreshLegalMoves();
         notifyListeners();
+        scheduleAiMove();
     }
 
     private void afterMove() {
