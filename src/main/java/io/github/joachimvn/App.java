@@ -87,6 +87,13 @@ public class App extends Application {
         aiToggle.getStyleClass().add("ai-toggle-button");
         aiToggle.setOnAction(e -> ctrl.setVsAi(aiToggle.isSelected()));
 
+        FontIcon flipIcon = new FontIcon(FontAwesomeSolid.SYNC_ALT);
+        flipIcon.getStyleClass().add("mute-icon");
+        ToggleButton flipButton = new ToggleButton();
+        flipButton.setGraphic(flipIcon);
+        flipButton.getStyleClass().add("mute-button");
+        flipButton.setOnAction(e -> board.setFlipped(flipButton.isSelected()));
+
         FontIcon muteIcon = new FontIcon(FontAwesomeSolid.VOLUME_UP);
         muteIcon.getStyleClass().add("mute-icon");
         Button muteButton = new Button();
@@ -100,7 +107,7 @@ public class App extends Application {
         Region botSpacer = new Region();
         HBox.setHgrow(botSpacer, Priority.ALWAYS);
 
-        HBox bottomBar = new HBox(statusLabel, botSpacer, aiToggle, muteButton, newGame);
+        HBox bottomBar = new HBox(statusLabel, botSpacer, aiToggle, flipButton, muteButton, newGame);
         bottomBar.getStyleClass().add("chrome-bar");
         bottomBar.setAlignment(Pos.CENTER_LEFT);
         scaleB.addListener((obs, old, nw) -> {
@@ -117,6 +124,10 @@ public class App extends Application {
                 12*s, 5*s, 16*s, 5*s, 16*s));
             muteIcon.setIconSize((int)(13 * s));
             muteButton.setStyle(String.format(Locale.ROOT,
+                "-fx-padding: %.1f %.1f %.1f %.1f;",
+                5*s, 9*s, 5*s, 9*s));
+            flipIcon.setIconSize((int)(13 * s));
+            flipButton.setStyle(String.format(Locale.ROOT,
                 "-fx-padding: %.1f %.1f %.1f %.1f;",
                 5*s, 9*s, 5*s, 9*s));
         });

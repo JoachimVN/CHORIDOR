@@ -64,13 +64,20 @@ public class BoardView extends Canvas {
     private Color legalDot = Color.WHITE;
     private Color hoverDot = Color.WHITE;
     private Color hoverBg  = Color.WHITE;
+    private boolean flipped = false;
+
+    public void setFlipped(boolean flipped) {
+        this.flipped = flipped;
+        refresh();
+    }
 
     public BoardView(GameController ctrl) {
         super(SIZE, SIZE);
         this.ctrl = ctrl;
         setOnMouseMoved(e -> {
-            boolean changed = updateHoverCell(e.getX(), e.getY());
-            ctrl.updatePreviewWall(wallCandidate(e.getX(), e.getY()));
+            double x = unflip(e.getX()), y = unflip(e.getY());
+            boolean changed = updateHoverCell(x, y);
+            ctrl.updatePreviewWall(wallCandidate(x, y));
             if (changed) refresh();
         });
         setOnMouseExited(e -> {
@@ -80,7 +87,11 @@ public class BoardView extends Canvas {
             ctrl.updatePreviewWall(null);
             if (changed) refresh();
         });
-        setOnMouseClicked(e -> handleClick(e.getX(), e.getY()));
+        setOnMouseClicked(e -> handleClick(unflip(e.getX()), unflip(e.getY())));
+    }
+
+    private double unflip(double coord) {
+        return flipped ? getWidth() - coord : coord;
     }
 
     // ── Resize contract ──────────────────────────────────────────────────────
@@ -125,6 +136,12 @@ public class BoardView extends Canvas {
         gc.setFill(BG);
         gc.fillRect(0, 0, size, size);
 
+        if (flipped) {
+            gc.save();
+            gc.translate(size, size);
+            gc.scale(-1, -1);
+        }
+
         for (int r = 0; r < GameState.BOARD_SIZE; r++) {
             for (int c = 0; c < GameState.BOARD_SIZE; c++) {
                 drawCell(gc, r, c, legal, step, cell);
@@ -144,6 +161,8 @@ public class BoardView extends Canvas {
 
         paintPawn(gc, state.getPawnPosition(Player.ONE), P1_COLOR, step, cell);
         paintPawn(gc, state.getPawnPosition(Player.TWO), P2_COLOR, step, cell);
+
+        if (flipped) gc.restore();
 
         if (ctrl.isGameOver()) paintWinOverlay(gc, ctrl.getStatusText(), s);
     }
