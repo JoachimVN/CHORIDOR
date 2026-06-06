@@ -17,6 +17,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
@@ -147,8 +148,17 @@ public class App extends Application {
         // ── Setup overlay ────────────────────────────────────────────────────
         StackPane overlay = buildSetupOverlay(ctrl, board, flipButton);
 
+        // ── Game-over overlay ─────────────────────────────────────────────────
+        Label winLabel = new Label();
+        winLabel.getStyleClass().add("game-over-title");
+        StackPane gameOverOverlay = buildGameOverOverlay(ctrl, overlay, winLabel);
+
         newGame.setOnAction(e -> ctrl.replay());
-        changeMode.setOnAction(e -> { ctrl.playSelect(); overlay.setVisible(true); });
+        changeMode.setOnAction(e -> {
+            ctrl.playSelect();
+            gameOverOverlay.setVisible(false);
+            overlay.setVisible(true);
+        });
 
         // ── Wiring ───────────────────────────────────────────────────────────
         ctrl.addListener(() -> {
@@ -158,6 +168,7 @@ public class App extends Application {
             updateStatus(statusLabel, ctrl);
             p1Name.setText(ctrl.getPlayerName(Player.ONE));
             p2Name.setText(ctrl.getPlayerName(Player.TWO));
+            updateGameOverOverlay(gameOverOverlay, winLabel, ctrl, overlay.isVisible());
         });
 
         board.refresh();
@@ -169,7 +180,7 @@ public class App extends Application {
         gamePane.setTop(topBar);
         gamePane.setBottom(bottomBar);
 
-        StackPane sceneRoot = new StackPane(gamePane, overlay);
+        StackPane sceneRoot = new StackPane(gamePane, gameOverOverlay, overlay);
 
         Scene scene = new Scene(sceneRoot);
         scene.getStylesheets().add(
@@ -180,6 +191,7 @@ public class App extends Application {
                 stage.setFullScreen(!stage.isFullScreen());
                 e.consume();
             } else if (e.getCode() == KeyCode.ENTER && ctrl.isGameOver()) {
+                gameOverOverlay.setVisible(false);
                 overlay.setVisible(true);
                 e.consume();
             }
@@ -322,6 +334,60 @@ public class App extends Application {
 
         overlay.getChildren().add(scroll);
         return overlay;
+    }
+
+    // ── Game-over overlay ───────────────────────────────────────────────────────
+
+    private StackPane buildGameOverOverlay(GameController ctrl, StackPane setupOverlay, Label winLabel) {
+        StackPane overlay = new StackPane();
+        overlay.getStyleClass().add("game-over-overlay");
+        overlay.setVisible(false);
+
+        Button newGameBtn = iconActionButton(ctrl, FontAwesomeSolid.REDO, "New Game",
+            ctrl::replay);
+        Button changeBtn  = iconActionButton(ctrl, FontAwesomeSolid.SLIDERS_H, "Change Mode",
+            () -> { overlay.setVisible(false); setupOverlay.setVisible(true); });
+        // Look Back is a placeholder for now — the button exists but does nothing yet.
+        Button lookBtn    = iconActionButton(ctrl, FontAwesomeSolid.HISTORY, "Look Back", null);
+
+        HBox buttons = new HBox(16, newGameBtn, changeBtn, lookBtn);
+        buttons.setAlignment(Pos.CENTER);
+
+        VBox card = new VBox(26, winLabel, buttons);
+        card.getStyleClass().add("game-over-card");
+        card.setAlignment(Pos.CENTER);
+        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+
+        overlay.getChildren().add(card);
+        return overlay;
+    }
+
+    /** Icon-on-top button for the game-over overlay. A null action makes it an inert placeholder. */
+    private Button iconActionButton(GameController ctrl, FontAwesomeSolid icon, String caption, Runnable action) {
+        FontIcon fi = new FontIcon(icon);
+        fi.getStyleClass().add("game-over-icon");
+        fi.setIconSize(24);
+
+        Button btn = new Button(caption, fi);
+        btn.setContentDisplay(ContentDisplay.TOP);
+        btn.setGraphicTextGap(8);
+        btn.getStyleClass().add("game-over-button");
+        btn.setOnAction(e -> {
+            ctrl.playSelect();
+            if (action != null) action.run();
+        });
+        return btn;
+    }
+
+    /** Show the game-over overlay (with the winner's name and colour) once a game ends. */
+    private void updateGameOverOverlay(StackPane overlay, Label winLabel, GameController ctrl, boolean setupVisible) {
+        boolean over = ctrl.isGameOver();
+        if (over) {
+            winLabel.setText(ctrl.getStatusText());
+            winLabel.getStyleClass().removeAll(CSS_PLAYER1, CSS_PLAYER2);
+            winLabel.getStyleClass().add(ctrl.getWinner() == Player.ONE ? CSS_PLAYER1 : CSS_PLAYER2);
+        }
+        overlay.setVisible(over && !setupVisible);
     }
 
     private ToggleButton modeBtn(String text, ToggleGroup group) {
