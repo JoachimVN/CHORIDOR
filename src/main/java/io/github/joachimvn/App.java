@@ -15,6 +15,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 import javafx.scene.layout.BorderPane;
@@ -126,6 +127,7 @@ public class App extends Application {
             updateWallBoxes(p1WallBoxes, ctrl.getState(), Player.ONE);
             updateWallBoxes(p2WallBoxes, ctrl.getState(), Player.TWO);
             updateStatus(statusLabel, ctrl);
+            aiToggle.setSelected(ctrl.isVsAi());
         });
 
         board.refresh();
@@ -141,9 +143,13 @@ public class App extends Application {
         scene.getStylesheets().add(
             getClass().getResource("/css/app.css").toExternalForm()
         );
-        scene.setOnKeyPressed(e -> {
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
             if (e.getCode() == KeyCode.F11) {
                 stage.setFullScreen(!stage.isFullScreen());
+                e.consume();
+            } else if (e.getCode() == KeyCode.ENTER && ctrl.isGameOver()) {
+                ctrl.reset();
+                e.consume();
             }
         });
 

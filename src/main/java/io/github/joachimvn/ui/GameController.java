@@ -57,6 +57,7 @@ public class GameController {
     public Wall getPreviewWall()             { return previewWall; }
     public boolean isGameOver()              { return gameOver; }
     public boolean isAiThinking()            { return aiThinking; }
+    public boolean isVsAi()                  { return aiStrategy != null; }
     public Player getWallOwner(Wall wall)    { return wallOwners.get(wall); }
 
     public String getStatusText() {
