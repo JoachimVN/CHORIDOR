@@ -141,9 +141,18 @@
     -fx-background-color: rgba(0, 0, 0, 0.80);
 }
 
+.setup-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+}
+
+.setup-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
 .setup-card {
     -fx-background-color: #13151F;
-    -fx-padding: 40 48 40 48;
+    -fx-padding: 44 60 44 60;
     -fx-background-radius: 4;
     -fx-border-color: #1E2130;
     -fx-border-radius: 4;
@@ -152,13 +161,13 @@
 
 .overlay-title-red {
     -fx-font-family: "Adlam Display";
-    -fx-font-size: 36px;
+    -fx-font-size: 52px;
     -fx-text-fill: #9d493f;
 }
 
 .overlay-title-blue {
     -fx-font-family: "Adlam Display";
-    -fx-font-size: 36px;
+    -fx-font-size: 52px;
     -fx-text-fill: #3e67a7;
 }
 
@@ -169,7 +178,7 @@
 }
 
 .setup-section-label {
-    -fx-font-size: 10px;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-text-fill: #3A3F58;
 }
@@ -177,9 +186,9 @@
 .mode-button {
     -fx-background-color: #191C2A;
     -fx-text-fill: #606880;
-    -fx-font-size: 13px;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
-    -fx-padding: 10 24 10 24;
+    -fx-padding: 12 28 12 28;
     -fx-background-radius: 4;
     -fx-border-color: #1E2130;
     -fx-border-radius: 4;
@@ -218,7 +227,7 @@
 .strategy-combo > .combo-box-base {
     -fx-background-color: transparent;
     -fx-border-width: 0;
-    -fx-padding: 8 10 8 10;
+    -fx-padding: 12 14 12 14;
 }
 
 .strategy-combo > .combo-box-base > .arrow-button {
@@ -233,7 +242,7 @@
 
 .strategy-combo > .combo-box-base > .label {
     -fx-text-fill: #8890A8;
-    -fx-font-size: 12px;
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
 }
 
@@ -251,7 +260,7 @@
 
 .strategy-combo .combo-box-popup .list-cell {
     -fx-background-color: transparent;
-    -fx-padding: 8 12 8 12;
+    -fx-padding: 12 16 12 16;
     -fx-border-width: 0 0 0 2;
     -fx-border-color: transparent;
 }
@@ -272,7 +281,7 @@
 }
 
 .strategy-name {
-    -fx-font-size: 12px;
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
     -fx-text-fill: #606880;
 }
@@ -282,7 +291,7 @@
 }
 
 .strategy-desc {
-    -fx-font-size: 10px;
+    -fx-font-size: 12px;
     -fx-text-fill: #343850;
 }
 
@@ -327,9 +336,9 @@
 .start-button {
     -fx-background-color: #1E3560;
     -fx-text-fill: #8AAADA;
-    -fx-font-size: 13px;
+    -fx-font-size: 17px;
     -fx-font-weight: bold;
-    -fx-padding: 12 0 12 0;
+    -fx-padding: 16 0 16 0;
     -fx-background-radius: 4;
     -fx-border-color: #2E508A;
     -fx-border-radius: 4;

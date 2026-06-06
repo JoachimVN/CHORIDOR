@@ -36,6 +36,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListCell;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.FillRule;
@@ -201,7 +202,7 @@ public class App extends Application {
         overlay.getStyleClass().add("setup-overlay");
 
         // Title — SVG logo at fixed size
-        HBox titleRow = new HBox(buildLogoFixed(50));
+        HBox titleRow = new HBox(buildLogoFixed(65));
         titleRow.setAlignment(Pos.CENTER);
 
         // Mode row
@@ -210,21 +211,21 @@ public class App extends Application {
         ToggleButton modeHvAI   = modeBtn("vs AI",     modeGroup);
         ToggleButton modeAiVsAi = modeBtn("AI vs AI",  modeGroup);
         modeHvH.setSelected(true);
-        HBox modeRow = new HBox(6, modeHvH, modeHvAI, modeAiVsAi);
+        HBox modeRow = new HBox(10, modeHvH, modeHvAI, modeAiVsAi);
         modeRow.setAlignment(Pos.CENTER);
 
         // AI 1 strategy
         Label ai1Label = new Label("AI");
         ai1Label.getStyleClass().add(SECTION_LABEL_CSS);
         ComboBox<Difficulty> strat1List = strategyCombo();
-        VBox ai1Box = new VBox(8, ai1Label, strat1List);
+        VBox ai1Box = new VBox(10, ai1Label, strat1List);
         ai1Box.setAlignment(Pos.CENTER);
 
         // AI 2 strategy (AI vs AI only)
         Label ai2Label = new Label("BLUE AI");
         ai2Label.getStyleClass().add(SECTION_LABEL_CSS);
         ComboBox<Difficulty> strat2List = strategyCombo();
-        VBox ai2Box = new VBox(8, ai2Label, strat2List);
+        VBox ai2Box = new VBox(10, ai2Label, strat2List);
         ai2Box.setAlignment(Pos.CENTER);
         ai2Box.setVisible(false);
         ai2Box.setManaged(false);
@@ -234,11 +235,16 @@ public class App extends Application {
         ToggleButton pickRed  = colorBtn("color-pick-p1", colorGroup);
         ToggleButton pickBlue = colorBtn("color-pick-p2", colorGroup);
         pickRed.setSelected(true);
+        for (ToggleButton btn : List.of(pickRed, pickBlue)) {
+            btn.setPrefSize(30, 30);
+            btn.setMinSize(30, 30);
+            btn.setMaxSize(30, 30);
+        }
         Label colorLabel = new Label("PLAY AS");
         colorLabel.getStyleClass().add(SECTION_LABEL_CSS);
-        HBox colorRow = new HBox(10, pickRed, pickBlue);
+        HBox colorRow = new HBox(12, pickRed, pickBlue);
         colorRow.setAlignment(Pos.CENTER);
-        VBox colorBox = new VBox(8, colorLabel, colorRow);
+        VBox colorBox = new VBox(10, colorLabel, colorRow);
         colorBox.setAlignment(Pos.CENTER);
         colorBox.setVisible(false);
         colorBox.setManaged(false);
@@ -248,7 +254,7 @@ public class App extends Application {
         sep.setVisible(false);
         sep.setManaged(false);
 
-        VBox aiSection = new VBox(18, ai1Box, ai2Box, colorBox);
+        VBox aiSection = new VBox(22, ai1Box, ai2Box, colorBox);
         aiSection.setAlignment(Pos.CENTER);
         aiSection.setVisible(false);
         aiSection.setManaged(false);
@@ -299,13 +305,23 @@ public class App extends Application {
             overlay.setVisible(false);
         });
 
-        VBox card = new VBox(24, titleRow, modeRow, sep, aiSection, startBtn);
+        VBox card = new VBox(28, titleRow, modeRow, sep, aiSection, startBtn);
         card.getStyleClass().add("setup-card");
         card.setAlignment(Pos.CENTER);
-        card.setMaxWidth(480);
+        card.setMaxWidth(700);
         card.setMaxHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
 
-        overlay.getChildren().add(card);
+        // Center card and allow scrolling on small screens
+        StackPane scrollContent = new StackPane(card);
+        scrollContent.setAlignment(Pos.CENTER);
+        ScrollPane scroll = new ScrollPane(scrollContent);
+        scroll.setFitToWidth(true);
+        scroll.setFitToHeight(false);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.getStyleClass().add("setup-scroll");
+        scrollContent.minHeightProperty().bind(scroll.heightProperty());
+
+        overlay.getChildren().add(scroll);
         return overlay;
     }
 
@@ -340,7 +356,7 @@ public class App extends Application {
             protected void updateItem(Difficulty d, boolean empty) {
                 super.updateItem(d, empty);
                 setText(empty || d == null ? "" : d.displayName());
-                setStyle("-fx-text-fill: #8AAADA; -fx-font-weight: bold; -fx-font-size: 12px;");
+                setStyle("-fx-text-fill: #8AAADA; -fx-font-weight: bold; -fx-font-size: 15px;");
             }
         });
         combo.getSelectionModel().selectLast();
