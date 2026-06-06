@@ -1,3 +1,8 @@
+@font-face {
+    font-family: "Adlam Display";
+    src: url('../fonts/ADLAMDISPLAY-REGULAR.TTF');
+}
+
 .root {
     -fx-background-color: #0F1117;
 }
@@ -133,89 +138,110 @@
 /* ── Setup overlay ─────────────────────────────────────────────────────── */
 
 .setup-overlay {
-    -fx-background-color: rgba(0, 0, 0, 0.78);
+    -fx-background-color: rgba(0, 0, 0, 0.80);
 }
 
 .setup-card {
     -fx-background-color: #13151F;
-    -fx-padding: 36 44 36 44;
-    -fx-background-radius: 12;
-    -fx-border-color: #2E3250;
-    -fx-border-radius: 12;
+    -fx-padding: 40 48 40 48;
+    -fx-background-radius: 4;
+    -fx-border-color: #1E2130;
+    -fx-border-radius: 4;
     -fx-border-width: 1;
 }
 
+.overlay-title-red {
+    -fx-font-family: "Adlam Display";
+    -fx-font-size: 36px;
+    -fx-text-fill: #9d493f;
+}
+
+.overlay-title-blue {
+    -fx-font-family: "Adlam Display";
+    -fx-font-size: 36px;
+    -fx-text-fill: #3e67a7;
+}
+
+.overlay-separator {
+    -fx-background-color: #1E2130;
+    -fx-pref-height: 1;
+    -fx-max-height: 1;
+}
+
 .setup-section-label {
-    -fx-font-family: "System";
-    -fx-font-size: 11px;
+    -fx-font-size: 10px;
     -fx-font-weight: bold;
-    -fx-text-fill: #606880;
+    -fx-text-fill: #3A3F58;
 }
 
 .mode-button {
-    -fx-background-color: #1E2130;
-    -fx-text-fill: #8890A8;
-    -fx-font-size: 14px;
+    -fx-background-color: #191C2A;
+    -fx-text-fill: #606880;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
-    -fx-padding: 10 22 10 22;
-    -fx-background-radius: 6;
-    -fx-border-color: #2E3250;
-    -fx-border-radius: 6;
+    -fx-padding: 10 24 10 24;
+    -fx-background-radius: 4;
+    -fx-border-color: #1E2130;
+    -fx-border-radius: 4;
     -fx-border-width: 1;
     -fx-cursor: hand;
 }
 
 .mode-button:hover {
-    -fx-background-color: #252840;
-    -fx-text-fill: #C8CCDC;
-    -fx-border-color: #3E4470;
+    -fx-text-fill: #8890A8;
+    -fx-border-color: #2E3250;
 }
 
 .mode-button:selected {
-    -fx-background-color: #2A3F6A;
-    -fx-text-fill: #FFFFFF;
-    -fx-border-color: #3E68A8;
+    -fx-background-color: #141E30;
+    -fx-text-fill: #5A84C4;
+    -fx-border-color: #2E508A;
 }
 
 .difficulty-button {
-    -fx-background-color: #1E2130;
-    -fx-text-fill: #8890A8;
+    -fx-background-color: #191C2A;
+    -fx-text-fill: #606880;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-padding: 6 16 6 16;
+    -fx-padding: 7 16 7 16;
     -fx-background-radius: 4;
-    -fx-border-color: #2E3250;
+    -fx-border-color: #1E2130;
     -fx-border-radius: 4;
     -fx-border-width: 1;
     -fx-cursor: hand;
 }
 
 .difficulty-button:hover {
-    -fx-background-color: #252840;
-    -fx-text-fill: #C8CCDC;
-    -fx-border-color: #3E4470;
+    -fx-text-fill: #8890A8;
+    -fx-border-color: #2E3250;
 }
 
 .difficulty-button:selected {
-    -fx-background-color: #2A3F6A;
-    -fx-text-fill: #FFFFFF;
-    -fx-border-color: #3E68A8;
+    -fx-background-color: #141E30;
+    -fx-text-fill: #5A84C4;
+    -fx-border-color: #2E508A;
 }
 
 .start-button {
-    -fx-background-color: #3E68A8;
-    -fx-text-fill: #FFFFFF;
-    -fx-font-size: 14px;
+    -fx-background-color: #1E3560;
+    -fx-text-fill: #8AAADA;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
-    -fx-padding: 12 36 12 36;
-    -fx-background-radius: 6;
+    -fx-padding: 12 0 12 0;
+    -fx-background-radius: 4;
+    -fx-border-color: #2E508A;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
     -fx-cursor: hand;
 }
 
 .start-button:hover {
-    -fx-background-color: #5A84C4;
+    -fx-background-color: #253E6A;
+    -fx-text-fill: #C8DCFF;
+    -fx-border-color: #3E68A8;
 }
 
 .start-button:pressed {
-    -fx-background-color: #2A508A;
+    -fx-background-color: #3E68A8;
+    -fx-text-fill: #FFFFFF;
 }

@@ -183,87 +183,99 @@ public class App extends Application {
     // ── Setup overlay ─────────────────────────────────────────────────────────
 
     private StackPane buildSetupOverlay(GameController ctrl, BoardView board, ToggleButton flipButton) {
-        // Mode selection
-        ToggleGroup modeGroup  = new ToggleGroup();
-        ToggleButton modeHvH   = modeBtn("2 Players", modeGroup);
-        ToggleButton modeHvAI  = modeBtn("vs AI",     modeGroup);
+        StackPane overlay = new StackPane();
+        overlay.getStyleClass().add("setup-overlay");
+
+        // Title
+        Label titleRed  = new Label("CHOR");
+        Label titleBlue = new Label("IDOR");
+        titleRed.getStyleClass().add("overlay-title-red");
+        titleBlue.getStyleClass().add("overlay-title-blue");
+        HBox titleRow = new HBox(titleRed, titleBlue);
+        titleRow.setAlignment(Pos.CENTER);
+
+        // Mode row
+        ToggleGroup modeGroup   = new ToggleGroup();
+        ToggleButton modeHvH    = modeBtn("2 Players", modeGroup);
+        ToggleButton modeHvAI   = modeBtn("vs AI",     modeGroup);
         ToggleButton modeAiVsAi = modeBtn("AI vs AI",  modeGroup);
         modeHvH.setSelected(true);
-
-        HBox modeRow = new HBox(8, modeHvH, modeHvAI, modeAiVsAi);
+        HBox modeRow = new HBox(6, modeHvH, modeHvAI, modeAiVsAi);
         modeRow.setAlignment(Pos.CENTER);
 
-        // Difficulty rows
-        Label diff1Label = new Label("AI");
-        diff1Label.getStyleClass().add(SECTION_LABEL_CSS);
-        ToggleGroup diff1Group = new ToggleGroup();
-        HBox diff1Row = diffRow(diff1Group);
-        VBox diff1Box = new VBox(6, diff1Label, diff1Row);
-        diff1Box.setAlignment(Pos.CENTER);
+        // AI 1 strategy
+        Label ai1Label = new Label("AI");
+        ai1Label.getStyleClass().add(SECTION_LABEL_CSS);
+        ToggleGroup strat1Group = new ToggleGroup();
+        VBox ai1Box = new VBox(8, ai1Label, diffRow(strat1Group));
+        ai1Box.setAlignment(Pos.CENTER);
 
-        Label diff2Label = new Label("Blue AI");
-        diff2Label.getStyleClass().add(SECTION_LABEL_CSS);
-        ToggleGroup diff2Group = new ToggleGroup();
-        HBox diff2Row = diffRow(diff2Group);
-        VBox diff2Box = new VBox(6, diff2Label, diff2Row);
-        diff2Box.setAlignment(Pos.CENTER);
-        diff2Box.setVisible(false);
-        diff2Box.setManaged(false);
+        // AI 2 strategy (AI vs AI only)
+        Label ai2Label = new Label("BLUE AI");
+        ai2Label.getStyleClass().add(SECTION_LABEL_CSS);
+        ToggleGroup strat2Group = new ToggleGroup();
+        VBox ai2Box = new VBox(8, ai2Label, diffRow(strat2Group));
+        ai2Box.setAlignment(Pos.CENTER);
+        ai2Box.setVisible(false);
+        ai2Box.setManaged(false);
 
-        // Color picker (HvAI only)
+        // Color picker (vs AI only)
         ToggleGroup colorGroup = new ToggleGroup();
         ToggleButton pickRed  = colorBtn("color-pick-p1", colorGroup);
         ToggleButton pickBlue = colorBtn("color-pick-p2", colorGroup);
         pickRed.setSelected(true);
-        Label colorLabel = new Label("Play as");
+        Label colorLabel = new Label("PLAY AS");
         colorLabel.getStyleClass().add(SECTION_LABEL_CSS);
-        HBox colorRow = new HBox(6, pickRed, pickBlue);
+        HBox colorRow = new HBox(10, pickRed, pickBlue);
         colorRow.setAlignment(Pos.CENTER);
-        VBox colorBox = new VBox(6, colorLabel, colorRow);
+        VBox colorBox = new VBox(8, colorLabel, colorRow);
         colorBox.setAlignment(Pos.CENTER);
         colorBox.setVisible(false);
         colorBox.setManaged(false);
 
-        VBox aiSection = new VBox(16, diff1Box, diff2Box, colorBox);
+        Region sep = new Region();
+        sep.getStyleClass().add("overlay-separator");
+        sep.setVisible(false);
+        sep.setManaged(false);
+
+        VBox aiSection = new VBox(18, ai1Box, ai2Box, colorBox);
         aiSection.setAlignment(Pos.CENTER);
         aiSection.setVisible(false);
         aiSection.setManaged(false);
 
-        // Mode change listener
         modeGroup.selectedToggleProperty().addListener((obs, old, sel) -> {
             boolean vsAI   = sel == modeHvAI;
             boolean aiVsAi = sel == modeAiVsAi;
-            aiSection.setVisible(vsAI || aiVsAi);
-            aiSection.setManaged(vsAI || aiVsAi);
-            diff2Box.setVisible(aiVsAi);
-            diff2Box.setManaged(aiVsAi);
+            boolean hasAi  = vsAI || aiVsAi;
+            aiSection.setVisible(hasAi);
+            aiSection.setManaged(hasAi);
+            sep.setVisible(hasAi);
+            sep.setManaged(hasAi);
+            ai2Box.setVisible(aiVsAi);
+            ai2Box.setManaged(aiVsAi);
             colorBox.setVisible(vsAI);
             colorBox.setManaged(vsAI);
-            diff1Label.setText(aiVsAi ? "Red AI" : "AI");
+            ai1Label.setText(aiVsAi ? "RED AI" : "AI");
         });
-
-        StackPane overlay = new StackPane();
-        overlay.getStyleClass().add("setup-overlay");
 
         // Start button
         Button startBtn = new Button("Start Game");
         startBtn.getStyleClass().add("start-button");
+        startBtn.setMaxWidth(Double.MAX_VALUE);
         startBtn.setOnAction(e -> {
             Toggle sel = modeGroup.getSelectedToggle();
             Strategy s1 = null;
             Strategy s2 = null;
             Player human = Player.ONE;
-
             if (sel == modeHvAI) {
-                Difficulty d = selectedDifficulty(diff1Group);
+                Difficulty d = selectedDifficulty(strat1Group);
                 human = pickBlue.isSelected() ? Player.TWO : Player.ONE;
                 if (human == Player.ONE) s2 = d.createStrategy(Player.TWO);
                 else                     s1 = d.createStrategy(Player.ONE);
             } else if (sel == modeAiVsAi) {
-                s1 = selectedDifficulty(diff1Group).createStrategy(Player.ONE);
-                s2 = selectedDifficulty(diff2Group).createStrategy(Player.TWO);
+                s1 = selectedDifficulty(strat1Group).createStrategy(Player.ONE);
+                s2 = selectedDifficulty(strat2Group).createStrategy(Player.TWO);
             }
-
             ctrl.startGame(s1, s2, human);
             boolean flip = sel == modeHvAI && human == Player.TWO;
             board.setFlipped(flip);
@@ -271,10 +283,10 @@ public class App extends Application {
             overlay.setVisible(false);
         });
 
-        VBox card = new VBox(20, modeRow, aiSection, startBtn);
+        VBox card = new VBox(24, titleRow, modeRow, sep, aiSection, startBtn);
         card.getStyleClass().add("setup-card");
         card.setAlignment(Pos.CENTER);
-        card.setMaxWidth(380);
+        card.setMaxWidth(480);
 
         overlay.getChildren().add(card);
         return overlay;
