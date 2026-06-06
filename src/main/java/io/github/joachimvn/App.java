@@ -293,7 +293,7 @@ public class App extends Application {
                 p1Name = d1.sample().displayName();
                 p2Name = d2.sample().displayName();
             }
-            ctrl.startGame(s1, s2, human, p1Name, p2Name);
+            ctrl.startGame(s1, s2, p1Name, p2Name);
             boolean flip = sel == modeHvAI && human == Player.TWO;
             board.setFlipped(flip);
             flipButton.setSelected(flip);

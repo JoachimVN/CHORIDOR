@@ -20,9 +20,6 @@ public class GameController {
     private final Strategy[] playerStrategies = new Strategy[2];
     private final String[]   playerNames      = {"Player 1", "Player 2"};
 
-    // Which player the human controls — only meaningful in HvAI mode.
-    private Player humanPlayer = Player.ONE;
-
     private GameState state = new GameState();
     private final MoveValidator validator = new MoveValidator();
     private final GameEngine engine = new GameEngine();
@@ -62,7 +59,6 @@ public class GameController {
     public boolean isAiThinking()            { return aiThinking; }
     public boolean isVsAi()                  { return !isHuman(Player.ONE) || !isHuman(Player.TWO); }
     public boolean isAiVsAi()               { return !isHuman(Player.ONE) && !isHuman(Player.TWO); }
-    public Player  getHumanPlayer()          { return humanPlayer; }
     public Player  getWallOwner(Wall wall)   { return wallOwners.get(wall); }
     public Player  getWinner()               { return engine.getWinner(state).orElse(null); }
 
@@ -88,11 +84,9 @@ public class GameController {
 
     public void replay() { reset(); }
 
-    public void startGame(Strategy p1Strategy, Strategy p2Strategy, Player humanPlayer,
-                          String p1Name, String p2Name) {
+    public void startGame(Strategy p1Strategy, Strategy p2Strategy, String p1Name, String p2Name) {
         playerStrategies[0] = p1Strategy;
         playerStrategies[1] = p2Strategy;
-        this.humanPlayer = humanPlayer;
         playerNames[0] = p1Name;
         playerNames[1] = p2Name;
         reset();
@@ -218,8 +212,6 @@ public class GameController {
             muted = true;
         }
     }
-
-    public void playLossSound() { play(lossSound); }
 
     private void play(AudioClip clip) { if (!muted) clip.play(); }
 
