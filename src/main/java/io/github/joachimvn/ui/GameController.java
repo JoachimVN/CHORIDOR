@@ -60,6 +60,7 @@ public class GameController {
     public boolean isVsAi()                  { return aiStrategy != null; }
     public Player  getHumanPlayer()          { return humanPlayer; }
     public Player  getWallOwner(Wall wall)   { return wallOwners.get(wall); }
+    public Player  getWinner()               { return engine.getWinner(state).orElse(null); }
 
     public String getPlayerName(Player player) {
         if (aiStrategy != null) {

@@ -164,7 +164,11 @@ public class BoardView extends Canvas {
 
         if (flipped) gc.restore();
 
-        if (ctrl.isGameOver()) paintWinOverlay(gc, ctrl.getStatusText(), s);
+        if (ctrl.isGameOver()) {
+            Player winner = ctrl.getWinner();
+            Color winColor = winner == Player.ONE ? P1_COLOR : P2_COLOR;
+            paintWinOverlay(gc, ctrl.getStatusText(), s, winColor);
+        }
     }
 
     private void drawCell(GraphicsContext gc, int r, int c, List<PawnMove> legal,
@@ -223,7 +227,7 @@ public class BoardView extends Canvas {
         gc.fillOval(x, y, d, d);
     }
 
-    private void paintWinOverlay(GraphicsContext gc, String winText, double s) {
+    private void paintWinOverlay(GraphicsContext gc, String winText, double s, Color winnerColor) {
         double size = getWidth();
         gc.setFill(Color.rgb(0, 0, 0, OVERLAY_OPACITY));
         gc.fillRect(0, 0, size, size);
@@ -244,7 +248,7 @@ public class BoardView extends Canvas {
 
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setFont(Font.font(FONT_NAME, FontWeight.BOLD, OVERLAY_TITLE_SZ * s));
-        gc.setFill(Color.WHITE);
+        gc.setFill(winnerColor);
         gc.fillText(winText, cx, oy + h * OVERLAY_TITLE_Y_FRAC);
 
         gc.setFont(Font.font(FONT_NAME, FontWeight.NORMAL, OVERLAY_HINT_SZ * s));
