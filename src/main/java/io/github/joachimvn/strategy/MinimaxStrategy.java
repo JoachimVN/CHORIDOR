@@ -9,8 +9,14 @@ import java.util.List;
 
 public class MinimaxStrategy implements Strategy {
 
-    private static final int DEPTH    = 2;
-    private static final int WIN      = 10_000;
+    // How many plies (half-moves) ahead the AI searches. Depth 2 = AI move + human response.
+    // Each extra level multiplies work by ~130 (branching factor), so increases slowly.
+    private static final int DEPTH = 2;
+
+    // Terminal score — must be strictly greater than any value the heuristic can return.
+    // The heuristic is bounded by ±BOARD_SIZE² (max BFS distance on the grid), so this
+    // scales correctly if BOARD_SIZE ever changes.
+    private static final int WIN = GameState.BOARD_SIZE * GameState.BOARD_SIZE + 1;
 
     private final Player aiPlayer;
     private final MoveValidator validator   = new MoveValidator();
