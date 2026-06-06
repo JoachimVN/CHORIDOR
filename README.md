@@ -41,11 +41,12 @@ A personal project built to explore:
 
 ## Core Features
 
-- Full Quoridor rules — pawn moves with jump logic, wall placement with path-check enforcement
+- Pawn moves with jump logic, wall placement with path-check enforcement
 - Human vs Human local play
+- Human VS AI
 - Dark-slate themed board with legal-move dot indicators and hover-preview for walls
-- Player-coloured walls with per-player wall-count display
-- Win overlay and turn indicator
+- Changing sides, flipping boards, and win overlay
+- Sound Effects for moves, jumps, wall placements, wins, and more
 - Cross-platform packaging (Windows EXE, Linux zip, macOS DMG, portable JAR)
 
 ## Tech Stack
