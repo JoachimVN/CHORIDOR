@@ -50,5 +50,8 @@ class StrategyTest {
         assertLegal(state, new MinimaxStrategy(Player.ONE, 150).decide(state));
         assertLegal(state, new TacticalStrategy(Player.ONE).decide(state));
         assertLegal(state, new RusherStrategy(Player.ONE).decide(state));
+        assertLegal(state, new BalancedStrategy(Player.ONE).decide(state));
+        assertLegal(state, new AdaptiveStrategy(Player.ONE).decide(state));
+        assertLegal(state, new EconomistStrategy(Player.ONE).decide(state));
     }
 }

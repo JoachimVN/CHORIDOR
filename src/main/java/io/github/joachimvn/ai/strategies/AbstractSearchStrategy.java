@@ -21,8 +21,10 @@ import java.util.NoSuchElementException;
 abstract class AbstractSearchStrategy implements Strategy {
 
     // Terminal score — must exceed the largest magnitude any score() can return.
-    // The heaviest weighting in use is Rusher's 3*dist; a BFS goal distance is bounded
-    // by BOARD_SIZE^2, so 4*BOARD_SIZE^2 sits safely above every possible heuristic value.
+    // The heaviest distance weighting in use is 3*dist (Rusher, Balanced, Adaptive),
+    // optionally combined with a wall-reserve term bounded by WALLS_PER_PLAYER. A BFS
+    // goal distance is bounded by BOARD_SIZE^2, so 3*BOARD_SIZE^2 + WALLS_PER_PLAYER stays
+    // below 4*BOARD_SIZE^2, which therefore sits safely above every possible heuristic value.
     protected static final int WIN = 4 * GameState.BOARD_SIZE * GameState.BOARD_SIZE + 1;
 
     private final Player aiPlayer;
@@ -40,6 +42,20 @@ abstract class AbstractSearchStrategy implements Strategy {
 
     /** Combine the two BFS goal distances into a non-terminal score; higher favours aiPlayer. */
     protected abstract int score(int myDist, int oppDist);
+
+    /**
+     * Wall-aware non-terminal score; higher favours aiPlayer. Defaults to the distance-only
+     * {@link #score(int, int)} so existing strategies need not change. Subclasses that weigh
+     * wall reserves or game phase override this and may call {@link #wallAdvantage(GameState)}.
+     */
+    protected int score(GameState state, int myDist, int oppDist) {
+        return score(myDist, oppDist);
+    }
+
+    /** Wall-reserve edge for aiPlayer: positive when aiPlayer holds more walls than the opponent. */
+    protected final int wallAdvantage(GameState state) {
+        return state.getWallCount(aiPlayer) - state.getWallCount(aiPlayer.opponent());
+    }
 
     /** Moves to consider at a node. Defaults to all legal moves; override to prune. */
     protected List<Move> candidates(GameState state) {
@@ -107,7 +123,7 @@ abstract class AbstractSearchStrategy implements Strategy {
         if (oppDist == 0)                 return -WIN;
         if (myDist  == Integer.MAX_VALUE) return -WIN;
         if (oppDist == Integer.MAX_VALUE) return  WIN;
-        return score(myDist, oppDist);
+        return score(state, myDist, oppDist);
     }
 
     private GameState apply(GameState state, Move move) {

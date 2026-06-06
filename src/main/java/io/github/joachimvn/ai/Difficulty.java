@@ -11,7 +11,10 @@ public enum Difficulty {
     GREEDY  (p -> new GreedyStrategy()),
     MINIMAX (p -> new MinimaxStrategy(p, 1000)),
     TACTICAL(TacticalStrategy::new),
-    RUSHER  (RusherStrategy::new);
+    RUSHER  (RusherStrategy::new),
+    BALANCED (BalancedStrategy::new),
+    ADAPTIVE (AdaptiveStrategy::new),
+    ECONOMIST(EconomistStrategy::new);
 
     private final Function<Player, Strategy> factory;
     private final Strategy sample;
