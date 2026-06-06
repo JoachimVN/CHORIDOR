@@ -103,6 +103,8 @@ public class App extends Application {
         }
         HBox colorPicker = new HBox(4, pickP1, pickP2);
         colorPicker.setAlignment(Pos.CENTER);
+        colorPicker.setVisible(false);
+        colorPicker.setManaged(false);
 
         ToggleButton aiToggle = new ToggleButton("vs AI");
         aiToggle.getStyleClass().add("ai-toggle-button");
@@ -167,6 +169,8 @@ public class App extends Application {
             updateWallBoxes(p2WallBoxes, ctrl.getState(), Player.TWO);
             updateStatus(statusLabel, ctrl);
             aiToggle.setSelected(ctrl.isVsAi());
+            colorPicker.setVisible(ctrl.isVsAi());
+            colorPicker.setManaged(ctrl.isVsAi());
             pickP1.setSelected(ctrl.getHumanPlayer() == Player.ONE);
             pickP2.setSelected(ctrl.getHumanPlayer() == Player.TWO);
         });
