@@ -235,11 +235,6 @@ public class App extends Application {
         ToggleButton pickRed  = colorBtn("color-pick-p1", colorGroup);
         ToggleButton pickBlue = colorBtn("color-pick-p2", colorGroup);
         pickRed.setSelected(true);
-        for (ToggleButton btn : List.of(pickRed, pickBlue)) {
-            btn.setPrefSize(30, 30);
-            btn.setMinSize(30, 30);
-            btn.setMaxSize(30, 30);
-        }
         Label colorLabel = new Label("PLAY AS");
         colorLabel.getStyleClass().add(SECTION_LABEL_CSS);
         HBox colorRow = new HBox(12, pickRed, pickBlue);
@@ -371,9 +366,9 @@ public class App extends Application {
         ToggleButton btn = new ToggleButton();
         btn.getStyleClass().addAll("color-pick-button", colorClass);
         btn.setToggleGroup(group);
-        btn.setPrefSize(20, 20);
-        btn.setMinSize(20, 20);
-        btn.setMaxSize(20, 20);
+        btn.setPrefSize(30, 30);
+        btn.setMinSize(30, 30);
+        btn.setMaxSize(30, 30);
         return btn;
     }
 
