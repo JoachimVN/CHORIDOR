@@ -89,12 +89,20 @@ public class App extends Application {
         pickP1.getStyleClass().addAll("color-pick-button", "color-pick-p1");
         pickP1.setToggleGroup(colorGroup);
         pickP1.setSelected(true);
-        pickP1.setOnAction(e -> ctrl.setHumanPlayer(Player.ONE));
+        pickP1.setOnAction(e -> {
+            ctrl.setHumanPlayer(Player.ONE);
+            board.setFlipped(false);
+            flipButton.setSelected(false);
+        });
 
         ToggleButton pickP2 = new ToggleButton();
         pickP2.getStyleClass().addAll("color-pick-button", "color-pick-p2");
         pickP2.setToggleGroup(colorGroup);
-        pickP2.setOnAction(e -> ctrl.setHumanPlayer(Player.TWO));
+        pickP2.setOnAction(e -> {
+            ctrl.setHumanPlayer(Player.TWO);
+            board.setFlipped(true);
+            flipButton.setSelected(true);
+        });
 
         for (ToggleButton btn : List.of(pickP1, pickP2)) {
             btn.setPrefSize(20, 20);
