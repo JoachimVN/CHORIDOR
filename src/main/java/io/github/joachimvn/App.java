@@ -83,6 +83,21 @@ public class App extends Application {
         newGame.getStyleClass().add("new-game-button");
         newGame.setOnAction(e -> ctrl.reset());
 
+        ToggleGroup colorGroup = new ToggleGroup();
+        ToggleButton pickP1 = new ToggleButton();
+        pickP1.getStyleClass().addAll("color-pick-button", "color-pick-p1");
+        pickP1.setToggleGroup(colorGroup);
+        pickP1.setSelected(true);
+        pickP1.setOnAction(e -> ctrl.setHumanPlayer(Player.ONE));
+
+        ToggleButton pickP2 = new ToggleButton();
+        pickP2.getStyleClass().addAll("color-pick-button", "color-pick-p2");
+        pickP2.setToggleGroup(colorGroup);
+        pickP2.setOnAction(e -> ctrl.setHumanPlayer(Player.TWO));
+
+        HBox colorPicker = new HBox(pickP1, pickP2);
+        colorPicker.setAlignment(Pos.CENTER);
+
         ToggleButton aiToggle = new ToggleButton("vs AI");
         aiToggle.getStyleClass().add("ai-toggle-button");
         aiToggle.setOnAction(e -> ctrl.setVsAi(aiToggle.isSelected()));
@@ -107,7 +122,7 @@ public class App extends Application {
         Region botSpacer = new Region();
         HBox.setHgrow(botSpacer, Priority.ALWAYS);
 
-        HBox bottomBar = new HBox(statusLabel, botSpacer, aiToggle, flipButton, muteButton, newGame);
+        HBox bottomBar = new HBox(statusLabel, botSpacer, colorPicker, aiToggle, flipButton, muteButton, newGame);
         bottomBar.getStyleClass().add("chrome-bar");
         bottomBar.setAlignment(Pos.CENTER_LEFT);
         scaleB.addListener((obs, old, nw) -> {
@@ -122,6 +137,13 @@ public class App extends Application {
             aiToggle.setStyle(String.format(Locale.ROOT,
                 "-fx-font-size: %.1fpx; -fx-padding: %.1f %.1f %.1f %.1f;",
                 12*s, 5*s, 16*s, 5*s, 16*s));
+            double sz = 20 * s;
+            for (ToggleButton btn : List.of(pickP1, pickP2)) {
+                btn.setPrefSize(sz, sz);
+                btn.setMinSize(sz, sz);
+                btn.setMaxSize(sz, sz);
+            }
+            colorPicker.setSpacing(4 * s);
             muteIcon.setIconSize((int)(13 * s));
             muteButton.setStyle(String.format(Locale.ROOT,
                 "-fx-padding: %.1f %.1f %.1f %.1f;",
@@ -139,6 +161,8 @@ public class App extends Application {
             updateWallBoxes(p2WallBoxes, ctrl.getState(), Player.TWO);
             updateStatus(statusLabel, ctrl);
             aiToggle.setSelected(ctrl.isVsAi());
+            pickP1.setSelected(ctrl.getHumanPlayer() == Player.ONE);
+            pickP2.setSelected(ctrl.getHumanPlayer() == Player.TWO);
         });
 
         board.refresh();

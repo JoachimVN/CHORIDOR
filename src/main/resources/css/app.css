@@ -60,6 +60,21 @@
 
 .status-label.thinking { -fx-text-fill: #8890A8; }
 
+.color-pick-button {
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
+    -fx-border-width: 2;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+}
+
+.color-pick-p1 { -fx-background-color: #9E4A40; }
+.color-pick-p2 { -fx-background-color: #3E68A8; }
+
+.color-pick-button:selected { -fx-border-color: #C8CCDC; }
+.color-pick-button:hover    { -fx-border-color: #8890A8; }
+
 .ai-toggle-button {
     -fx-background-color: #1E2130;
     -fx-text-fill: #8890A8;

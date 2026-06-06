@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class GameController {
 
-    private static final Player AI_PLAYER = Player.TWO;
+    private Player humanPlayer = Player.ONE;
 
     private GameState state = new GameState();
     private final MoveValidator validator = new MoveValidator();
@@ -58,6 +58,7 @@ public class GameController {
     public boolean isGameOver()              { return gameOver; }
     public boolean isAiThinking()            { return aiThinking; }
     public boolean isVsAi()                  { return aiStrategy != null; }
+    public Player  getHumanPlayer()          { return humanPlayer; }
     public Player getWallOwner(Wall wall)    { return wallOwners.get(wall); }
 
     public String getStatusText() {
@@ -71,7 +72,13 @@ public class GameController {
     }
 
     public void setVsAi(boolean vsAi) {
-        aiStrategy = vsAi ? new MinimaxStrategy(AI_PLAYER) : null;
+        aiStrategy = vsAi ? new MinimaxStrategy(humanPlayer.opponent()) : null;
+        reset();
+    }
+
+    public void setHumanPlayer(Player human) {
+        humanPlayer = human;
+        if (aiStrategy != null) aiStrategy = new MinimaxStrategy(humanPlayer.opponent());
         reset();
     }
 
@@ -88,7 +95,7 @@ public class GameController {
 
     public void clickCell(int row, int col) {
         if (gameOver || aiThinking) return;
-        if (aiStrategy != null && state.getCurrentPlayer() == AI_PLAYER) return;
+        if (aiStrategy != null && state.getCurrentPlayer() == humanPlayer.opponent()) return;
         Position target = new Position(row, col);
         boolean legal = legalPawnMoves.stream().anyMatch(m -> m.target().equals(target));
         if (!legal) return;
@@ -102,7 +109,7 @@ public class GameController {
 
     public void clickWall() {
         if (gameOver || aiThinking || previewWall == null) return;
-        if (aiStrategy != null && state.getCurrentPlayer() == AI_PLAYER) return;
+        if (aiStrategy != null && state.getCurrentPlayer() == humanPlayer.opponent()) return;
         wallOwners.put(previewWall, state.getCurrentPlayer());
         state = engine.applyMove(state, new WallMove(previewWall));
         clearPreview();
@@ -131,7 +138,7 @@ public class GameController {
     }
 
     private void scheduleAiMove() {
-        if (gameOver || aiStrategy == null || state.getCurrentPlayer() != AI_PLAYER) return;
+        if (gameOver || aiStrategy == null || state.getCurrentPlayer() != humanPlayer.opponent()) return;
         aiThinking = true;
         notifyListeners();
         int gen = generation.get();
