@@ -115,7 +115,7 @@ public class BoardView extends Canvas {
 
         GraphicsContext gc   = getGraphicsContext2D();
         GameState state      = ctrl.getState();
-        List<PawnMove> legal = ctrl.getLegalPawnMoves();
+        List<PawnMove> legal = ctrl.isAiThinking() ? List.of() : ctrl.getLegalPawnMoves();
 
         Color playerColor = state.getCurrentPlayer() == Player.ONE ? P1_COLOR : P2_COLOR;
         legalDot = playerColor.deriveColor(0, 1, 1, LEGAL_DOT_ALPHA);
