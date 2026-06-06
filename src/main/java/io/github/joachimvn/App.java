@@ -56,8 +56,10 @@ public class App extends Application {
         List<Rectangle> p1WallBoxes = buildWallBoxes(BoardView.P1_COLOR, scaleB);
         List<Rectangle> p2WallBoxes = buildWallBoxes(BoardView.P2_COLOR, scaleB);
 
-        HBox p1Side = playerSide(Player.ONE, p1WallBoxes, Pos.CENTER_LEFT, scaleB);
-        HBox p2Side = playerSide(Player.TWO, p2WallBoxes, Pos.CENTER_RIGHT, scaleB);
+        Label p1Name = new Label("Player 1");
+        Label p2Name = new Label("Player 2");
+        HBox p1Side = playerSide(Player.ONE, p1WallBoxes, Pos.CENTER_LEFT, scaleB, p1Name);
+        HBox p2Side = playerSide(Player.TWO, p2WallBoxes, Pos.CENTER_RIGHT, scaleB, p2Name);
 
         Pane logo = buildLogo(scaleB);
 
@@ -181,6 +183,8 @@ public class App extends Application {
             colorPicker.setManaged(ctrl.isVsAi());
             pickP1.setSelected(ctrl.getHumanPlayer() == Player.ONE);
             pickP2.setSelected(ctrl.getHumanPlayer() == Player.TWO);
+            p1Name.setText(ctrl.getPlayerName(Player.ONE));
+            p2Name.setText(ctrl.getPlayerName(Player.TWO));
         });
 
         board.refresh();
@@ -274,9 +278,8 @@ public class App extends Application {
         return boxes;
     }
 
-    private HBox playerSide(Player player, List<Rectangle> boxes, Pos alignment, DoubleBinding scaleB) {
+    private HBox playerSide(Player player, List<Rectangle> boxes, Pos alignment, DoubleBinding scaleB, Label name) {
         Color color = player == Player.ONE ? BoardView.P1_COLOR : BoardView.P2_COLOR;
-        String label = "Player " + (player == Player.ONE ? "1" : "2");
 
         Rectangle dot = new Rectangle();
         dot.widthProperty().bind(scaleB.multiply(8));
@@ -285,7 +288,6 @@ public class App extends Application {
         dot.arcHeightProperty().bind(scaleB.multiply(8));
         dot.setFill(color);
 
-        Label name = new Label(label);
         name.getStyleClass().add("player-label");
         scaleB.addListener((obs, old, nw) ->
             name.setStyle(String.format(Locale.ROOT, "-fx-font-size: %.1fpx;", 12 * nw.doubleValue())));
@@ -314,20 +316,17 @@ public class App extends Application {
     }
 
     private void updateStatus(Label label, GameController ctrl) {
-        label.getStyleClass().removeAll("player1", "player2", "gameover", "thinking");
+        label.getStyleClass().removeAll("player1", "player2", "gameover");
         if (ctrl.isAiThinking()) {
-            label.setText("Thinking...");
-            label.getStyleClass().add("thinking");
+            Player aiPlayer = ctrl.getHumanPlayer().opponent();
+            label.setText("AI is thinking...");
+            label.getStyleClass().add(aiPlayer == Player.ONE ? "player1" : "player2");
         } else if (ctrl.isGameOver()) {
             label.setText(ctrl.getStatusText());
             label.getStyleClass().add("gameover");
         } else {
             Player p = ctrl.getState().getCurrentPlayer();
-            String name;
-            if (!ctrl.isVsAi())                  name = "Player " + (p == Player.ONE ? "1" : "2");
-            else if (p == ctrl.getHumanPlayer()) name = "Your";
-            else                                 name = "AI";
-            label.setText(name + "'s turn");
+            label.setText(ctrl.getStatusText());
             label.getStyleClass().add(p == Player.ONE ? "player1" : "player2");
         }
     }

@@ -59,17 +59,24 @@ public class GameController {
     public boolean isAiThinking()            { return aiThinking; }
     public boolean isVsAi()                  { return aiStrategy != null; }
     public Player  getHumanPlayer()          { return humanPlayer; }
-    public Player getWallOwner(Wall wall)    { return wallOwners.get(wall); }
+    public Player  getWallOwner(Wall wall)   { return wallOwners.get(wall); }
+
+    public String getPlayerName(Player player) {
+        if (aiStrategy != null) {
+            return player == humanPlayer ? "You" : "AI";
+        }
+        return "Player " + label(player);
+    }
 
     public String getStatusText() {
-        if (aiThinking) return "Thinking...";
         if (gameOver) {
             Player winner = engine.getWinner(state).orElseThrow();
-            return "Player " + label(winner) + " wins!";
+            return getPlayerName(winner) + " wins!";
         }
         Player p = state.getCurrentPlayer();
-        String name = (aiStrategy != null && p == humanPlayer.opponent()) ? "AI" : "Player " + label(p);
-        return name + "'s turn  —  Walls: " + state.getWallCount(p);
+        String name = getPlayerName(p);
+        String prefix = "You".equals(name) ? "Your" : name + "'s";
+        return prefix + " turn";
     }
 
     public void setVsAi(boolean vsAi) {
