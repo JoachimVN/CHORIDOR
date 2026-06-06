@@ -20,6 +20,9 @@ public class RandomStrategy implements Strategy {
     public RandomStrategy() { this.rng = new Random(); }
     public RandomStrategy(long seed) { this.rng = new Random(seed); }
 
+    @Override public String displayName() { return "Random"; }
+    @Override public String description()   { return "Makes completely random moves, never plans ahead"; }
+
     @Override
     public Move decide(GameState state) {
         List<? extends Move> pawnMoves = validator.getLegalPawnMoves(state);

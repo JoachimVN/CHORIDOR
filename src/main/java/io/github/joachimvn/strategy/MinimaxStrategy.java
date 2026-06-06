@@ -29,6 +29,9 @@ public class MinimaxStrategy implements Strategy {
         this.timeLimitMs = timeLimitMs;
     }
 
+    @Override public String displayName() { return "Minimax"; }
+    @Override public String description()   { return "Searches several moves ahead using minimax with alpha-beta pruning"; }
+
     @Override
     public Move decide(GameState state) {
         deadline = System.currentTimeMillis() + timeLimitMs;

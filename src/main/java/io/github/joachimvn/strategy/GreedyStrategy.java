@@ -11,6 +11,9 @@ public class GreedyStrategy implements Strategy {
     private final MoveValidator validator   = new MoveValidator();
     private final PathChecker   pathChecker = new PathChecker();
 
+    @Override public String displayName() { return "Greedy"; }
+    @Override public String description()   { return "Always advances toward the goal, never places walls"; }
+
     @Override
     public Move decide(GameState state) {
         Player me = state.getCurrentPlayer();

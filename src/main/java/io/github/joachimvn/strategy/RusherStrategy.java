@@ -25,6 +25,9 @@ public class RusherStrategy implements Strategy {
         this.aiPlayer = aiPlayer;
     }
 
+    @Override public String displayName() { return "Rusher"; }
+    @Override public String description()   { return "Same deep search as Tactical, but races toward the goal rather than blocking"; }
+
     @Override
     public Move decide(GameState state) {
         deadline = System.currentTimeMillis() + TIME_LIMIT_MS;
