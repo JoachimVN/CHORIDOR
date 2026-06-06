@@ -10,8 +10,8 @@ public enum Difficulty {
     RANDOM  (p -> new RandomStrategy()),
     GREEDY  (p -> new GreedyStrategy()),
     MINIMAX (p -> new MinimaxStrategy(p, 1000)),
-    TACTICAL(p -> new TacticalStrategy(p)),
-    RUSHER  (p -> new RusherStrategy(p));
+    TACTICAL(TacticalStrategy::new),
+    RUSHER  (RusherStrategy::new);
 
     private final Function<Player, Strategy> factory;
     private final String displayName;
