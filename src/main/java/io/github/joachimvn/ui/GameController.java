@@ -72,7 +72,8 @@ public class GameController {
     public String getStatusText() {
         if (gameOver) {
             Player winner = engine.getWinner(state).orElseThrow();
-            return getPlayerName(winner) + " wins!";
+            String name = getPlayerName(winner);
+            return "You".equals(name) ? "You win!" : name + " wins!";
         }
         Player p = state.getCurrentPlayer();
         String name = getPlayerName(p);
