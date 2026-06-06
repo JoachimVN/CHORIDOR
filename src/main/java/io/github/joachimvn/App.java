@@ -42,8 +42,10 @@ public class App extends Application {
     private static final double SVG_WIDTH          = 2048;
     private static final double SVG_HEIGHT         = 460;
     // SVG palette
-    private static final Color  LOGO_RED   = Color.web("#9d493f");
-    private static final Color  LOGO_BLUE  = Color.web("#3e67a7");
+    private static final Color  LOGO_RED    = Color.web("#9d493f");
+    private static final Color  LOGO_BLUE   = Color.web("#3e67a7");
+    private static final String CSS_PLAYER1 = CSS_PLAYER1;
+    private static final String CSS_PLAYER2 = CSS_PLAYER2;
 
     @Override
     public void start(Stage stage) {
@@ -316,18 +318,18 @@ public class App extends Application {
     }
 
     private void updateStatus(Label label, GameController ctrl) {
-        label.getStyleClass().removeAll("player1", "player2", "gameover");
+        label.getStyleClass().removeAll(CSS_PLAYER1, CSS_PLAYER2, "gameover");
         if (ctrl.isAiThinking()) {
             Player aiPlayer = ctrl.getHumanPlayer().opponent();
             label.setText("AI is thinking...");
-            label.getStyleClass().add(aiPlayer == Player.ONE ? "player1" : "player2");
+            label.getStyleClass().add(aiPlayer == Player.ONE ? CSS_PLAYER1 : CSS_PLAYER2);
         } else if (ctrl.isGameOver()) {
             label.setText(ctrl.getStatusText());
             label.getStyleClass().add("gameover");
         } else {
             Player p = ctrl.getState().getCurrentPlayer();
             label.setText(ctrl.getStatusText());
-            label.getStyleClass().add(p == Player.ONE ? "player1" : "player2");
+            label.getStyleClass().add(p == Player.ONE ? CSS_PLAYER1 : CSS_PLAYER2);
         }
     }
 
