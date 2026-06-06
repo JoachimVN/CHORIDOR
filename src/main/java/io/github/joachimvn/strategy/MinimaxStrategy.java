@@ -84,8 +84,8 @@ public class MinimaxStrategy implements Strategy {
 
     private GameState apply(GameState state, Move move) {
         return switch (move) {
-            case PawnMove pm -> state.withPawnMove(pm.target());
-            case WallMove wm -> state.withWallMove(wm.wall());
+            case PawnMove(var target) -> state.withPawnMove(target);
+            case WallMove(var wall)   -> state.withWallMove(wall);
         };
     }
 }

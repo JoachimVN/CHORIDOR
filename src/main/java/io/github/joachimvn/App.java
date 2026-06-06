@@ -47,6 +47,7 @@ public class App extends Application {
     private static final Color  LOGO_BLUE   = Color.web("#3e67a7");
     private static final String CSS_PLAYER1 = "player1";
     private static final String CSS_PLAYER2 = "player2";
+    private static final String PADDING_FMT = "-fx-padding: %.1f %.1f %.1f %.1f;";
 
     @Override
     public void start(Stage stage) {
@@ -78,7 +79,7 @@ public class App extends Application {
         scaleB.addListener((obs, old, nw) -> {
             double s = nw.doubleValue();
             topBar.setStyle(String.format(Locale.ROOT,
-                "-fx-padding: %.1f %.1f %.1f %.1f;",
+                PADDING_FMT,
                 10*s, 14*s, 10*s, 14*s));
             sidesRow.setStyle(String.format(Locale.ROOT,
                 "-fx-spacing: %.1f;", 12*s));
@@ -152,14 +153,14 @@ public class App extends Application {
         scaleB.addListener((obs, old, nw) -> {
             double s = nw.doubleValue();
             bottomBar.setStyle(String.format(Locale.ROOT,
-                "-fx-padding: %.1f %.1f %.1f %.1f; -fx-spacing: %.1f;",
+                PADDING_FMT + " -fx-spacing: %.1f;",
                 10*s, 14*s, 10*s, 14*s, 12*s));
             statusLabel.setStyle(String.format(Locale.ROOT, "-fx-font-size: %.1fpx;", 13*s));
             newGame.setStyle(String.format(Locale.ROOT,
-                "-fx-font-size: %.1fpx; -fx-padding: %.1f %.1f %.1f %.1f;",
+                "-fx-font-size: %.1fpx; " + PADDING_FMT,
                 12*s, 5*s, 16*s, 5*s, 16*s));
             aiToggle.setStyle(String.format(Locale.ROOT,
-                "-fx-font-size: %.1fpx; -fx-padding: %.1f %.1f %.1f %.1f;",
+                "-fx-font-size: %.1fpx; " + PADDING_FMT,
                 12*s, 5*s, 16*s, 5*s, 16*s));
             double sz = 20 * s;
             for (ToggleButton btn : List.of(pickP1, pickP2)) {
@@ -170,11 +171,11 @@ public class App extends Application {
             colorPicker.setSpacing(4 * s);
             muteIcon.setIconSize((int)(13 * s));
             muteButton.setStyle(String.format(Locale.ROOT,
-                "-fx-padding: %.1f %.1f %.1f %.1f;",
+                PADDING_FMT,
                 5*s, 9*s, 5*s, 9*s));
             flipIcon.setIconSize((int)(13 * s));
             flipButton.setStyle(String.format(Locale.ROOT,
-                "-fx-padding: %.1f %.1f %.1f %.1f;",
+                PADDING_FMT,
                 5*s, 9*s, 5*s, 9*s));
         });
 
