@@ -14,17 +14,14 @@ public enum Difficulty {
     RUSHER  (RusherStrategy::new);
 
     private final Function<Player, Strategy> factory;
-    private final String displayName;
-    private final String description;
+    private final Strategy sample;
 
     Difficulty(Function<Player, Strategy> factory) {
         this.factory = factory;
-        Strategy sample = factory.apply(Player.ONE);
-        this.displayName = sample.displayName();
-        this.description = sample.description();
+        this.sample  = factory.apply(Player.ONE);
     }
 
-    public String   displayName()            { return displayName; }
-    public String   description()            { return description; }
+    /** A representative instance — source of truth for name and description. */
+    public Strategy sample()                 { return sample; }
     public Strategy createStrategy(Player p) { return factory.apply(p); }
 }

@@ -295,8 +295,8 @@ public class App extends Application {
                 Difficulty d2 = selectedDifficulty(strat2List);
                 s1 = d1.createStrategy(Player.ONE);
                 s2 = d2.createStrategy(Player.TWO);
-                p1Name = d1.displayName();
-                p2Name = d2.displayName();
+                p1Name = d1.sample().displayName();
+                p2Name = d2.sample().displayName();
             }
             ctrl.startGame(s1, s2, human, p1Name, p2Name);
             boolean flip = sel == modeHvAI && human == Player.TWO;
@@ -342,9 +342,9 @@ public class App extends Application {
             protected void updateItem(Difficulty d, boolean empty) {
                 super.updateItem(d, empty);
                 if (empty || d == null) { setGraphic(null); setText(null); return; }
-                Label name = new Label(d.displayName());
+                Label name = new Label(d.sample().displayName());
                 name.getStyleClass().add("strategy-name");
-                Label desc = new Label(d.description());
+                Label desc = new Label(d.sample().description());
                 desc.getStyleClass().add("strategy-desc");
                 desc.setWrapText(true);
                 setGraphic(new VBox(2, name, desc));
@@ -355,7 +355,7 @@ public class App extends Application {
             @Override
             protected void updateItem(Difficulty d, boolean empty) {
                 super.updateItem(d, empty);
-                setText(empty || d == null ? "" : d.displayName());
+                setText(empty || d == null ? "" : d.sample().displayName());
                 setStyle("-fx-text-fill: #8AAADA; -fx-font-weight: bold; -fx-font-size: 15px;");
             }
         });
