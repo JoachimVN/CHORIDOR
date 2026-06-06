@@ -232,17 +232,9 @@
 }
 
 .strategy-combo > .combo-box-base > .label {
-    -fx-text-fill: #8AAADA;
+    -fx-text-fill: #8890A8;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-}
-
-.strategy-combo-button-cell {
-    -fx-text-fill: #8AAADA;
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-background-color: transparent;
-    -fx-padding: 0;
 }
 
 /* The dropdown popup */

@@ -335,7 +335,7 @@ public class App extends Application {
             protected void updateItem(Difficulty d, boolean empty) {
                 super.updateItem(d, empty);
                 setText(empty || d == null ? "" : d.displayName());
-                getStyleClass().add("strategy-combo-button-cell");
+                setStyle("-fx-text-fill: #8AAADA; -fx-font-weight: bold; -fx-font-size: 12px;");
             }
         });
         combo.getSelectionModel().selectLast();
