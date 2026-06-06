@@ -47,7 +47,8 @@ public class App extends Application {
     private static final Color  LOGO_BLUE   = Color.web("#3e67a7");
     private static final String CSS_PLAYER1 = "player1";
     private static final String CSS_PLAYER2 = "player2";
-    private static final String PADDING_FMT = "-fx-padding: %.1f %.1f %.1f %.1f;";
+    private static final String PADDING_FMT  = "-fx-padding: %.1f %.1f %.1f %.1f;";
+    private static final String FONTSIZE_FMT = "-fx-font-size: %.1fpx; ";
 
     @Override
     public void start(Stage stage) {
@@ -130,9 +131,20 @@ public class App extends Application {
         colorPicker.setVisible(false);
         colorPicker.setManaged(false);
 
+        ToggleButton aiVsAiToggle = new ToggleButton("AI vs AI");
+        aiVsAiToggle.getStyleClass().add("ai-toggle-button");
+
         ToggleButton aiToggle = new ToggleButton("vs AI");
         aiToggle.getStyleClass().add("ai-toggle-button");
-        aiToggle.setOnAction(e -> ctrl.setVsAi(aiToggle.isSelected()));
+        aiToggle.setOnAction(e -> {
+            aiVsAiToggle.setSelected(false);
+            ctrl.setVsAi(aiToggle.isSelected());
+        });
+
+        aiVsAiToggle.setOnAction(e -> {
+            aiToggle.setSelected(false);
+            ctrl.setAiVsAi(aiVsAiToggle.isSelected());
+        });
 
         FontIcon muteIcon = new FontIcon(FontAwesomeSolid.VOLUME_UP);
         muteIcon.getStyleClass().add("bar-icon");
@@ -147,7 +159,7 @@ public class App extends Application {
         Region botSpacer = new Region();
         HBox.setHgrow(botSpacer, Priority.ALWAYS);
 
-        HBox bottomBar = new HBox(statusLabel, botSpacer, colorPicker, aiToggle, flipButton, muteButton, newGame);
+        HBox bottomBar = new HBox(statusLabel, botSpacer, colorPicker, aiToggle, aiVsAiToggle, flipButton, muteButton, newGame);
         bottomBar.getStyleClass().add("chrome-bar");
         bottomBar.setAlignment(Pos.CENTER_LEFT);
         scaleB.addListener((obs, old, nw) -> {
@@ -157,10 +169,13 @@ public class App extends Application {
                 10*s, 14*s, 10*s, 14*s, 12*s));
             statusLabel.setStyle(String.format(Locale.ROOT, "-fx-font-size: %.1fpx;", 13*s));
             newGame.setStyle(String.format(Locale.ROOT,
-                "-fx-font-size: %.1fpx; " + PADDING_FMT,
+                FONTSIZE_FMT + PADDING_FMT,
                 12*s, 5*s, 16*s, 5*s, 16*s));
             aiToggle.setStyle(String.format(Locale.ROOT,
-                "-fx-font-size: %.1fpx; " + PADDING_FMT,
+                FONTSIZE_FMT + PADDING_FMT,
+                12*s, 5*s, 16*s, 5*s, 16*s));
+            aiVsAiToggle.setStyle(String.format(Locale.ROOT,
+                FONTSIZE_FMT + PADDING_FMT,
                 12*s, 5*s, 16*s, 5*s, 16*s));
             double sz = 20 * s;
             for (ToggleButton btn : List.of(pickP1, pickP2)) {
@@ -185,9 +200,10 @@ public class App extends Application {
             updateWallBoxes(p1WallBoxes, ctrl.getState(), Player.ONE);
             updateWallBoxes(p2WallBoxes, ctrl.getState(), Player.TWO);
             updateStatus(statusLabel, ctrl);
-            aiToggle.setSelected(ctrl.isVsAi());
-            colorPicker.setVisible(ctrl.isVsAi());
-            colorPicker.setManaged(ctrl.isVsAi());
+            aiToggle.setSelected(ctrl.isVsAi() && !ctrl.isAiVsAi());
+            aiVsAiToggle.setSelected(ctrl.isAiVsAi());
+            colorPicker.setVisible(ctrl.isVsAi() && !ctrl.isAiVsAi());
+            colorPicker.setManaged(ctrl.isVsAi() && !ctrl.isAiVsAi());
             pickP1.setSelected(ctrl.getHumanPlayer() == Player.ONE);
             pickP2.setSelected(ctrl.getHumanPlayer() == Player.TWO);
             p1Name.setText(ctrl.getPlayerName(Player.ONE));
@@ -325,9 +341,12 @@ public class App extends Application {
     private void updateStatus(Label label, GameController ctrl) {
         label.getStyleClass().removeAll(CSS_PLAYER1, CSS_PLAYER2);
         if (ctrl.isAiThinking()) {
-            Player aiPlayer = ctrl.getHumanPlayer().opponent();
-            label.setText("AI is thinking...");
-            label.getStyleClass().add(aiPlayer == Player.ONE ? CSS_PLAYER1 : CSS_PLAYER2);
+            Player current = ctrl.getState().getCurrentPlayer();
+            String thinkText = ctrl.isAiVsAi()
+                ? ctrl.getPlayerName(current) + " is thinking..."
+                : "AI is thinking...";
+            label.setText(thinkText);
+            label.getStyleClass().add(current == Player.ONE ? CSS_PLAYER1 : CSS_PLAYER2);
         } else if (ctrl.isGameOver()) {
             Player winner = ctrl.getWinner();
             label.setText(ctrl.getStatusText());
