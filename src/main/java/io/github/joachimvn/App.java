@@ -24,6 +24,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.FillRule;
 import javafx.scene.shape.Rectangle;
@@ -65,19 +66,22 @@ public class App extends Application {
 
         Pane logo = buildLogo(scaleB);
 
-        Region topSpacerLeft  = new Region();
-        Region topSpacerRight = new Region();
-        HBox.setHgrow(topSpacerLeft,  Priority.ALWAYS);
-        HBox.setHgrow(topSpacerRight, Priority.ALWAYS);
+        Region topSpacer = new Region();
+        HBox.setHgrow(topSpacer, Priority.ALWAYS);
+        HBox sidesRow = new HBox(p1Side, topSpacer, p2Side);
+        sidesRow.setMaxWidth(Double.MAX_VALUE);
+        sidesRow.setAlignment(Pos.CENTER);
 
-        HBox topBar = new HBox(p1Side, topSpacerLeft, logo, topSpacerRight, p2Side);
+        StackPane topBar = new StackPane(sidesRow, logo);
+        StackPane.setAlignment(logo, Pos.CENTER);
         topBar.getStyleClass().addAll("chrome-bar", "chrome-bar-top");
-        topBar.setAlignment(Pos.CENTER);
         scaleB.addListener((obs, old, nw) -> {
             double s = nw.doubleValue();
             topBar.setStyle(String.format(Locale.ROOT,
-                "-fx-padding: %.1f %.1f %.1f %.1f; -fx-spacing: %.1f;",
-                10*s, 14*s, 10*s, 14*s, 12*s));
+                "-fx-padding: %.1f %.1f %.1f %.1f;",
+                10*s, 14*s, 10*s, 14*s));
+            sidesRow.setStyle(String.format(Locale.ROOT,
+                "-fx-spacing: %.1f;", 12*s));
         });
 
         // ── Bottom bar ───────────────────────────────────────────────────────
