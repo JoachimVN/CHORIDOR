@@ -84,6 +84,13 @@ public class App extends Application {
         newGame.getStyleClass().add("new-game-button");
         newGame.setOnAction(e -> ctrl.reset());
 
+        FontIcon flipIcon = new FontIcon(FontAwesomeSolid.SYNC_ALT);
+        flipIcon.getStyleClass().add("bar-icon");
+        ToggleButton flipButton = new ToggleButton();
+        flipButton.setGraphic(flipIcon);
+        flipButton.getStyleClass().add("mute-button");
+        flipButton.setOnAction(e -> board.setFlipped(flipButton.isSelected()));
+
         ToggleGroup colorGroup = new ToggleGroup();
         ToggleButton pickP1 = new ToggleButton();
         pickP1.getStyleClass().addAll("color-pick-button", "color-pick-p1");
@@ -117,13 +124,6 @@ public class App extends Application {
         ToggleButton aiToggle = new ToggleButton("vs AI");
         aiToggle.getStyleClass().add("ai-toggle-button");
         aiToggle.setOnAction(e -> ctrl.setVsAi(aiToggle.isSelected()));
-
-        FontIcon flipIcon = new FontIcon(FontAwesomeSolid.SYNC_ALT);
-        flipIcon.getStyleClass().add("bar-icon");
-        ToggleButton flipButton = new ToggleButton();
-        flipButton.setGraphic(flipIcon);
-        flipButton.getStyleClass().add("mute-button");
-        flipButton.setOnAction(e -> board.setFlipped(flipButton.isSelected()));
 
         FontIcon muteIcon = new FontIcon(FontAwesomeSolid.VOLUME_UP);
         muteIcon.getStyleClass().add("bar-icon");
@@ -323,8 +323,11 @@ public class App extends Application {
             label.getStyleClass().add("gameover");
         } else {
             Player p = ctrl.getState().getCurrentPlayer();
-            boolean isAiTurn = ctrl.isVsAi() && p != ctrl.getHumanPlayer();
-            label.setText((isAiTurn ? "AI" : "Player " + (p == Player.ONE ? "1" : "2")) + "'s turn");
+            String name;
+            if (!ctrl.isVsAi())                  name = "Player " + (p == Player.ONE ? "1" : "2");
+            else if (p == ctrl.getHumanPlayer()) name = "Your";
+            else                                 name = "AI";
+            label.setText(name + "'s turn");
             label.getStyleClass().add(p == Player.ONE ? "player1" : "player2");
         }
     }
