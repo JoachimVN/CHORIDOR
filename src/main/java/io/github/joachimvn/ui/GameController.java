@@ -3,7 +3,7 @@ package io.github.joachimvn.ui;
 import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.core.rules.GameEngine;
 import io.github.joachimvn.core.rules.MoveValidator;
-import io.github.joachimvn.strategy.Strategy;
+import io.github.joachimvn.ai.Strategy;
 import javafx.application.Platform;
 import javafx.scene.media.AudioClip;
 

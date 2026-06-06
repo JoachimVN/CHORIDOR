@@ -1,4 +1,4 @@
-package io.github.joachimvn.strategy;
+package io.github.joachimvn.ai;
 
 import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.core.rules.MoveValidator;

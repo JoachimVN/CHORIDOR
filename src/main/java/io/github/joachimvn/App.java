@@ -3,7 +3,7 @@ package io.github.joachimvn;
 import io.github.joachimvn.core.model.GameState;
 import io.github.joachimvn.core.model.Player;
 import io.github.joachimvn.ai.Difficulty;
-import io.github.joachimvn.strategy.Strategy;
+import io.github.joachimvn.ai.Strategy;
 import io.github.joachimvn.ui.BoardView;
 import io.github.joachimvn.ui.GameController;
 
