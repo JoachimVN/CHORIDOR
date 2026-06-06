@@ -313,7 +313,7 @@ public class App extends Application {
         list.getItems().addAll(Difficulty.values());
         list.getStyleClass().add("strategy-list");
         list.setFixedCellSize(40);
-        list.setPrefHeight(list.getFixedCellSize() * 3 + 2);
+        list.setPrefHeight(list.getFixedCellSize() * Difficulty.values().length + 2);
         list.setMaxHeight(list.getPrefHeight());
         list.setCellFactory(lv -> new ListCell<>() {
             @Override

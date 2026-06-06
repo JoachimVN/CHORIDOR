@@ -206,41 +206,79 @@
     -fx-border-radius: 4;
     -fx-background-radius: 4;
     -fx-border-width: 1;
-    -fx-padding: 2 0 2 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-padding: 3 0 3 0;
 }
 
-.strategy-list > .virtual-flow > .clipped-container > .sheet > .list-cell {
+.strategy-list .list-cell {
     -fx-background-color: transparent;
-    -fx-padding: 6 10 6 10;
+    -fx-background-insets: 0;
+    -fx-padding: 7 12 7 12;
     -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 0 2;
+    -fx-border-insets: 0;
 }
 
-.strategy-list > .virtual-flow > .clipped-container > .sheet > .list-cell:hover {
+.strategy-list .list-cell:odd {
+    -fx-background-color: transparent;
+}
+
+.strategy-list .list-cell:hover {
     -fx-background-color: #1E2130;
 }
 
-.strategy-list > .virtual-flow > .clipped-container > .sheet > .list-cell:selected {
+.strategy-list .list-cell:selected,
+.strategy-list:focused .list-cell:selected {
     -fx-background-color: #141E30;
-    -fx-border-color: #2E508A;
-    -fx-border-width: 0 0 0 2;
+    -fx-border-color: #3E68A8;
 }
 
-.strategy-list .scroll-bar:vertical {
+.strategy-list .list-cell:focused {
+    -fx-background-color: transparent;
+}
+
+.strategy-list .list-cell .strategy-name {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #505878;
+}
+
+.strategy-list .list-cell:selected .strategy-name,
+.strategy-list:focused .list-cell:selected .strategy-name {
+    -fx-text-fill: #5A84C4;
+}
+
+.strategy-list .list-cell .strategy-desc {
+    -fx-font-size: 10px;
+    -fx-text-fill: #343850;
+}
+
+.strategy-list .list-cell:selected .strategy-desc,
+.strategy-list:focused .list-cell:selected .strategy-desc {
+    -fx-text-fill: #505878;
+}
+
+/* Scrollbar */
+
+.strategy-list .scroll-bar {
     -fx-background-color: #191C2A;
     -fx-pref-width: 6;
 }
 
-.strategy-list .scroll-bar:vertical > .track {
+.strategy-list .scroll-bar > .track {
     -fx-background-color: #13151F;
     -fx-background-radius: 3;
+    -fx-border-color: transparent;
 }
 
-.strategy-list .scroll-bar:vertical > .thumb {
-    -fx-background-color: #2E3250;
+.strategy-list .scroll-bar > .thumb {
+    -fx-background-color: #2A2E48;
     -fx-background-radius: 3;
 }
 
-.strategy-list .scroll-bar:vertical > .thumb:hover {
+.strategy-list .scroll-bar > .thumb:hover {
     -fx-background-color: #3E4470;
 }
 
@@ -248,31 +286,15 @@
 .strategy-list .scroll-bar > .decrement-button {
     -fx-background-color: transparent;
     -fx-padding: 0;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
 }
 
 .strategy-list .scroll-bar > .increment-button > .increment-arrow,
 .strategy-list .scroll-bar > .decrement-button > .decrement-arrow {
     -fx-shape: "";
     -fx-padding: 0;
-}
-
-.strategy-list .list-cell .strategy-name {
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #606880;
-}
-
-.strategy-list .list-cell:selected .strategy-name {
-    -fx-text-fill: #5A84C4;
-}
-
-.strategy-list .list-cell .strategy-desc {
-    -fx-font-size: 10px;
-    -fx-text-fill: #3A3F58;
-}
-
-.strategy-list .list-cell:selected .strategy-desc {
-    -fx-text-fill: #505878;
 }
 
 .start-button {
