@@ -1,4 +1,5 @@
-package io.github.joachimvn.ai;
+package io.github.joachimvn.ai.strategies;
+import io.github.joachimvn.ai.Strategy;
 
 import io.github.joachimvn.core.model.GameState;
 import io.github.joachimvn.core.model.Move;

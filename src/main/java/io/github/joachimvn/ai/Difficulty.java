@@ -1,7 +1,7 @@
 package io.github.joachimvn.ai;
 
 import io.github.joachimvn.core.model.Player;
-import io.github.joachimvn.ai.*;
+import io.github.joachimvn.ai.strategies.*;
 
 import java.util.function.Function;
 
