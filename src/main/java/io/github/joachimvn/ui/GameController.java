@@ -22,7 +22,8 @@ public class GameController {
     private final String[]   playerNames      = {"Player 1", "Player 2"};
 
     private GameState state = new GameState();
-    private final MoveValidator validator = new MoveValidator();
+    private final MoveValidator validator   = new MoveValidator();
+    private final PathChecker   pathChecker = new PathChecker();
     private final GameEngine engine = new GameEngine();
     private List<PawnMove> legalPawnMoves;
     private Wall previewWall;
@@ -383,10 +384,9 @@ public class GameController {
             }
         }
 
-        // Summary line
-        PathChecker pc = new PathChecker();
-        int d1 = pc.shortestPath(s, Player.ONE);
-        int d2 = pc.shortestPath(s, Player.TWO);
+        // Summary line (jump-aware distances match what the AI actually sees)
+        int d1 = pathChecker.shortestPathWithJumps(s, Player.ONE);
+        int d2 = pathChecker.shortestPathWithJumps(s, Player.TWO);
         sb.append(String.format(
             "Red@(%d,%d) d=%d walls=%d  |  Blue@(%d,%d) d=%d walls=%d  |  Turn: %s%n",
             p1.row(), p1.col(), d1, s.getWallCount(Player.ONE),
