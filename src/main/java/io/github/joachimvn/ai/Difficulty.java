@@ -14,7 +14,8 @@ public enum Difficulty {
     RUSHER  (RusherStrategy::new),
     BALANCED (BalancedStrategy::new),
     ADAPTIVE (AdaptiveStrategy::new),
-    ECONOMIST(EconomistStrategy::new);
+    ECONOMIST(EconomistStrategy::new),
+    SHARP    (SharpStrategy::new);
 
     private final Function<Player, Strategy> factory;
     private final Strategy sample;

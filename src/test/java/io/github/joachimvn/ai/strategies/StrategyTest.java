@@ -56,6 +56,7 @@ class StrategyTest {
         assertLegal(state, new BalancedStrategy(Player.ONE).decide(state));
         assertLegal(state, new AdaptiveStrategy(Player.ONE).decide(state));
         assertLegal(state, new EconomistStrategy(Player.ONE).decide(state));
+        assertLegal(state, new SharpStrategy(Player.ONE).decide(state));
     }
 
     @Test
@@ -74,7 +75,8 @@ class StrategyTest {
             new RusherStrategy(Player.ONE),
             new BalancedStrategy(Player.ONE),
             new AdaptiveStrategy(Player.ONE),
-            new EconomistStrategy(Player.ONE));
+            new EconomistStrategy(Player.ONE),
+            new SharpStrategy(Player.ONE));
 
         for (Strategy s : strategies) {
             Move move = s.decide(state);
