@@ -90,9 +90,8 @@ public class App extends Application {
             if (e.getCode() == KeyCode.F11) {
                 stage.setFullScreen(!stage.isFullScreen());
                 e.consume();
-            } else if (e.getCode() == KeyCode.ENTER && ctrl.isGameOver()) {
-                gameOver.getRoot().setVisible(false);
-                setup.getRoot().setVisible(true);
+            } else if (e.getCode() == KeyCode.ENTER && gameOver.getRoot().isVisible()) {
+                ctrl.replay();
                 e.consume();
             } else if (ctrl.isReviewing()) {
                 // Step through the finished game; Shift jumps to the first / last position.

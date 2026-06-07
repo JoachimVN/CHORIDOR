@@ -201,7 +201,7 @@ public final class SetupOverlay {
                 setStyle("-fx-text-fill: #8AAADA; -fx-font-weight: bold; -fx-font-size: 15px;");
             }
         });
-        combo.getSelectionModel().selectLast();
+        combo.getSelectionModel().selectFirst();
         return combo;
     }
 

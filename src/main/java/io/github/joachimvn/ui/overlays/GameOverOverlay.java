@@ -38,7 +38,8 @@ public final class GameOverOverlay {
         Button lookBtn    = iconActionButton(FontAwesomeSolid.HISTORY, "Look Back",
             () -> { root.setVisible(false); ctrl.enterReview(); });
 
-        HBox buttons = new HBox(18, newGameBtn, changeBtn, lookBtn);
+        // Play Again sits in the middle as the default action (also bound to Enter/Space in App).
+        HBox buttons = new HBox(18, changeBtn, newGameBtn, lookBtn);
         buttons.setAlignment(Pos.CENTER);
 
         VBox card = new VBox(26, winLabel, buttons);
