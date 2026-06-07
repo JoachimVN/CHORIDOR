@@ -79,6 +79,31 @@ abstract class AbstractSearchStrategy implements Strategy {
         long deadline = System.currentTimeMillis() + timeLimitMs;
         List<Move> moves = candidates(state);
         if (moves.isEmpty()) throw new NoSuchElementException("No legal moves available");
+
+        // Fast-path: when already winning the race (my BFS distance strictly less than the
+        // opponent's), advancing the pawn is almost always optimal. Any wall placed instead
+        // costs a move we can't afford and lets the opponent close the gap. The minimax
+        // can't reliably find the winning pawn line at depth 7+ within the time budget when
+        // many walls remain (branching factor explodes), so we shortcut directly to the
+        // best advancing pawn move and skip the search entirely in this case.
+        int myDist  = pathChecker.shortestPath(state, aiPlayer);
+        int oppDist = pathChecker.shortestPath(state, aiPlayer.opponent());
+        if (myDist > 0 && myDist < oppDist) {
+            PawnMove bestPawn = null;
+            int bestPawnDist  = myDist;
+            for (Move m : moves) {
+                if (m instanceof PawnMove pm) {
+                    int d = pathChecker.shortestPath(apply(state, pm), aiPlayer);
+                    if (d < bestPawnDist) { bestPawnDist = d; bestPawn = pm; }
+                }
+            }
+            if (bestPawn != null) return bestPawn;
+        }
+
+        // Full iterative-deepening minimax for all other positions.
+        // Sort root candidates by BFS distance so the most promising moves come first —
+        // alpha-beta prunes large subtrees once a good move is found early.
+        moves.sort(orderByProgress(state));
         Move best = moves.get(0);
         for (int depth = 1; depth <= maxDepth; depth++) {
             if (System.currentTimeMillis() >= deadline) break;
@@ -86,6 +111,45 @@ abstract class AbstractSearchStrategy implements Strategy {
             if (candidate != null) best = candidate;
         }
         return best;
+    }
+
+    /**
+     * Comparator that puts advancing pawn moves first (sorted by BFS distance to own goal),
+     * then retreating/lateral pawn moves, then walls. Used at the root and inside minimax to
+     * improve alpha-beta pruning efficiency.
+     */
+    /**
+     * Comparator using only row-to-goal distance — no BFS call, safe to use at every
+     * recursive minimax node without meaningful overhead.
+     */
+    private static java.util.Comparator<Move> orderByRowProgress(GameState state) {
+        int goalRow = state.getCurrentPlayer().goalRow();
+        return (a, b) -> {
+            boolean aIsPawn = a instanceof PawnMove;
+            boolean bIsPawn = b instanceof PawnMove;
+            if (aIsPawn != bIsPawn) return aIsPawn ? -1 : 1;
+            if (!aIsPawn) return 0;
+            int dA = Math.abs(((PawnMove) a).target().row() - goalRow);
+            int dB = Math.abs(((PawnMove) b).target().row() - goalRow);
+            return Integer.compare(dA, dB);
+        };
+    }
+
+    private java.util.Comparator<Move> orderByProgress(GameState state) {
+        Player mover   = state.getCurrentPlayer();
+        boolean aiMoves = mover == aiPlayer;
+        Player scored  = aiMoves ? aiPlayer : aiPlayer.opponent();
+        return (a, b) -> {
+            // Pawn moves before walls
+            boolean aIsPawn = a instanceof PawnMove;
+            boolean bIsPawn = b instanceof PawnMove;
+            if (aIsPawn != bIsPawn) return aIsPawn ? -1 : 1;
+            if (!aIsPawn) return 0; // relative wall order doesn't matter here
+            // Within pawn moves: prefer smaller BFS distance to the moving player's goal
+            int dA = pathChecker.shortestPath(apply(state, a), scored);
+            int dB = pathChecker.shortestPath(apply(state, b), scored);
+            return Integer.compare(dA, dB);
+        };
     }
 
     private Move searchDepth(GameState state, List<Move> moves, int depth, long deadline) {
@@ -131,6 +195,9 @@ abstract class AbstractSearchStrategy implements Strategy {
         if (depth == 0 || System.currentTimeMillis() >= deadline) return s;
 
         List<Move> moves = candidates(state);
+        // Lightweight ordering inside the tree: put pawn moves that advance toward goal first.
+        // Uses row distance (no BFS call) so the overhead per node is minimal.
+        moves.sort(orderByRowProgress(state));
         if (maximizing) {
             int max = Integer.MIN_VALUE;
             for (Move move : moves) {
