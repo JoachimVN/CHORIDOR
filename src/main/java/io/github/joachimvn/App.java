@@ -94,6 +94,15 @@ public class App extends Application {
                 gameOver.getRoot().setVisible(false);
                 setup.getRoot().setVisible(true);
                 e.consume();
+            } else if (ctrl.isReviewing()) {
+                // Step through the finished game; Shift jumps to the first / last position.
+                switch (e.getCode()) {
+                    case LEFT  -> { if (e.isShiftDown()) ctrl.reviewFirst(); else ctrl.reviewPrev(); e.consume(); }
+                    case RIGHT -> { if (e.isShiftDown()) ctrl.reviewLast();  else ctrl.reviewNext(); e.consume(); }
+                    case HOME  -> { ctrl.reviewFirst(); e.consume(); }
+                    case END   -> { ctrl.reviewLast();  e.consume(); }
+                    default    -> { }
+                }
             }
         });
 
