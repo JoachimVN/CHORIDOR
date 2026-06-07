@@ -30,6 +30,12 @@ Walls must never completely seal off a player's route, keeping every game solvab
     <em>In-game board</em>
 </p>
 
+<p align="center">
+    <img src="docs/screenshots/Setup_Example.png" alt="Setup screen with AI vs AI"/>
+    <br>
+    <em>Setup screen</em>
+</p>
+
 ## Why This Project
 
 A personal project built to explore:
