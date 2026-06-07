@@ -3,6 +3,7 @@ package io.github.joachimvn.ui;
 import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.core.rules.GameEngine;
 import io.github.joachimvn.core.rules.MoveValidator;
+import io.github.joachimvn.core.rules.PathChecker;
 import io.github.joachimvn.ai.Strategy;
 import javafx.application.Platform;
 import javafx.scene.media.AudioClip;
@@ -267,5 +268,65 @@ public class GameController {
 
     private static String label(Player p) {
         return p == Player.ONE ? "1" : "2";
+    }
+
+    /**
+     * Returns a compact, human-readable text representation of the current board — paste this
+     * into a bug report or a conversation to get an exact diagnosis without relying on screenshots.
+     *
+     * Format: a 9×9 character grid (R=red pawn, B=blue pawn, ·=empty cell) followed by
+     * horizontal-wall markers (═) below each row boundary and vertical-wall markers (║) between
+     * column pairs, then a summary line.
+     */
+    public String boardStateText() {
+        GameState s = getState();
+        Position p1 = s.getPawnPosition(Player.ONE);
+        Position p2 = s.getPawnPosition(Player.TWO);
+
+        // Column header
+        StringBuilder sb = new StringBuilder();
+        sb.append("   ");
+        for (int c = 0; c < GameState.BOARD_SIZE; c++)
+            sb.append(String.format(" %d  ", c));
+        sb.append("\n");
+
+        for (int r = 0; r < GameState.BOARD_SIZE; r++) {
+            // Row of cells
+            sb.append(String.format("%d  ", r));
+            for (int c = 0; c < GameState.BOARD_SIZE; c++) {
+                Position pos = new Position(r, c);
+                char cell = pos.equals(p1) ? 'R' : pos.equals(p2) ? 'B' : '·';
+                sb.append('[').append(cell).append(']');
+                // Vertical wall to the right of this cell?
+                if (c < GameState.BOARD_SIZE - 1) {
+                    boolean blocked = s.isEdgeBlocked(pos, new Position(r, c + 1));
+                    sb.append(blocked ? '║' : ' ');
+                }
+            }
+            sb.append("\n");
+
+            // Horizontal walls below this row
+            if (r < GameState.BOARD_SIZE - 1) {
+                sb.append("   ");
+                for (int c = 0; c < GameState.BOARD_SIZE; c++) {
+                    boolean blocked = s.isEdgeBlocked(new Position(r, c), new Position(r + 1, c));
+                    sb.append(blocked ? " ═══" : "    ");
+                    if (c < GameState.BOARD_SIZE - 1) sb.append(' ');
+                }
+                sb.append("\n");
+            }
+        }
+
+        // Summary line
+        PathChecker pc = new PathChecker();
+        int d1 = pc.shortestPath(s, Player.ONE);
+        int d2 = pc.shortestPath(s, Player.TWO);
+        sb.append(String.format(
+            "Red@(%d,%d) d=%d walls=%d  |  Blue@(%d,%d) d=%d walls=%d  |  Turn: %s%n",
+            p1.row(), p1.col(), d1, s.getWallCount(Player.ONE),
+            p2.row(), p2.col(), d2, s.getWallCount(Player.TWO),
+            s.getCurrentPlayer() == Player.ONE ? "Red" : "Blue"));
+
+        return sb.toString();
     }
 }

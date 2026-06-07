@@ -28,8 +28,11 @@ abstract class AbstractSearchStrategy implements Strategy {
     protected static final int WIN = 4 * GameState.BOARD_SIZE * GameState.BOARD_SIZE + 1;
 
     // Default per-wall reserve cost for strategies that don't define their own wall economy.
-    // A wall must buy more than this many cells of net distance to be worth spending.
-    private static final int WALL_RESERVE_WEIGHT = 2;
+    // Weight 1 means a wall must buy at least 1 net distance cell to be worth spending.
+    // Weight 2 caused walls to be hoarded too aggressively: with a large wall advantage the
+    // reserve bonus outweighed the distance gain of even a good blocking move, so the AI
+    // refused to block even when one step away from losing.
+    private static final int WALL_RESERVE_WEIGHT = 1;
 
     private final Player aiPlayer;
     private final long   timeLimitMs;
@@ -88,21 +91,22 @@ abstract class AbstractSearchStrategy implements Strategy {
     private Move searchDepth(GameState state, List<Move> moves, int depth, long deadline) {
         Move best = null;
         int bestScore = Integer.MIN_VALUE;
-        int bestDist  = Integer.MAX_VALUE;
+        int bestGap   = Integer.MAX_VALUE;
         for (Move move : moves) {
             if (System.currentTimeMillis() >= deadline) break;
             GameState next = apply(state, move);
             int s = minimax(next, depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false, deadline);
-            // Tie-break equal-scoring lines toward getting our own pawn closer to goal. Otherwise
-            // positions where every move scores the same are decided by raw move order, which
-            // flip-flops -> the pawn shuffles back and forth. This notably happens in a forced
-            // loss: the opponent reaches their goal in a fixed number of turns no matter what we
-            // do, so all our moves tie. Preferring the smaller resulting distance makes the AI keep
-            // racing toward its own goal instead of giving up the position.
-            int dist = pathChecker.shortestPath(next, aiPlayer);
-            if (s > bestScore || (s == bestScore && dist < bestDist)) {
+            // Tie-break equal-scoring lines by the net distance gap (myDist - oppDist); lower is
+            // better. This captures both "advance myself" and "block the opponent" in one measure,
+            // so a wall that pushes the opponent further away is just as preferred as a pawn step
+            // forward. Without this, ties (e.g. all moves score -WIN in a forced loss) were broken
+            // only by own distance, so the AI ignored blocking walls and just shuffled its pawn.
+            int myDist  = pathChecker.shortestPath(next, aiPlayer);
+            int oppDist = pathChecker.shortestPath(next, aiPlayer.opponent());
+            int gap = myDist - oppDist;
+            if (s > bestScore || (s == bestScore && gap < bestGap)) {
                 bestScore = s;
-                bestDist  = dist;
+                bestGap   = gap;
                 best = move;
             }
         }

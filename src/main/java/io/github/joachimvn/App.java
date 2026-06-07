@@ -87,7 +87,10 @@ public class App extends Application {
             getClass().getResource("/css/app.css").toExternalForm()
         );
         scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (e.getCode() == KeyCode.F11) {
+            if (e.getCode() == KeyCode.D && e.isControlDown()) {
+                System.out.println(ctrl.boardStateText());
+                e.consume();
+            } else if (e.getCode() == KeyCode.F11) {
                 stage.setFullScreen(!stage.isFullScreen());
                 e.consume();
             } else if (e.getCode() == KeyCode.ENTER && gameOver.getRoot().isVisible()) {
