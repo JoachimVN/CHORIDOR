@@ -89,24 +89,31 @@ abstract class AbstractSearchStrategy implements Strategy {
     }
 
     private Move searchDepth(GameState state, List<Move> moves, int depth, long deadline) {
-        Move best = null;
-        int bestScore = Integer.MIN_VALUE;
-        int bestGap   = Integer.MAX_VALUE;
+        Move best       = null;
+        int bestScore   = Integer.MIN_VALUE;
+        int bestMyDist  = Integer.MAX_VALUE;
+        int bestOppDist = Integer.MIN_VALUE;
         for (Move move : moves) {
             if (System.currentTimeMillis() >= deadline) break;
             GameState next = apply(state, move);
             int s = minimax(next, depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false, deadline);
-            // Tie-break equal-scoring lines by the net distance gap (myDist - oppDist); lower is
-            // better. This captures both "advance myself" and "block the opponent" in one measure,
-            // so a wall that pushes the opponent further away is just as preferred as a pawn step
-            // forward. Without this, ties (e.g. all moves score -WIN in a forced loss) were broken
-            // only by own distance, so the AI ignored blocking walls and just shuffled its pawn.
             int myDist  = pathChecker.shortestPath(next, aiPlayer);
             int oppDist = pathChecker.shortestPath(next, aiPlayer.opponent());
-            int gap = myDist - oppDist;
-            if (s > bestScore || (s == bestScore && gap < bestGap)) {
-                bestScore = s;
-                bestGap   = gap;
+            // Two-level tie-break when the search scores are equal:
+            //   1. Prefer smaller myDist (keep advancing toward own goal).
+            //   2. If myDist is also equal, prefer larger oppDist (block the opponent more).
+            // Separating these avoids the single-number gap (myDist - oppDist) masking cases
+            // where different (myDist, oppDist) pairs cancel to the same value, which caused
+            // deterministic oscillation — e.g. in a forced loss all pawn moves score -WIN,
+            // so the first move alphabetically in the list was always chosen regardless of
+            // whether it made progress toward goal.
+            boolean better = s > bestScore
+                || (s == bestScore && myDist < bestMyDist)
+                || (s == bestScore && myDist == bestMyDist && oppDist > bestOppDist);
+            if (better) {
+                bestScore   = s;
+                bestMyDist  = myDist;
+                bestOppDist = oppDist;
                 best = move;
             }
         }

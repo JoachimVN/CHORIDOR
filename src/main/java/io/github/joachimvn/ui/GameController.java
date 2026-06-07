@@ -35,6 +35,9 @@ public class GameController {
     // GameState is immutable, so storing references is safe. reviewCursor == -1 means live play.
     private final List<GameState> history = new ArrayList<>();
     private int reviewCursor = -1;
+
+    // Standard Quoridor notation for each ply (index 0 = notation of move 1, etc.).
+    private final List<String> moveLog = new ArrayList<>();
     private final AudioClip moveSound = new AudioClip(
         getClass().getResource("/audio/sfx/Move.wav").toExternalForm());
     private final AudioClip wallSound = new AudioClip(
@@ -116,19 +119,21 @@ public class GameController {
         if (!legal) return;
         Position from = state.getPawnPosition(state.getCurrentPlayer());
         boolean isJump = Math.abs(target.row() - from.row()) + Math.abs(target.col() - from.col()) > 1;
-        state = engine.applyMove(state, new PawnMove(target));
+        PawnMove pm = new PawnMove(target);
+        state = engine.applyMove(state, pm);
         clearPreview();
         play(isJump ? jumpSound : moveSound);
-        afterMove();
+        afterMove(pm);
     }
 
     public void clickWall() {
         if (gameOver || aiThinking || previewWall == null || !isHuman(state.getCurrentPlayer())) return;
+        WallMove wm = new WallMove(previewWall);
         wallOwners.put(previewWall, state.getCurrentPlayer());
-        state = engine.applyMove(state, new WallMove(previewWall));
+        state = engine.applyMove(state, wm);
         clearPreview();
         play(wallSound);
-        afterMove();
+        afterMove(wm);
     }
 
     private void reset() {
@@ -140,6 +145,7 @@ public class GameController {
         wallOwners.clear();
         history.clear();
         history.add(state);
+        moveLog.clear();
         reviewCursor = -1;
         clearPreview();
         refreshLegalMoves();
@@ -147,8 +153,9 @@ public class GameController {
         scheduleAiMove();
     }
 
-    private void afterMove() {
+    private void afterMove(Move move) {
         history.add(state);
+        moveLog.add(toNotation(move));
         gameOver = engine.isGameOver(state);
         if (gameOver) {
             Player winner = engine.getWinner(state).orElseThrow();
@@ -199,7 +206,7 @@ public class GameController {
                 play(wallSound);
             }
         }
-        afterMove();
+        afterMove(move);
     }
 
     private void clearPreview() {
@@ -270,6 +277,62 @@ public class GameController {
         return p == Player.ONE ? "1" : "2";
     }
 
+    // ── Quoridor notation ─────────────────────────────────────────────────────
+
+    /**
+     * Standard Quoridor notation. Columns a–i map left-to-right; rows 1–9 map bottom-to-top
+     * (row 1 = our row 8 = player-one's start, row 9 = our row 0 = player-two's start).
+     *
+     * <ul>
+     *   <li>Pawn to Position(r,c) → {@code a+c}{@code 9−r}  e.g. {@code e2}</li>
+     *   <li>Wall(H, r, c)         → {@code a+c}{@code 8−r}h  e.g. {@code e4h}</li>
+     *   <li>Wall(V, r, c)         → {@code a+c}{@code 8−r}v  e.g. {@code e4v}</li>
+     * </ul>
+     */
+    public static String toNotation(Move move) {
+        return switch (move) {
+            case PawnMove pm -> {
+                Position p = pm.target();
+                yield String.valueOf((char)('a' + p.col())) + (9 - p.row());
+            }
+            case WallMove wm -> {
+                Wall w = wm.wall();
+                char col = (char)('a' + w.col());
+                int  row = 8 - w.row();
+                char ori = w.orientation() == Wall.Orientation.HORIZONTAL ? 'h' : 'v';
+                yield "" + col + row + ori;
+            }
+        };
+    }
+
+    /**
+     * The notation for the move that led to review position {@code cursor}, in chess style:
+     * {@code "1. e2"} (red's first move) or {@code "1... e8"} (blue's first move).
+     * Returns {@code null} at cursor 0 (start position — no move yet).
+     */
+    public String getMoveNotation(int cursor) {
+        if (cursor <= 0 || cursor > moveLog.size()) return null;
+        int turn = (cursor + 1) / 2;
+        boolean redMoved = (cursor % 2) == 1;
+        return turn + (redMoved ? ". " : "... ") + moveLog.get(cursor - 1);
+    }
+
+    /** Full game notation formatted like chess: {@code "1. e2 e8  2. e2h e7  ..."} */
+    public String fullNotation() {
+        if (moveLog.isEmpty()) return "(no moves yet)";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < moveLog.size(); i++) {
+            if (i % 2 == 0) {
+                if (i > 0) sb.append("  ");
+                sb.append(i / 2 + 1).append(". ");
+            } else {
+                sb.append(' ');
+            }
+            sb.append(moveLog.get(i));
+        }
+        return sb.toString();
+    }
+
     /**
      * Returns a compact, human-readable text representation of the current board — paste this
      * into a bug report or a conversation to get an exact diagnosis without relying on screenshots.
@@ -283,16 +346,19 @@ public class GameController {
         Position p1 = s.getPawnPosition(Player.ONE);
         Position p2 = s.getPawnPosition(Player.TWO);
 
-        // Column header
+        // Move log
         StringBuilder sb = new StringBuilder();
+        sb.append("Moves: ").append(fullNotation()).append("\n\n");
+
+        // Column header (a–i)
         sb.append("   ");
         for (int c = 0; c < GameState.BOARD_SIZE; c++)
-            sb.append(String.format(" %d  ", c));
+            sb.append(String.format(" %c  ", 'a' + c));
         sb.append("\n");
 
         for (int r = 0; r < GameState.BOARD_SIZE; r++) {
-            // Row of cells
-            sb.append(String.format("%d  ", r));
+            // Row of cells (label = standard row 9..1, top to bottom)
+            sb.append(String.format("%d  ", 9 - r));
             for (int c = 0; c < GameState.BOARD_SIZE; c++) {
                 Position pos = new Position(r, c);
                 char cell = pos.equals(p1) ? 'R' : pos.equals(p2) ? 'B' : '·';

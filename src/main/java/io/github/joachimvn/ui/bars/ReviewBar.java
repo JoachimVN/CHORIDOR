@@ -97,8 +97,8 @@ public final class ReviewBar {
 
     private static String labelText(GameController ctrl) {
         int cursor = ctrl.getReviewCursor();
-        return cursor == 0
-            ? "Start position"
-            : "Move " + cursor + " / " + ctrl.getMoveCount();
+        if (cursor == 0) return "Start position";
+        String notation = ctrl.getMoveNotation(cursor);
+        return notation + "  (" + cursor + "/" + ctrl.getMoveCount() + ")";
     }
 }
