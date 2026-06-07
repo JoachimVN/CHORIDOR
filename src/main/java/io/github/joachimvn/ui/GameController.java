@@ -3,6 +3,7 @@ package io.github.joachimvn.ui;
 import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.core.rules.GameEngine;
 import io.github.joachimvn.core.rules.MoveValidator;
+import io.github.joachimvn.core.rules.PathChecker;
 import io.github.joachimvn.ai.Strategy;
 import javafx.application.Platform;
 import javafx.scene.media.AudioClip;
@@ -21,7 +22,8 @@ public class GameController {
     private final String[]   playerNames      = {"Player 1", "Player 2"};
 
     private GameState state = new GameState();
-    private final MoveValidator validator = new MoveValidator();
+    private final MoveValidator validator   = new MoveValidator();
+    private final PathChecker   pathChecker = new PathChecker();
     private final GameEngine engine = new GameEngine();
     private List<PawnMove> legalPawnMoves;
     private Wall previewWall;
@@ -29,6 +31,14 @@ public class GameController {
     private boolean gameOver;
     private final List<Runnable> listeners = new ArrayList<>();
     private final Map<Wall, Player> wallOwners = new LinkedHashMap<>();
+
+    // Snapshot after every move (index 0 = starting position), for the look-back review.
+    // GameState is immutable, so storing references is safe. reviewCursor == -1 means live play.
+    private final List<GameState> history = new ArrayList<>();
+    private int reviewCursor = -1;
+
+    // Standard Quoridor notation for each ply (index 0 = notation of move 1, etc.).
+    private final List<String> moveLog = new ArrayList<>();
     private final AudioClip moveSound = new AudioClip(
         getClass().getResource("/audio/sfx/Move.wav").toExternalForm());
     private final AudioClip wallSound = new AudioClip(
@@ -52,7 +62,7 @@ public class GameController {
 
     public void addListener(Runnable r) { listeners.add(r); }
 
-    public GameState getState()              { return state; }
+    public GameState getState()              { return isReviewing() ? history.get(reviewCursor) : state; }
     public List<PawnMove> getLegalPawnMoves(){ return legalPawnMoves; }
     public Wall getPreviewWall()             { return previewWall; }
     public boolean isGameOver()              { return gameOver; }
@@ -110,19 +120,21 @@ public class GameController {
         if (!legal) return;
         Position from = state.getPawnPosition(state.getCurrentPlayer());
         boolean isJump = Math.abs(target.row() - from.row()) + Math.abs(target.col() - from.col()) > 1;
-        state = engine.applyMove(state, new PawnMove(target));
+        PawnMove pm = new PawnMove(target);
+        state = engine.applyMove(state, pm);
         clearPreview();
         play(isJump ? jumpSound : moveSound);
-        afterMove();
+        afterMove(pm);
     }
 
     public void clickWall() {
         if (gameOver || aiThinking || previewWall == null || !isHuman(state.getCurrentPlayer())) return;
+        WallMove wm = new WallMove(previewWall);
         wallOwners.put(previewWall, state.getCurrentPlayer());
-        state = engine.applyMove(state, new WallMove(previewWall));
+        state = engine.applyMove(state, wm);
         clearPreview();
         play(wallSound);
-        afterMove();
+        afterMove(wm);
     }
 
     private void reset() {
@@ -132,13 +144,19 @@ public class GameController {
         state = new GameState();
         gameOver = false;
         wallOwners.clear();
+        history.clear();
+        history.add(state);
+        moveLog.clear();
+        reviewCursor = -1;
         clearPreview();
         refreshLegalMoves();
         notifyListeners();
         scheduleAiMove();
     }
 
-    private void afterMove() {
+    private void afterMove(Move move) {
+        history.add(state);
+        moveLog.add(toNotation(move));
         gameOver = engine.isGameOver(state);
         if (gameOver) {
             Player winner = engine.getWinner(state).orElseThrow();
@@ -189,7 +207,7 @@ public class GameController {
                 play(wallSound);
             }
         }
-        afterMove();
+        afterMove(move);
     }
 
     private void clearPreview() {
@@ -213,7 +231,44 @@ public class GameController {
         }
     }
 
+    /** Play the selection click, e.g. for setup-screen controls. Honours the mute toggle. */
+    public void playSelect() { play(selectSound); }
+
     private void play(AudioClip clip) { if (!muted) clip.play(); }
+
+    // ── Game review (look-back) ───────────────────────────────────────────────
+
+    public boolean isReviewing()     { return reviewCursor >= 0; }
+    public int     getReviewCursor() { return reviewCursor; }
+    /** Number of moves played in the current game (history has moveCount + 1 positions). */
+    public int     getMoveCount()    { return Math.max(0, history.size() - 1); }
+
+    /** Enter review at the final position. No-op until at least one move has been played. */
+    public void enterReview() {
+        if (history.size() <= 1) return;
+        reviewCursor = history.size() - 1;
+        notifyListeners();
+    }
+
+    public void exitReview() {
+        if (!isReviewing()) return;
+        reviewCursor = -1;
+        notifyListeners();
+    }
+
+    public void reviewFirst() { seekReview(0); }
+    public void reviewPrev()  { seekReview(reviewCursor - 1); }
+    public void reviewNext()  { seekReview(reviewCursor + 1); }
+    public void reviewLast()  { seekReview(history.size() - 1); }
+
+    private void seekReview(int index) {
+        if (!isReviewing()) return;
+        int clamped = Math.max(0, Math.min(history.size() - 1, index));
+        if (clamped == reviewCursor) return;
+        reviewCursor = clamped;
+        play(moveSound);
+        notifyListeners();
+    }
 
     private void notifyListeners() {
         listeners.forEach(Runnable::run);
@@ -221,5 +276,123 @@ public class GameController {
 
     private static String label(Player p) {
         return p == Player.ONE ? "1" : "2";
+    }
+
+    // ── Quoridor notation ─────────────────────────────────────────────────────
+
+    /**
+     * Standard Quoridor notation. Columns a–i map left-to-right; rows 1–9 map bottom-to-top
+     * (row 1 = our row 8 = player-one's start, row 9 = our row 0 = player-two's start).
+     *
+     * <ul>
+     *   <li>Pawn to Position(r,c) → {@code a+c}{@code 9−r}  e.g. {@code e2}</li>
+     *   <li>Wall(H, r, c)         → {@code a+c}{@code 8−r}h  e.g. {@code e4h}</li>
+     *   <li>Wall(V, r, c)         → {@code a+c}{@code 8−r}v  e.g. {@code e4v}</li>
+     * </ul>
+     */
+    public static String toNotation(Move move) {
+        return switch (move) {
+            case PawnMove pm -> {
+                Position p = pm.target();
+                yield String.valueOf((char)('a' + p.col())) + (9 - p.row());
+            }
+            case WallMove wm -> {
+                Wall w = wm.wall();
+                char col = (char)('a' + w.col());
+                int  row = 8 - w.row();
+                char ori = w.orientation() == Wall.Orientation.HORIZONTAL ? 'h' : 'v';
+                yield "" + col + row + ori;
+            }
+        };
+    }
+
+    /**
+     * The notation for the move that led to review position {@code cursor}, in chess style:
+     * {@code "1. e2"} (red's first move) or {@code "1... e8"} (blue's first move).
+     * Returns {@code null} at cursor 0 (start position — no move yet).
+     */
+    public String getMoveNotation(int cursor) {
+        if (cursor <= 0 || cursor > moveLog.size()) return null;
+        int turn = (cursor + 1) / 2;
+        boolean redMoved = (cursor % 2) == 1;
+        return turn + (redMoved ? ". " : "... ") + moveLog.get(cursor - 1);
+    }
+
+    /** Full game notation formatted like chess: {@code "1. e2 e8  2. e2h e7  ..."} */
+    public String fullNotation() {
+        if (moveLog.isEmpty()) return "(no moves yet)";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < moveLog.size(); i++) {
+            if (i % 2 == 0) {
+                if (i > 0) sb.append("  ");
+                sb.append(i / 2 + 1).append(". ");
+            } else {
+                sb.append(' ');
+            }
+            sb.append(moveLog.get(i));
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Returns a compact, human-readable text representation of the current board — paste this
+     * into a bug report or a conversation to get an exact diagnosis without relying on screenshots.
+     *
+     * Format: a 9×9 character grid (R=red pawn, B=blue pawn, ·=empty cell) followed by
+     * horizontal-wall markers (═) below each row boundary and vertical-wall markers (║) between
+     * column pairs, then a summary line.
+     */
+    public String boardStateText() {
+        GameState s = getState();
+        Position p1 = s.getPawnPosition(Player.ONE);
+        Position p2 = s.getPawnPosition(Player.TWO);
+
+        // Move log
+        StringBuilder sb = new StringBuilder();
+        sb.append("Moves: ").append(fullNotation()).append("\n\n");
+
+        // Column header (a–i)
+        sb.append("   ");
+        for (int c = 0; c < GameState.BOARD_SIZE; c++)
+            sb.append(String.format(" %c  ", 'a' + c));
+        sb.append("\n");
+
+        for (int r = 0; r < GameState.BOARD_SIZE; r++) {
+            // Row of cells (label = standard row 9..1, top to bottom)
+            sb.append(String.format("%d  ", 9 - r));
+            for (int c = 0; c < GameState.BOARD_SIZE; c++) {
+                Position pos = new Position(r, c);
+                char cell = pos.equals(p1) ? 'R' : pos.equals(p2) ? 'B' : '·';
+                sb.append('[').append(cell).append(']');
+                // Vertical wall to the right of this cell?
+                if (c < GameState.BOARD_SIZE - 1) {
+                    boolean blocked = s.isEdgeBlocked(pos, new Position(r, c + 1));
+                    sb.append(blocked ? '║' : ' ');
+                }
+            }
+            sb.append("\n");
+
+            // Horizontal walls below this row
+            if (r < GameState.BOARD_SIZE - 1) {
+                sb.append("   ");
+                for (int c = 0; c < GameState.BOARD_SIZE; c++) {
+                    boolean blocked = s.isEdgeBlocked(new Position(r, c), new Position(r + 1, c));
+                    sb.append(blocked ? " ═══" : "    ");
+                    if (c < GameState.BOARD_SIZE - 1) sb.append(' ');
+                }
+                sb.append("\n");
+            }
+        }
+
+        // Summary line (jump-aware distances match what the AI actually sees)
+        int d1 = pathChecker.shortestPathWithJumps(s, Player.ONE);
+        int d2 = pathChecker.shortestPathWithJumps(s, Player.TWO);
+        sb.append(String.format(
+            "Red@(%d,%d) d=%d walls=%d  |  Blue@(%d,%d) d=%d walls=%d  |  Turn: %s%n",
+            p1.row(), p1.col(), d1, s.getWallCount(Player.ONE),
+            p2.row(), p2.col(), d2, s.getWallCount(Player.TWO),
+            s.getCurrentPlayer() == Player.ONE ? "Red" : "Blue"));
+
+        return sb.toString();
     }
 }

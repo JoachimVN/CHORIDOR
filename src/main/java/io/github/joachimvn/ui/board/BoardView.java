@@ -1,5 +1,6 @@
-package io.github.joachimvn.ui;
+package io.github.joachimvn.ui.board;
 
+import io.github.joachimvn.ui.GameController;
 import io.github.joachimvn.core.model.GameState;
 import io.github.joachimvn.core.model.PawnMove;
 import io.github.joachimvn.core.model.Player;
@@ -8,9 +9,6 @@ import io.github.joachimvn.core.model.Wall;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.TextAlignment;
 
 import java.util.List;
 
@@ -33,18 +31,6 @@ public class BoardView extends Canvas {
     private static final double HOVER_DOT_RATIO = 0.36;
     private static final double PREVIEW_OPACITY = 0.45;
     private static final double STRIP_OPACITY   = 0.70;
-
-    // Win overlay (at scale 1.0)
-    private static final double OVERLAY_OPACITY      = 0.60;
-    private static final double OVERLAY_PANEL_ALPHA  = 0.97;
-    private static final int    OVERLAY_W            = 340;
-    private static final int    OVERLAY_H            = 120;
-    private static final int    OVERLAY_RADIUS       = 12;
-    private static final int    OVERLAY_TITLE_SZ     = 28;
-    private static final int    OVERLAY_HINT_SZ      = 14;
-    private static final double OVERLAY_TITLE_Y_FRAC = 0.42;
-    private static final double OVERLAY_HINT_Y_FRAC  = 0.72;
-    private static final String FONT_NAME            = "System";
 
     // Public colours — App uses these as the single source of truth
     public static final Color P1_COLOR = Color.web("#9E4A40");
@@ -150,12 +136,7 @@ public class BoardView extends Canvas {
         paintPawn(gc, state.getPawnPosition(Player.TWO), P2_COLOR, step, cell);
 
         if (flipped) gc.restore();
-
-        if (ctrl.isGameOver()) {
-            Player winner = ctrl.getWinner();
-            Color winColor = winner == Player.ONE ? P1_COLOR : P2_COLOR;
-            paintWinOverlay(gc, ctrl.getStatusText(), s, winColor);
-        }
+        // Game-over UI is a JavaFX overlay owned by App, not painted on the canvas.
     }
 
     private void drawCells(GraphicsContext gc, List<PawnMove> legal, double step, double cell) {
@@ -232,35 +213,6 @@ public class BoardView extends Canvas {
         double d   = cell - 2 * pad;
         gc.setFill(color);
         gc.fillOval(x, y, d, d);
-    }
-
-    private void paintWinOverlay(GraphicsContext gc, String winText, double s, Color winnerColor) {
-        double size = getWidth();
-        gc.setFill(Color.rgb(0, 0, 0, OVERLAY_OPACITY));
-        gc.fillRect(0, 0, size, size);
-
-        double cx  = size / 2.0;
-        double cy  = size / 2.0;
-        double w   = OVERLAY_W * s;
-        double h   = OVERLAY_H * s;
-        double r   = OVERLAY_RADIUS * s;
-        double ox  = cx - w / 2.0;
-        double oy  = cy - h / 2.0;
-
-        gc.setFill(Color.web("#13151F", OVERLAY_PANEL_ALPHA));
-        gc.fillRoundRect(ox, oy, w, h, r, r);
-        gc.setStroke(Color.web("#2E3250"));
-        gc.setLineWidth(s);
-        gc.strokeRoundRect(ox, oy, w, h, r, r);
-
-        gc.setTextAlign(TextAlignment.CENTER);
-        gc.setFont(Font.font(FONT_NAME, FontWeight.BOLD, OVERLAY_TITLE_SZ * s));
-        gc.setFill(winnerColor);
-        gc.fillText(winText, cx, oy + h * OVERLAY_TITLE_Y_FRAC);
-
-        gc.setFont(Font.font(FONT_NAME, FontWeight.NORMAL, OVERLAY_HINT_SZ * s));
-        gc.setFill(Color.web("#606880"));
-        gc.fillText("Press New Game to play again", cx, oy + h * OVERLAY_HINT_Y_FRAC);
     }
 
     // ── Hit testing ──────────────────────────────────────────────────────────
