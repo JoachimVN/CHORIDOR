@@ -31,14 +31,14 @@ public final class GameOverOverlay {
         root.getStyleClass().add("game-over-overlay");
         root.setVisible(false);
 
-        Button newGameBtn = iconActionButton(FontAwesomeSolid.REDO, "New Game",
+        Button newGameBtn = iconActionButton(FontAwesomeSolid.REDO, "Play Again",
             ctrl::replay);
         Button changeBtn  = iconActionButton(FontAwesomeSolid.SLIDERS_H, "Change Mode",
             () -> { root.setVisible(false); setupOverlay.setVisible(true); });
         Button lookBtn    = iconActionButton(FontAwesomeSolid.HISTORY, "Look Back",
             () -> { root.setVisible(false); ctrl.enterReview(); });
 
-        HBox buttons = new HBox(16, newGameBtn, changeBtn, lookBtn);
+        HBox buttons = new HBox(18, newGameBtn, changeBtn, lookBtn);
         buttons.setAlignment(Pos.CENTER);
 
         VBox card = new VBox(26, winLabel, buttons);
@@ -62,15 +62,15 @@ public final class GameOverOverlay {
         root.setVisible(over && !setupVisible && !ctrl.isReviewing());
     }
 
-    /** Icon-on-top button for the game-over overlay. */
+    /** Icon-on-top "card" button for the game-over overlay. */
     private Button iconActionButton(FontAwesomeSolid icon, String caption, Runnable action) {
         FontIcon fi = new FontIcon(icon);
         fi.getStyleClass().add("game-over-icon");
-        fi.setIconSize(24);
+        fi.setIconSize(34);
 
         Button btn = new Button(caption, fi);
         btn.setContentDisplay(ContentDisplay.TOP);
-        btn.setGraphicTextGap(8);
+        btn.setGraphicTextGap(14);
         btn.getStyleClass().add("game-over-button");
         btn.setOnAction(e -> {
             ctrl.playSelect();

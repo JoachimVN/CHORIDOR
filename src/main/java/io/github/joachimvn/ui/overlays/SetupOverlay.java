@@ -168,11 +168,17 @@ public final class SetupOverlay {
         return btn;
     }
 
+    /** Show at most this many strategy rows; the rest scroll, so the popup never runs off-screen. */
+    private static final int STRATEGY_VISIBLE_ROWS = 4;
+
     private static ComboBox<Difficulty> strategyCombo() {
         ComboBox<Difficulty> combo = new ComboBox<>();
         combo.getItems().addAll(Difficulty.values());
         combo.getStyleClass().add("strategy-combo");
         combo.setMaxWidth(Double.MAX_VALUE);
+        // Cap the dropdown height regardless of how many strategies exist (the CSS max-height on the
+        // popup list-view alone isn't honoured, so the row count is the reliable bound).
+        combo.setVisibleRowCount(STRATEGY_VISIBLE_ROWS);
         combo.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(Difficulty d, boolean empty) {

@@ -385,37 +385,42 @@
 .game-over-title.player2 { -fx-text-fill: #3E68A8; }
 
 .game-over-button {
-    -fx-background-color: #1E2130;
-    -fx-text-fill: #8890A8;
+    -fx-background-color: #191C2A;
+    -fx-text-fill: #6E7694;
     -fx-font-size: 12px;
-    -fx-font-weight: bold;
-    -fx-padding: 14 18 14 18;
-    -fx-min-width: 92;
-    -fx-background-radius: 6;
-    -fx-border-color: #2E3250;
-    -fx-border-radius: 6;
+    -fx-font-weight: normal;
+    -fx-padding: 24 16 20 16;
+    -fx-min-width: 124;
+    -fx-pref-width: 124;
+    -fx-min-height: 116;
+    -fx-pref-height: 116;
+    -fx-background-radius: 12;
+    -fx-border-color: #242842;
+    -fx-border-radius: 12;
     -fx-border-width: 1;
     -fx-cursor: hand;
 }
 
 .game-over-button:hover {
-    -fx-background-color: #252840;
+    -fx-background-color: #1C2236;
     -fx-text-fill: #C8CCDC;
-    -fx-border-color: #3E4470;
+    -fx-border-color: #3E68A8;
+    -fx-effect: dropshadow(gaussian, rgba(62, 104, 168, 0.35), 14, 0.2, 0, 0);
 }
 
 .game-over-button:pressed {
     -fx-background-color: #3E68A8;
     -fx-text-fill: #FFFFFF;
-    -fx-border-color: #2E508A;
+    -fx-border-color: #5A84C4;
+    -fx-effect: none;
 }
 
 .game-over-icon {
-    -fx-icon-color: #8890A8;
+    -fx-icon-color: #99A1C2;
 }
 
 .game-over-button:hover .game-over-icon {
-    -fx-icon-color: #C8CCDC;
+    -fx-icon-color: #8AAADA;
 }
 
 .game-over-button:pressed .game-over-icon {
