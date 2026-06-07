@@ -29,6 +29,11 @@ public class GameController {
     private boolean gameOver;
     private final List<Runnable> listeners = new ArrayList<>();
     private final Map<Wall, Player> wallOwners = new LinkedHashMap<>();
+
+    // Snapshot after every move (index 0 = starting position), for the look-back review.
+    // GameState is immutable, so storing references is safe. reviewCursor == -1 means live play.
+    private final List<GameState> history = new ArrayList<>();
+    private int reviewCursor = -1;
     private final AudioClip moveSound = new AudioClip(
         getClass().getResource("/audio/sfx/Move.wav").toExternalForm());
     private final AudioClip wallSound = new AudioClip(
@@ -52,7 +57,7 @@ public class GameController {
 
     public void addListener(Runnable r) { listeners.add(r); }
 
-    public GameState getState()              { return state; }
+    public GameState getState()              { return isReviewing() ? history.get(reviewCursor) : state; }
     public List<PawnMove> getLegalPawnMoves(){ return legalPawnMoves; }
     public Wall getPreviewWall()             { return previewWall; }
     public boolean isGameOver()              { return gameOver; }
@@ -132,6 +137,9 @@ public class GameController {
         state = new GameState();
         gameOver = false;
         wallOwners.clear();
+        history.clear();
+        history.add(state);
+        reviewCursor = -1;
         clearPreview();
         refreshLegalMoves();
         notifyListeners();
@@ -139,6 +147,7 @@ public class GameController {
     }
 
     private void afterMove() {
+        history.add(state);
         gameOver = engine.isGameOver(state);
         if (gameOver) {
             Player winner = engine.getWinner(state).orElseThrow();
@@ -217,6 +226,40 @@ public class GameController {
     public void playSelect() { play(selectSound); }
 
     private void play(AudioClip clip) { if (!muted) clip.play(); }
+
+    // ── Game review (look-back) ───────────────────────────────────────────────
+
+    public boolean isReviewing()     { return reviewCursor >= 0; }
+    public int     getReviewCursor() { return reviewCursor; }
+    /** Number of moves played in the current game (history has moveCount + 1 positions). */
+    public int     getMoveCount()    { return Math.max(0, history.size() - 1); }
+
+    /** Enter review at the final position. No-op until at least one move has been played. */
+    public void enterReview() {
+        if (history.size() <= 1) return;
+        reviewCursor = history.size() - 1;
+        notifyListeners();
+    }
+
+    public void exitReview() {
+        if (!isReviewing()) return;
+        reviewCursor = -1;
+        notifyListeners();
+    }
+
+    public void reviewFirst() { seekReview(0); }
+    public void reviewPrev()  { seekReview(reviewCursor - 1); }
+    public void reviewNext()  { seekReview(reviewCursor + 1); }
+    public void reviewLast()  { seekReview(history.size() - 1); }
+
+    private void seekReview(int index) {
+        if (!isReviewing()) return;
+        int clamped = Math.max(0, Math.min(history.size() - 1, index));
+        if (clamped == reviewCursor) return;
+        reviewCursor = clamped;
+        play(moveSound);
+        notifyListeners();
+    }
 
     private void notifyListeners() {
         listeners.forEach(Runnable::run);
