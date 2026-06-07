@@ -77,7 +77,7 @@ public class SharpStrategy extends AbstractSearchStrategy {
             Position p1 = state.getPawnPosition(Player.ONE);
             Position p2 = state.getPawnPosition(Player.TWO);
 
-            List<int[]> wallImpacts = new ArrayList<>(); // {impact, index into legalWalls}
+            List<int[]> wallImpacts = new ArrayList<>();
             List<WallMove> legalWalls = validator.getLegalWallMoves(state);
             for (int wi = 0; wi < legalWalls.size(); wi++) {
                 Wall w = legalWalls.get(wi).wall();

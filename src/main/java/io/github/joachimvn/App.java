@@ -19,12 +19,16 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
+import java.util.logging.Logger;
+
 /**
  * Application entry point and UI orchestrator. Each chrome bar and overlay lives in its own class
  * in {@code io.github.joachimvn.ui}; this class wires them together around a shared
  * {@link GameController} and the board-derived {@code scaleB} that all of them scale against.
  */
 public class App extends Application {
+
+    private static final Logger LOG = Logger.getLogger(App.class.getName());
 
     /**
      * Dead-band for the chrome scale, in scale units (~{@value}×board-design-width of slack).
@@ -87,7 +91,7 @@ public class App extends Application {
             getClass().getResource("/css/app.css").toExternalForm()
         );
         scene.addEventFilter(KeyEvent.KEY_PRESSED,
-            e -> handleKey(e, stage, ctrl, gameOver, setup));
+            e -> handleKey(e, stage, ctrl, gameOver));
 
         stage.getIcons().add(new Image(getClass().getResourceAsStream(
             "/images/logos/Choridor_Logo_Square_White.png")));
@@ -100,10 +104,10 @@ public class App extends Application {
     }
 
     private static void handleKey(KeyEvent e, Stage stage, GameController ctrl,
-                                  GameOverOverlay gameOver, SetupOverlay setup) {
+                                  GameOverOverlay gameOver) {
         KeyCode code = e.getCode();
         if (code == KeyCode.D && e.isControlDown()) {
-            System.err.println(ctrl.boardStateText()); // intentional diagnostic output to stderr
+            LOG.info(ctrl::boardStateText);
             e.consume();
         } else if (code == KeyCode.F11) {
             stage.setFullScreen(!stage.isFullScreen());
