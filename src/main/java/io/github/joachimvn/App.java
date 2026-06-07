@@ -86,27 +86,8 @@ public class App extends Application {
         scene.getStylesheets().add(
             getClass().getResource("/css/app.css").toExternalForm()
         );
-        scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (e.getCode() == KeyCode.D && e.isControlDown()) {
-                System.out.println(ctrl.boardStateText());
-                e.consume();
-            } else if (e.getCode() == KeyCode.F11) {
-                stage.setFullScreen(!stage.isFullScreen());
-                e.consume();
-            } else if (e.getCode() == KeyCode.ENTER && gameOver.getRoot().isVisible()) {
-                ctrl.replay();
-                e.consume();
-            } else if (ctrl.isReviewing()) {
-                // Step through the finished game; Shift jumps to the first / last position.
-                switch (e.getCode()) {
-                    case LEFT  -> { if (e.isShiftDown()) ctrl.reviewFirst(); else ctrl.reviewPrev(); e.consume(); }
-                    case RIGHT -> { if (e.isShiftDown()) ctrl.reviewLast();  else ctrl.reviewNext(); e.consume(); }
-                    case HOME  -> { ctrl.reviewFirst(); e.consume(); }
-                    case END   -> { ctrl.reviewLast();  e.consume(); }
-                    default    -> { }
-                }
-            }
-        });
+        scene.addEventFilter(KeyEvent.KEY_PRESSED,
+            e -> handleKey(e, stage, ctrl, gameOver, setup));
 
         stage.getIcons().add(new Image(getClass().getResourceAsStream(
             "/images/logos/Choridor_Logo_Square_White.png")));
@@ -116,6 +97,34 @@ public class App extends Application {
         stage.setMinWidth(300);
         stage.setMinHeight(360);
         stage.show();
+    }
+
+    private static void handleKey(KeyEvent e, Stage stage, GameController ctrl,
+                                  GameOverOverlay gameOver, SetupOverlay setup) {
+        KeyCode code = e.getCode();
+        if (code == KeyCode.D && e.isControlDown()) {
+            System.err.println(ctrl.boardStateText()); // intentional diagnostic output to stderr
+            e.consume();
+        } else if (code == KeyCode.F11) {
+            stage.setFullScreen(!stage.isFullScreen());
+            e.consume();
+        } else if (code == KeyCode.ENTER && gameOver.getRoot().isVisible()) {
+            ctrl.replay();
+            e.consume();
+        } else if (ctrl.isReviewing()) {
+            handleReviewKey(e, ctrl);
+        }
+    }
+
+    private static void handleReviewKey(KeyEvent e, GameController ctrl) {
+        switch (e.getCode()) {
+            case LEFT  -> { if (e.isShiftDown()) ctrl.reviewFirst(); else ctrl.reviewPrev(); }
+            case RIGHT -> { if (e.isShiftDown()) ctrl.reviewLast();  else ctrl.reviewNext(); }
+            case HOME  -> ctrl.reviewFirst();
+            case END   -> ctrl.reviewLast();
+            default    -> { return; }
+        }
+        e.consume();
     }
 
     public static void main(String[] args) {

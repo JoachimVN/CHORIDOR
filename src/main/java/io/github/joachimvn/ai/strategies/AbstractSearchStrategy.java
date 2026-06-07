@@ -86,19 +86,8 @@ abstract class AbstractSearchStrategy implements Strategy {
         // can't reliably find the winning pawn line at depth 7+ within the time budget when
         // many walls remain (branching factor explodes), so we shortcut directly to the
         // best advancing pawn move and skip the search entirely in this case.
-        int myDist  = pathChecker.shortestPath(state, aiPlayer);
-        int oppDist = pathChecker.shortestPath(state, aiPlayer.opponent());
-        if (myDist > 0 && myDist < oppDist) {
-            PawnMove bestPawn = null;
-            int bestPawnDist  = myDist;
-            for (Move m : moves) {
-                if (m instanceof PawnMove pm) {
-                    int d = pathChecker.shortestPath(apply(state, pm), aiPlayer);
-                    if (d < bestPawnDist) { bestPawnDist = d; bestPawn = pm; }
-                }
-            }
-            if (bestPawn != null) return bestPawn;
-        }
+        PawnMove racing = racingMove(state, moves);
+        if (racing != null) return racing;
 
         // Full iterative-deepening minimax for all other positions.
         // Sort root candidates by BFS distance so the most promising moves come first —
@@ -113,15 +102,23 @@ abstract class AbstractSearchStrategy implements Strategy {
         return best;
     }
 
-    /**
-     * Comparator that puts advancing pawn moves first (sorted by BFS distance to own goal),
-     * then retreating/lateral pawn moves, then walls. Used at the root and inside minimax to
-     * improve alpha-beta pruning efficiency.
-     */
-    /**
-     * Comparator using only row-to-goal distance — no BFS call, safe to use at every
-     * recursive minimax node without meaningful overhead.
-     */
+    /** If winning the race (myDist < oppDist), return the pawn move that best advances toward goal. */
+    private PawnMove racingMove(GameState state, List<Move> moves) {
+        int myDist  = pathChecker.shortestPath(state, aiPlayer);
+        int oppDist = pathChecker.shortestPath(state, aiPlayer.opponent());
+        if (myDist <= 0 || myDist >= oppDist) return null;
+        PawnMove best = null;
+        int bestDist  = myDist;
+        for (Move m : moves) {
+            if (m instanceof PawnMove pm) {
+                int d = pathChecker.shortestPath(apply(state, pm), aiPlayer);
+                if (d < bestDist) { bestDist = d; best = pm; }
+            }
+        }
+        return best;
+    }
+
+    /** Comparator using only row-to-goal distance — no BFS call, safe at every recursive minimax node. */
     private static java.util.Comparator<Move> orderByRowProgress(GameState state) {
         int goalRow = state.getCurrentPlayer().goalRow();
         return (a, b) -> {
@@ -186,35 +183,35 @@ abstract class AbstractSearchStrategy implements Strategy {
 
     private int minimax(GameState state, int depth, int alpha, int beta, boolean maximizing, long deadline) {
         int s = evaluate(state);
-        // Bias terminal scores by the remaining depth so the search strictly prefers winning
-        // sooner and losing later. Without this every line that wins anywhere inside the horizon
-        // scores exactly WIN — a flat plateau with no gradient toward the goal — so a winning AI
-        // dawdles, shuffling back and forth instead of finishing (and AI-vs-AI can deadlock).
-        // More depth remaining == fewer plies to the terminal == a larger bias.
+        // Bias terminal scores by remaining depth: prefer winning sooner, losing later.
         if (Math.abs(s) >= WIN) return s > 0 ? s + depth : s - depth;
         if (depth == 0 || System.currentTimeMillis() >= deadline) return s;
 
         List<Move> moves = candidates(state);
-        // Lightweight ordering inside the tree: put pawn moves that advance toward goal first.
-        // Uses row distance (no BFS call) so the overhead per node is minimal.
         moves.sort(orderByRowProgress(state));
-        if (maximizing) {
-            int max = Integer.MIN_VALUE;
-            for (Move move : moves) {
-                max = Math.max(max, minimax(apply(state, move), depth - 1, alpha, beta, false, deadline));
-                alpha = Math.max(alpha, max);
-                if (beta <= alpha) break;
-            }
-            return max;
-        } else {
-            int min = Integer.MAX_VALUE;
-            for (Move move : moves) {
-                min = Math.min(min, minimax(apply(state, move), depth - 1, alpha, beta, true, deadline));
-                beta = Math.min(beta, min);
-                if (beta <= alpha) break;
-            }
-            return min;
+        return maximizing
+            ? maximize(moves, state, depth, alpha, beta, deadline)
+            : minimize(moves, state, depth, alpha, beta, deadline);
+    }
+
+    private int maximize(List<Move> moves, GameState state, int depth, int alpha, int beta, long deadline) {
+        int max = Integer.MIN_VALUE;
+        for (Move move : moves) {
+            max = Math.max(max, minimax(apply(state, move), depth - 1, alpha, beta, false, deadline));
+            alpha = Math.max(alpha, max);
+            if (beta <= alpha) break;
         }
+        return max;
+    }
+
+    private int minimize(List<Move> moves, GameState state, int depth, int alpha, int beta, long deadline) {
+        int min = Integer.MAX_VALUE;
+        for (Move move : moves) {
+            min = Math.min(min, minimax(apply(state, move), depth - 1, alpha, beta, true, deadline));
+            beta = Math.min(beta, min);
+            if (beta <= alpha) break;
+        }
+        return min;
     }
 
     private int evaluate(GameState state) {
