@@ -49,6 +49,8 @@ A personal project built to explore:
 - Changing sides, flipping boards, and win overlay
 - Sound effects for moves, jumps, wall placements, wins, and more
 - Multiple AI strategies
+- **Game review** — after a game ends, open Look Back to step through every move with ← / → (Shift to jump to start/end); the review bar shows standard Quoridor notation (e.g. `e2`, `e3h`)
+- **Nine AI strategies**: Random, Greedy, Minimax, Tactical, Rusher, Balanced, Adaptive, Economist, Sharp
 - Cross-platform packaging (Windows EXE, Linux zip, macOS DMG, portable JAR)
 
 ## Tech Stack
@@ -146,10 +148,15 @@ Produces a disk image at `target/dist/Choridor-<version>-macos.dmg`. Intel Mac u
 src/main/java/io/github/joachimvn
     App.java                 # JavaFX application entry point and UI wiring
     Launcher.java            # Fat-JAR entry point
-    core/model/              # domain model (GameState, Player, Wall, Move, Position, etc.)
+    core/model/              # domain model (GameState, Player, Wall, Move, Position, …)
     core/rules/              # rules engine (MoveValidator, PathChecker, GameEngine)
-    strategy/                # strategy interface and RandomStrategy implementation
-    ui/                      # JavaFX UI (BoardView, GameController)
+    ai/                      # Strategy interface, Difficulty enum, and all AI strategies
+    ui/
+        GameController.java  # game state bridge between AI/rules and the UI
+        board/               # BoardView canvas
+        bars/                # TopBar, BottomBar, ReviewBar
+        overlays/            # SetupOverlay, GameOverOverlay
+        common/              # UiScale, UiConstants, LogoFactory
 
 src/main/resources
     css/                     # UI styling
