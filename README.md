@@ -55,8 +55,8 @@ A personal project built to explore:
 - Changing sides, flipping boards, and win overlay
 - Sound effects for moves, jumps, wall placements, wins, and more
 - Multiple AI strategies
-- **Game review** — after a game ends, open Look Back to step through every move with ← / → (Shift to jump to start/end); the review bar shows standard Quoridor notation (e.g. `e2`, `e3h`)
-- **Nine AI strategies**: Random, Greedy, Minimax, Tactical, Rusher, Balanced, Adaptive, Economist, Sharp
+- Game review to look back on moves
+- Nine AI strategies: Random, Greedy, Minimax, Tactical, Rusher, Balanced, Adaptive, Economist, Sharp
 - Cross-platform packaging (Windows EXE, Linux zip, macOS DMG, portable JAR)
 
 ## Tech Stack
