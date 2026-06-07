@@ -21,7 +21,7 @@ public class GreedyStrategy implements Strategy {
         Player me = state.getCurrentPlayer();
         return validator.getLegalPawnMoves(state).stream()
             .min(Comparator.comparingInt(m ->
-                pathChecker.shortestPath(state.withPawnMove(m.target()), me)))
+                pathChecker.shortestPathWithJumps(state.withPawnMove(m.target()), me)))
             .orElseThrow();
     }
 }

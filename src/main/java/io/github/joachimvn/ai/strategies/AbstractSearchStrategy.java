@@ -104,14 +104,14 @@ abstract class AbstractSearchStrategy implements Strategy {
 
     /** If winning the race (myDist < oppDist), return the pawn move that best advances toward goal. */
     private PawnMove racingMove(GameState state, List<Move> moves) {
-        int myDist  = pathChecker.shortestPath(state, aiPlayer);
-        int oppDist = pathChecker.shortestPath(state, aiPlayer.opponent());
+        int myDist  = pathChecker.shortestPathWithJumps(state, aiPlayer);
+        int oppDist = pathChecker.shortestPathWithJumps(state, aiPlayer.opponent());
         if (myDist <= 0 || myDist >= oppDist) return null;
         PawnMove best = null;
         int bestDist  = myDist;
         for (Move m : moves) {
             if (m instanceof PawnMove pm) {
-                int d = pathChecker.shortestPath(apply(state, pm), aiPlayer);
+                int d = pathChecker.shortestPathWithJumps(apply(state, pm), aiPlayer);
                 if (d < bestDist) { bestDist = d; best = pm; }
             }
         }
@@ -143,8 +143,8 @@ abstract class AbstractSearchStrategy implements Strategy {
             if (aIsPawn != bIsPawn) return aIsPawn ? -1 : 1;
             if (!aIsPawn) return 0; // relative wall order doesn't matter here
             // Within pawn moves: prefer smaller BFS distance to the moving player's goal
-            int dA = pathChecker.shortestPath(apply(state, a), scored);
-            int dB = pathChecker.shortestPath(apply(state, b), scored);
+            int dA = pathChecker.shortestPathWithJumps(apply(state, a), scored);
+            int dB = pathChecker.shortestPathWithJumps(apply(state, b), scored);
             return Integer.compare(dA, dB);
         };
     }
@@ -158,8 +158,8 @@ abstract class AbstractSearchStrategy implements Strategy {
             if (System.currentTimeMillis() >= deadline) break;
             GameState next = apply(state, move);
             int s = minimax(next, depth - 1, Integer.MIN_VALUE, Integer.MAX_VALUE, false, deadline);
-            int myDist  = pathChecker.shortestPath(next, aiPlayer);
-            int oppDist = pathChecker.shortestPath(next, aiPlayer.opponent());
+            int myDist  = pathChecker.shortestPathWithJumps(next, aiPlayer);
+            int oppDist = pathChecker.shortestPathWithJumps(next, aiPlayer.opponent());
             // Two-level tie-break when the search scores are equal:
             //   1. Prefer smaller myDist (keep advancing toward own goal).
             //   2. If myDist is also equal, prefer larger oppDist (block the opponent more).
@@ -215,8 +215,8 @@ abstract class AbstractSearchStrategy implements Strategy {
     }
 
     private int evaluate(GameState state) {
-        int myDist  = pathChecker.shortestPath(state, aiPlayer);
-        int oppDist = pathChecker.shortestPath(state, aiPlayer.opponent());
+        int myDist  = pathChecker.shortestPathWithJumps(state, aiPlayer);
+        int oppDist = pathChecker.shortestPathWithJumps(state, aiPlayer.opponent());
         if (myDist  == 0)                 return  WIN;
         if (oppDist == 0)                 return -WIN;
         if (myDist  == Integer.MAX_VALUE) return -WIN;
