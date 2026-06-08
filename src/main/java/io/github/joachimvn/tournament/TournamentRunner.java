@@ -31,10 +31,13 @@ public class TournamentRunner {
 
     /** [wins, losses] per strategy — FX-thread-only. */
     private final Map<Difficulty, int[]> results = new LinkedHashMap<>();
+    /** wins that strategy A scored against strategy B specifically — FX-thread-only. */
+    private final Map<Difficulty, Map<Difficulty, Integer>> matchupWins = new LinkedHashMap<>();
     private ExecutorService pool;
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
 
     public Map<Difficulty, int[]> getResults() { return results; }
+    public Map<Difficulty, Map<Difficulty, Integer>> getMatchupWins() { return matchupWins; }
 
     public int totalGames(List<Difficulty> strategies) {
         int n = strategies.size();
@@ -47,7 +50,13 @@ public class TournamentRunner {
                       BiConsumer<Integer, Integer> onProgress, Runnable onComplete) {
         cancelled.set(false);
         results.clear();
-        for (Difficulty d : strategies) results.put(d, new int[]{0, 0});
+        matchupWins.clear();
+        for (Difficulty a : strategies) {
+            results.put(a, new int[]{0, 0});
+            Map<Difficulty, Integer> row = new LinkedHashMap<>();
+            for (Difficulty b : strategies) { if (a != b) row.put(b, 0); }
+            matchupWins.put(a, row);
+        }
 
         List<Difficulty[]> matchups = buildMatchups(strategies);
         int total = matchups.size();
@@ -71,6 +80,7 @@ public class TournamentRunner {
                         Difficulty loser = winner == matchup[0] ? matchup[1] : matchup[0];
                         results.get(winner)[0]++;
                         results.get(loser)[1]++;
+                        matchupWins.get(winner).merge(loser, 1, Integer::sum);
                     }
                     onProgress.accept(done, total);
                     if (done == total) onComplete.run();

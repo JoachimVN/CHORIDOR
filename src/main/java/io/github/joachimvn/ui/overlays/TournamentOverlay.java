@@ -11,10 +11,11 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Full-screen overlay that runs and displays a round-robin AI tournament.
@@ -55,7 +56,6 @@ public final class TournamentOverlay {
         progressRow.setAlignment(Pos.CENTER_LEFT);
 
         actionBtn.getStyleClass().add("start-button");
-        actionBtn.setMaxWidth(Double.MAX_VALUE);
         actionBtn.setOnAction(e -> {
             if (running) {
                 runner.cancel();
@@ -65,7 +65,16 @@ public final class TournamentOverlay {
             onClose.run();
         });
 
-        VBox card = new VBox(22, titleLabel, progressRow, table, actionBtn);
+        Button copyBtn = new Button("Copy Results");
+        copyBtn.getStyleClass().add("new-game-button");
+        copyBtn.setOnAction(e -> copyResultsToClipboard());
+
+        HBox bottomRow = new HBox(10, copyBtn, actionBtn);
+        bottomRow.setAlignment(Pos.CENTER);
+        HBox.setHgrow(actionBtn, Priority.ALWAYS);
+        actionBtn.setMaxWidth(Double.MAX_VALUE);
+
+        VBox card = new VBox(22, titleLabel, progressRow, table, bottomRow);
         card.getStyleClass().addAll("setup-card", "tournament-card");
         card.setAlignment(Pos.CENTER);
         card.setMaxWidth(760);
@@ -204,5 +213,65 @@ public final class TournamentOverlay {
 
         tv.getColumns().addAll(rankCol, nameCol, wCol, lCol, pctCol);
         return tv;
+    }
+
+    private void copyResultsToClipboard() {
+        ClipboardContent content = new ClipboardContent();
+        content.putString(formatResults());
+        Clipboard.getSystemClipboard().setContent(content);
+    }
+
+    private String formatResults() {
+        int total = runner.totalGames(strategies);
+        Map<Difficulty, int[]> res = runner.getResults();
+        Map<Difficulty, Map<Difficulty, Integer>> mw = runner.getMatchupWins();
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("CHORIDOR TOURNAMENT RESULTS\n");
+        sb.append(strategies.size()).append(" strategies · ").append(total).append(" games\n\n");
+
+        // Standings
+        sb.append(String.format("%-4s  %-16s  %3s  %3s  %5s%n", "#", "Strategy", "W", "L", "Win%"));
+        sb.append("─".repeat(40)).append("\n");
+        for (int i = 0; i < tableItems.size(); i++) {
+            Difficulty d = tableItems.get(i);
+            int[] wr = res.get(d);
+            int w = wr == null ? 0 : wr[0];
+            int l = wr == null ? 0 : wr[1];
+            String pct = (w + l == 0) ? "—" : String.format("%.0f%%", 100.0 * w / (w + l));
+            sb.append(String.format("%-4d  %-16s  %3d  %3d  %5s%n",
+                i + 1, d.sample().displayName(), w, l, pct));
+        }
+
+        // Head-to-head breakdown per strategy
+        sb.append("\n\nHEAD-TO-HEAD BREAKDOWN\n");
+        sb.append("─".repeat(40)).append("\n");
+        for (Difficulty d : tableItems) {
+            int[] wr = res.get(d);
+            int w = wr == null ? 0 : wr[0];
+            int l = wr == null ? 0 : wr[1];
+            String pct = (w + l == 0) ? "—" : String.format("%.0f%%", 100.0 * w / (w + l));
+            sb.append(d.sample().displayName())
+              .append("  (").append(w).append("W–").append(l).append("L  ").append(pct).append(")\n");
+
+            Map<Difficulty, Integer> wins = mw.get(d);
+            if (wins != null) {
+                // Sort opponents: most wins first, then alphabetically
+                List<Map.Entry<Difficulty, Integer>> entries = new ArrayList<>(wins.entrySet());
+                entries.sort(Comparator
+                    .<Map.Entry<Difficulty, Integer>>comparingInt(Map.Entry::getValue).reversed()
+                    .thenComparing(e -> e.getKey().sample().displayName()));
+                for (Map.Entry<Difficulty, Integer> e : entries) {
+                    int ww = e.getValue();
+                    int ll = 2 - ww;
+                    String marker = ww == 2 ? "✓✓" : ww == 1 ? "✓✗" : "✗✗";
+                    sb.append(String.format("  %s  %-16s  %d–%d%n",
+                        marker, e.getKey().sample().displayName(), ww, ll));
+                }
+            }
+            sb.append("\n");
+        }
+
+        return sb.toString();
     }
 }
