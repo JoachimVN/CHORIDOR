@@ -37,7 +37,10 @@ public class TournamentRunner {
     private final ConcurrentHashMap<Integer, Difficulty[]>                    liveMatchups   = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> liveWallOwners = new ConcurrentHashMap<>();
     /** Populated just before a game is removed from liveStates; lets the UI show a winner overlay. */
-    private final ConcurrentHashMap<Integer, Difficulty>                      liveWinners    = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, Difficulty>                      liveWinners     = new ConcurrentHashMap<>();
+    /** Final game state captured before liveStates is cleared — lets the UI show the winning move. */
+    private final ConcurrentHashMap<Integer, GameState>                       finalGameStates = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> finalWallOwners = new ConcurrentHashMap<>();
 
     // ── Control ─────────────────────────────────────────────────────────────
     private final AtomicBoolean  cancelled   = new AtomicBoolean(false);
@@ -51,7 +54,9 @@ public class TournamentRunner {
     public ConcurrentHashMap<Integer, GameState>                       getLiveStates()     { return liveStates; }
     public ConcurrentHashMap<Integer, Difficulty[]>                    getLiveMatchups()   { return liveMatchups; }
     public ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> getLiveWallOwners() { return liveWallOwners; }
-    public ConcurrentHashMap<Integer, Difficulty>                      getLiveWinners()    { return liveWinners; }
+    public ConcurrentHashMap<Integer, Difficulty>                      getLiveWinners()     { return liveWinners; }
+    public ConcurrentHashMap<Integer, GameState>                       getFinalGameStates() { return finalGameStates; }
+    public ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> getFinalWallOwners() { return finalWallOwners; }
     public boolean isPaused()  { return paused; }
 
     public int totalGames(List<Difficulty> strategies) {
@@ -77,6 +82,8 @@ public class TournamentRunner {
         liveMatchups.clear();
         liveWallOwners.clear();
         liveWinners.clear();
+        finalGameStates.clear();
+        finalWallOwners.clear();
         results.clear();
         matchupWins.clear();
         for (Difficulty a : strategies) {
@@ -185,8 +192,13 @@ public class TournamentRunner {
                    <= pathChecker.shortestPathWithJumps(state, Player.TWO) ? d1 : d2);
             return winner;
         } finally {
-            // Expose winner before clearing live state so the UI can show a result overlay.
-            if (winner != null) liveWinners.put(gameId, winner);
+            // Expose final state and winner BEFORE clearing live maps so the UI
+            // can read the winning board position and show a result overlay.
+            if (winner != null) {
+                liveWinners.put(gameId, winner);
+                finalGameStates.put(gameId, state);
+                finalWallOwners.put(gameId, wallOwners);
+            }
             liveStates.remove(gameId);
             liveMatchups.remove(gameId);
             liveWallOwners.remove(gameId);

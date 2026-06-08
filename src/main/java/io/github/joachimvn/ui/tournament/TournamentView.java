@@ -94,8 +94,8 @@ public final class TournamentView {
 
     // Active games: gameId → MiniBoard (game still running)
     private final Map<Integer, MiniBoard> activeBoards  = new LinkedHashMap<>();
-    // Finishing games: board stays 1.5 s showing winner overlay, then fades out
-    private record FinishingGame(MiniBoard board, String winnerName, long startNs) {}
+    // Finishing games: board stays 1.5 s showing winner overlay (already drawn), then fades out
+    private record FinishingGame(MiniBoard board, long startNs) {}
     private final Map<Integer, FinishingGame> finishingGames = new LinkedHashMap<>();
     // Frozen boards: pinned games whose match has ended — stay until clicked again
     private final Map<Integer, MiniBoard>     frozenBoards   = new LinkedHashMap<>();
@@ -254,7 +254,7 @@ public final class TournamentView {
                 String pct = (wr == null || wr[0] + wr[1] == 0) ? ""
                     : String.format(" (%d%%)", (int) Math.round(100.0 * wr[0] / (wr[0] + wr[1])));
                 recentResults.add(0, "  " + winner.sample().displayName()
-                    + "  beat  " + loser.sample().displayName() + pct);
+                    + " beat " + loser.sample().displayName() + pct);
                 if (recentResults.size() > MAX_RESULTS)
                     recentResults.remove(recentResults.size() - 1);
             },
@@ -333,20 +333,29 @@ public final class TournamentView {
             int id = e.getKey();
             if (current.contains(id)) return false;
             MiniBoard mb = e.getValue();
+
+            // Redraw the actual final position (stored before liveStates was cleared)
+            GameState finalState = runner.getFinalGameStates().get(id);
+            var finalWO = runner.getFinalWallOwners().getOrDefault(id,
+                                  new java.util.concurrent.ConcurrentHashMap<>());
+            if (finalState != null) mb.draw(finalState, finalWO);
+
+            // Draw winner overlay once — canvas retains it
+            Difficulty winner = runner.getLiveWinners().get(id);
+            String wName  = winner != null ? winner.sample().displayName() : null;
+            Color  wColor = (winner == mb.d1) ? P1_COLOR : P2_COLOR;
+            mb.drawWinnerOverlay(wName, wColor);
+
             if (pinnedGameIds.remove(id)) {
-                // Pinned: freeze the board, let user dismiss it manually
-                mb.setPinned(false); // hide the active-pin indicator
+                // Pinned: keep overlay and board permanently, click to dismiss
+                mb.setPinned(true);
                 mb.card.setOnMouseClicked(ev -> dismissFrozen(id, mb));
                 frozenBoards.put(id, mb);
             } else {
-                // Not pinned: show winner overlay, then fade out
-                Difficulty winner = liveWinners.get(id);
-                String wName  = winner != null ? winner.sample().displayName() : null;
-                Color  wColor = (winner == mb.d1) ? P1_COLOR : P2_COLOR;
-                mb.drawWinnerOverlay(wName, wColor);
-                finishingGames.put(id, new FinishingGame(mb, wName, now));
+                // Not pinned: overlay visible 1.5 s then fades out
+                finishingGames.put(id, new FinishingGame(mb, now));
             }
-            return true; // removed from activeBoards
+            return true;
         });
 
         // ── 3. Age finishing boards (winner overlay → fade out → remove) ──
