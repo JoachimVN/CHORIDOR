@@ -68,7 +68,7 @@ public final class LandingView {
     // ── Mutable state ─────────────────────────────────────────────────────────
     private final StackPane root;
     private Canvas bgCanvas;
-    private final StackPane arena  = new StackPane();
+    private StackPane arena; // initialized after allCards so computePrefHeight can reference order[]
     private List<VBox> allCards;
     /** order[slot] = card index occupying that slot (0=left, 1=centre, 2=right). */
     private final int[] order = {0, 1, 2};
@@ -107,8 +107,15 @@ public final class LandingView {
         populateSimulate(simBody, ctrl, board, flipSelected, onTournament);
         populateSettings(setBody);
 
+        // Arena height tracks only the centre card — side cards use translateX/Y so they
+        // must not inflate the arena or they'd shift its layout centre when centre card grows.
+        arena = new StackPane() {
+            @Override protected double computePrefHeight(double w) {
+                return allCards.get(order[1]).prefHeight(w);
+            }
+            @Override protected double computeMinHeight(double w) { return computePrefHeight(w); }
+        };
         arena.setAlignment(Pos.CENTER);
-        arena.setMinHeight(220);
         for (int i = 0; i < 3; i++) {
             VBox c = allCards.get(i);
             c.setPrefWidth(CARD_W);
@@ -207,13 +214,9 @@ public final class LandingView {
         if (slotOf(cardIdx) == 1) {
             toggleBody(cardIdx);
         } else {
-            if (openBody != null) {
-                VBox cc = allCards.get(order[1]);
-                collapseBody(cc, openBody);
-                new Timeline(new KeyFrame(DUR_EXPAND, e -> rotate(cardIdx))).play();
-            } else {
-                rotate(cardIdx);
-            }
+            // Collapse and rotate at the same time — don't wait for collapse to finish
+            if (openBody != null) collapseBody(allCards.get(order[1]), openBody);
+            rotate(cardIdx);
         }
     }
 
@@ -296,14 +299,17 @@ public final class LandingView {
         double h = body.prefHeight(CARD_W - 48);
         if (h < 20) h = 220;
 
+        body.setMaxHeight(0); // drives card VBox height; animated in sync with clip
         Rectangle clip = new Rectangle(CARD_W, 0);
         body.setClip(clip);
 
         final double finalH = h;
         Timeline open = new Timeline(new KeyFrame(DUR_EXPAND,
-            new KeyValue(clip.heightProperty(), finalH, EASE)));
+            new KeyValue(clip.heightProperty(),    finalH, EASE),
+            new KeyValue(body.maxHeightProperty(), finalH, EASE)));
         open.setOnFinished(ev -> {
             body.setClip(null);
+            body.setMaxHeight(Double.MAX_VALUE);
             // Stagger each child settling into place
             List<Node> kids = body.getChildren();
             for (int i = 0; i < kids.size(); i++) {
@@ -333,8 +339,8 @@ public final class LandingView {
         body.setClip(clip);
 
         Timeline close = new Timeline(new KeyFrame(DUR_EXPAND,
-            new KeyValue(clip.heightProperty(), 0.0,  EASE),
-            new KeyValue(body.opacityProperty(), 0.0,  EASE)));
+            new KeyValue(clip.heightProperty(),    0.0, EASE),
+            new KeyValue(body.maxHeightProperty(), 0.0, EASE)));
         close.setOnFinished(e -> {
             body.setClip(null);
             body.setManaged(false);
