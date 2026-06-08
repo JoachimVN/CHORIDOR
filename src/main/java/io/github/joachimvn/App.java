@@ -87,6 +87,8 @@ public class App extends Application {
             gameOver.update(landing.getRoot().isVisible());
         });
 
+        // Prime the board with a default game so it's visible through the landing overlay
+        ctrl.startGame(null, null, "Player 1", "Player 2");
         board.refresh();
         topBar.update(ctrl);
         bottomBar.updateStatus();

@@ -10,8 +10,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -67,8 +65,7 @@ public final class LandingView {
 
     // ── Mutable state ─────────────────────────────────────────────────────────
     private final StackPane root;
-    private Canvas bgCanvas;
-    private StackPane arena; // initialized after allCards so computePrefHeight can reference order[]
+    private final StackPane arena = new StackPane();
     private List<VBox> allCards;
     /** order[slot] = card index occupying that slot (0=left, 1=centre, 2=right). */
     private final int[] order = {0, 1, 2};
@@ -82,11 +79,6 @@ public final class LandingView {
                        Consumer<Boolean> flipSelected, Runnable onTournament) {
         root = new StackPane();
         root.getStyleClass().add("landing-root");
-
-        bgCanvas = new Canvas(1, 1);
-        bgCanvas.setMouseTransparent(true);
-        root.widthProperty().addListener((o, ov, w)  -> { bgCanvas.setWidth(w.doubleValue());  drawBg(bgCanvas); });
-        root.heightProperty().addListener((o, ov, h) -> { bgCanvas.setHeight(h.doubleValue()); drawBg(bgCanvas); });
 
         ImageView logo = new ImageView(new Image(
             getClass().getResourceAsStream("/images/logos/CHORIDOR_Logo.png")));
@@ -107,15 +99,9 @@ public final class LandingView {
         populateSimulate(simBody, ctrl, board, flipSelected, onTournament);
         populateSettings(setBody);
 
-        // Arena height tracks only the centre card — side cards use translateX/Y so they
-        // must not inflate the arena or they'd shift its layout centre when centre card grows.
-        arena = new StackPane() {
-            @Override protected double computePrefHeight(double w) {
-                return allCards.get(order[1]).prefHeight(w);
-            }
-            @Override protected double computeMinHeight(double w) { return computePrefHeight(w); }
-        };
-        arena.setAlignment(Pos.CENTER);
+        // TOP_CENTER: side cards are pinned to the arena top via their translateY,
+        // so they don't shift when the centre card expands and grows the arena height.
+        arena.setAlignment(Pos.TOP_CENTER);
         for (int i = 0; i < 3; i++) {
             VBox c = allCards.get(i);
             c.setPrefWidth(CARD_W);
@@ -141,46 +127,17 @@ public final class LandingView {
         scroll.getStyleClass().add("landing-scroll");
         centred.minHeightProperty().bind(scroll.heightProperty());
 
-        root.getChildren().addAll(bgCanvas, scroll);
+        root.getChildren().add(scroll);
     }
 
     public StackPane getRoot() { return root; }
 
-    // ── Background board silhouette ───────────────────────────────────────────
-
-    private static void drawBg(Canvas canvas) {
-        double cw = canvas.getWidth(), ch = canvas.getHeight();
-        if (cw < 1 || ch < 1) return;
-        GraphicsContext g = canvas.getGraphicsContext2D();
-        g.clearRect(0, 0, cw, ch);
-
-        int n = 9;
-        double cell = 54, gap = 10, step = 64, total = n * cell + (n - 1) * gap;
-        double bp = Math.min(cw, ch) * 0.60;
-        double sc = bp / total, cs = cell * sc, gs = gap * sc, ss = step * sc;
-        double ox = (cw - bp) / 2.0, oy = (ch - bp) / 2.0;
-
-        // Cell outlines only — filled rects at even 0.018 opacity accumulate too visibly
-        g.setStroke(Color.web("#6080C0", 0.038));
-        g.setLineWidth(0.6);
-        for (int r = 0; r < n; r++)
-            for (int c = 0; c < n; c++)
-                g.strokeRoundRect(ox + c*ss + 0.3, oy + r*ss + 0.3, cs - 0.6, cs - 0.6, 3*sc, 3*sc);
-
-        // Starting pawn positions — subtle fills
-        double pad = cs * 0.22;
-        g.setFill(Color.web("#9E4A40", 0.055));
-        g.fillOval(ox + 4*ss + pad, oy + 8*ss + pad, cs - 2*pad, cs - 2*pad);
-        g.setFill(Color.web("#3E68A8", 0.055));
-        g.fillOval(ox + 4*ss + pad, oy + pad, cs - 2*pad, cs - 2*pad);
-    }
-
     // ── Game exit transition ──────────────────────────────────────────────────
 
     /**
-     * Runs {@code gameStart} so the board underneath is live, then fades the
-     * landing root out with EASE_IN so it lingers briefly then disappears cleanly.
-     * No scale — scaling makes the transition feel artificial.
+     * The landing root has a semi-transparent background, so the live BoardView
+     * has been visible behind it the whole time. Running gameStart then fading
+     * the overlay reveals the same board that was always there.
      */
     private void exitToGame(Runnable gameStart) {
         gameStart.run();
