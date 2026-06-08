@@ -2,7 +2,6 @@ package io.github.joachimvn.ui.tournament;
 
 import io.github.joachimvn.ai.Difficulty;
 import io.github.joachimvn.core.model.*;
-import io.github.joachimvn.tournament.GameRecord;
 import io.github.joachimvn.tournament.TournamentRunner;
 
 import javafx.animation.*;
@@ -13,62 +12,34 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
-import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.Stop;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
- * Full-screen tournament view with live boards, standings, and a rich post-tournament summary.
+ * Full-screen tournament view: live boards during play, rich summary after.
+ * Board rendering → {@link BoardRenderer}
+ * Live board card  → {@link MiniBoard}
+ * Post-tournament  → {@link TournamentSummary}
  */
 public final class TournamentView {
 
-    // ── Board rendering ──────────────────────────────────────────────────────
-    private static final double DESIGN_CELL = 54;
-    private static final double DESIGN_GAP  = 10;
-    private static final double DESIGN_STEP = DESIGN_CELL + DESIGN_GAP;
-    private static final double DESIGN_SIZE = GameState.BOARD_SIZE * DESIGN_CELL
-                                            + (GameState.BOARD_SIZE - 1) * DESIGN_GAP;
-    private static final double BOARD_PX         = 370;
-    private static final double SUMMARY_BOARD_PX = 260;
-    private static final double GOAL_STRIP_RATIO = 3.0 / 54;
-    private static final double PAWN_PAD_RATIO   = 0.16;
-    private static final double STRIP_OPACITY    = 0.70;
-
-    private static final Color P1_COLOR = Color.web("#9E4A40");
-    private static final Color P2_COLOR = Color.web("#3E68A8");
-    private static final Color BG_COLOR = Color.web("#0F1117");
-    private static final Color CELL_CLR = Color.web("#191C2A");
-    private static final Color P1_STRIP = P1_COLOR.deriveColor(0, 1, 1, STRIP_OPACITY);
-    private static final Color P2_STRIP = P2_COLOR.deriveColor(0, 1, 1, STRIP_OPACITY);
-
-    private static final String BORDER_P1   = "-fx-border-color: #9E4A40; -fx-border-width: 2;";
-    private static final String BORDER_P2   = "-fx-border-color: #3E68A8; -fx-border-width: 2;";
-    private static final String BORDER_BOTH = "-fx-border-color: #D4AC0D; -fx-border-width: 2;";
-
     private static final String ICON_COLOR_BTN  = "#8890A8";
     private static final String ICON_COLOR_STOP = "#C8706A";
-
-    private static final long FINISH_OVERLAY_NS = 1_500_000_000L;
-    private static final int  MAX_RESULTS        = 20;
+    private static final long   FINISH_OVERLAY_NS = 1_500_000_000L;
+    private static final int    MAX_RESULTS       = 20;
+    private static final int    ETA_WINDOW = 20;
+    private static final double ETA_ALPHA  = 0.25;
 
     // ── State ────────────────────────────────────────────────────────────────
     private final StackPane root;
@@ -88,9 +59,9 @@ public final class TournamentView {
     private final Button      restartBtn    = new Button("Restart");
     private final Button      actionBtn     = new Button("Back");
 
-    private final TilePane boardGrid   = new TilePane(10, 10);
-    private final VBox     summaryBox  = new VBox(14);
-    private       Label    boardsTitle; // updated "LIVE GAMES" → "RESULTS SUMMARY"
+    private final TilePane boardGrid  = new TilePane(10, 10);
+    private final VBox     summaryBox = new VBox(14);
+    private       Label    boardsTitle;
 
     private final Map<Integer, MiniBoard>     activeBoards   = new LinkedHashMap<>();
     private record FinishingGame(MiniBoard board, long startNs) {}
@@ -109,21 +80,19 @@ public final class TournamentView {
     private ScrollPane summaryScroll;
     private AnimationTimer animTimer;
     private Timeline       etaTimeline;
-    private boolean running  = false;
-    private boolean paused   = false;
+    private boolean running = false;
+    private boolean paused  = false;
     private long    tournamentStartMs;
     private int     doneCount, totalCount;
     private long    etaDisplayMs = 0;
     private final ArrayDeque<Long> recentGameTimes = new ArrayDeque<>();
-    private static final int    ETA_WINDOW = 20;
-    private static final double ETA_ALPHA  = 0.25;
 
     public TournamentView(Runnable onClose) {
         root = new StackPane();
         root.getStyleClass().add("tournament-view");
         root.setVisible(false);
 
-        tableItems    = FXCollections.observableArrayList(strategies);
+        tableItems     = FXCollections.observableArrayList(strategies);
         standingsTable = buildTable();
 
         // ── Top bar ──────────────────────────────────────────────────────────
@@ -174,16 +143,15 @@ public final class TournamentView {
 
         // ── Live boards ───────────────────────────────────────────────────────
         boardGrid.getStyleClass().add("tournament-board-grid");
-        boardGrid.setPrefTileWidth((int) BOARD_PX + 24);
-        boardGrid.setPrefTileHeight((int) BOARD_PX + 52);
+        boardGrid.setPrefTileWidth((int) MiniBoard.BOARD_PX + 24);
+        boardGrid.setPrefTileHeight((int) MiniBoard.BOARD_PX + 52);
         boardGrid.setPadding(new Insets(10));
 
         Label noGamesLabel = new Label("Waiting for games to start…");
         noGamesLabel.getStyleClass().add("tournament-empty-label");
-
         StackPane boardsContent = new StackPane(boardGrid, noGamesLabel);
         boardGrid.getChildren().addListener(
-            (javafx.collections.ListChangeListener<javafx.scene.Node>) c ->
+            (javafx.collections.ListChangeListener<Node>) c ->
                 noGamesLabel.setVisible(boardGrid.getChildren().isEmpty()));
 
         boardsScroll = new ScrollPane(boardsContent);
@@ -195,7 +163,7 @@ public final class TournamentView {
         summaryBox.setPadding(new Insets(4));
         summaryScroll = new ScrollPane(summaryBox);
         summaryScroll.setFitToWidth(true);
-        summaryScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED); // safety: scroll rather than push right panel
+        summaryScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         summaryScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         summaryScroll.getStyleClass().add("tournament-board-scroll");
         summaryScroll.setVisible(false);
@@ -214,7 +182,6 @@ public final class TournamentView {
         // ── Right panel ───────────────────────────────────────────────────────
         Label standingsTitle = new Label("STANDINGS");
         standingsTitle.getStyleClass().add("tournament-section-title");
-
         Label resultsTitle = new Label("RECENT RESULTS");
         resultsTitle.getStyleClass().add("tournament-section-title");
 
@@ -242,6 +209,8 @@ public final class TournamentView {
     }
 
     public StackPane getRoot() { return root; }
+
+    // ── Start ─────────────────────────────────────────────────────────────────
 
     public void start() {
         running = true;
@@ -289,17 +258,16 @@ public final class TournamentView {
                 progressBar.setProgress((double) done / t);
                 progressLabel.setText(done + " / " + t);
                 resort();
-                // Record completion time; compute rate over recent window and EWMA-blend into display
                 long now = System.currentTimeMillis();
                 recentGameTimes.addLast(now);
                 if (recentGameTimes.size() > ETA_WINDOW) recentGameTimes.pollFirst();
                 if (recentGameTimes.size() >= 2) {
                     long windowMs = recentGameTimes.peekLast() - recentGameTimes.peekFirst();
                     if (windowMs > 0) {
-                        double rate   = (recentGameTimes.size() - 1.0) / windowMs; // games/ms
-                        long   newEta = (long)((t - done) / rate);
-                        etaDisplayMs  = etaDisplayMs == 0 ? newEta
-                                      : (long)(ETA_ALPHA * newEta + (1.0 - ETA_ALPHA) * etaDisplayMs);
+                        double rate  = (recentGameTimes.size() - 1.0) / windowMs;
+                        long newEta  = (long) ((t - done) / rate);
+                        etaDisplayMs = etaDisplayMs == 0 ? newEta
+                                     : (long) (ETA_ALPHA * newEta + (1.0 - ETA_ALPHA) * etaDisplayMs);
                     }
                 }
             },
@@ -329,7 +297,7 @@ public final class TournamentView {
                 resort();
                 boardsScroll.setVisible(false);
                 summaryScroll.setVisible(true);
-                populateSummary(durationMs);
+                TournamentSummary.populate(summaryBox, runner, tableItems, strategies, durationMs);
             });
     }
 
@@ -345,314 +313,6 @@ public final class TournamentView {
         long s = ms / 1000;
         if (s < 60) return s + "s";
         return (s / 60) + "m " + (s % 60) + "s";
-    }
-
-    // ── Summary ───────────────────────────────────────────────────────────────
-
-    private void populateSummary(long durationMs) {
-        summaryBox.getChildren().clear();
-
-        Map<Difficulty, int[]> res = runner.getResults();
-
-        // ── Notable Games row ─────────────────────────────────────────────────
-        GameRecord best     = runner.getBestGame();
-        GameRecord shortest = runner.getShortestGame();
-        GameRecord longest  = runner.getLongestGame();
-
-        if (best != null || shortest != null || longest != null) {
-            HBox notableRow = new HBox(12);
-            notableRow.setAlignment(Pos.TOP_LEFT);
-            if (best     != null) addNotableCard(notableRow, best,     "BEST GAME",     best.moveCount() + " moves · " + best.wallCount() + " walls · " + best.loserFinalDist() + "-step finish", "#B8960C");
-            if (shortest != null) addNotableCard(notableRow, shortest, "SHORTEST GAME", shortest.moveCount() + " moves",  "#3E68A8");
-            if (longest  != null) addNotableCard(notableRow, longest,  "LONGEST GAME",  longest.moveCount()  + " moves",  "#9E4A40");
-
-            // HBox.prefHeight(-1) hits the SUMMARY_BOARD_PX fallback, so the row height is too small
-            // for the actual board size. Correct it once the row width is known.
-            notableRow.widthProperty().addListener((obs, oldW, newW) -> {
-                int n = notableRow.getChildren().size();
-                if (n == 0 || newW.doubleValue() < 1) return;
-                double boardSize = (newW.doubleValue() - 12.0 * (n - 1)) / n - 24;
-                if (boardSize < 1) return;
-                // ~90px: title(15) + matchup(20) + winner(18) + 3×spacing(15) + padding(24)
-                double totalH = boardSize + 92;
-                notableRow.setMinHeight(totalH);
-                notableRow.setPrefHeight(totalH);
-            });
-
-            summaryBox.getChildren().add(notableRow);
-        }
-
-        summaryBox.getChildren().add(separator());
-
-        // ── Key stats ─────────────────────────────────────────────────────────
-        VBox statsBox = new VBox(6);
-
-        String[] rankColors = {"#B8960C", "#8896A0", "#8B6040"};
-        String[] rankNames  = {"1st", "2nd", "3rd"};
-        HBox podiumRow = new HBox(20);
-        for (int i = 0; i < Math.min(3, tableItems.size()); i++) {
-            Difficulty d = tableItems.get(i);
-            int[] wr = res.getOrDefault(d, new int[]{0,0});
-            int w = wr[0], l = wr[1];
-            String pct = (w + l == 0) ? "—" : (int)Math.round(100.0*w/(w+l)) + "%";
-            VBox card = new VBox(3);
-            card.setPadding(new Insets(8, 14, 8, 14));
-            card.setStyle("-fx-background-color: #13151F; -fx-border-color: #1E2130; "
-                        + "-fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4;");
-            Label rank = new Label(rankNames[i]);
-            rank.setStyle("-fx-text-fill: " + rankColors[i] + "; -fx-font-size: 11px; -fx-font-weight: bold;");
-            Label name = new Label(d.sample().displayName());
-            name.setStyle("-fx-text-fill: " + rankColors[i] + "; -fx-font-size: 15px; -fx-font-weight: bold;");
-            Label wLbl = new Label(w + "W");
-            wLbl.setStyle("-fx-text-fill: #5ABF78; -fx-font-size: 12px; -fx-font-weight: bold;");
-            Label lLbl = new Label(l + "L");
-            lLbl.setStyle("-fx-text-fill: #C8706A; -fx-font-size: 12px; -fx-font-weight: bold;");
-            Label pctLbl = new Label(pct);
-            pctLbl.setStyle("-fx-text-fill: #606880; -fx-font-size: 12px;");
-            HBox recordRow = new HBox(6, wLbl, lLbl, pctLbl);
-            recordRow.setAlignment(Pos.CENTER_LEFT);
-            card.getChildren().addAll(rank, name, recordRow);
-            podiumRow.getChildren().add(card);
-        }
-        statsBox.getChildren().add(podiumRow);
-
-        // Additional stats
-        List<String> perfect = tableItems.stream()
-            .filter(d -> { int[] w = res.get(d); return w != null && w[1] == 0 && w[0] > 0; })
-            .map(d -> d.sample().displayName()).toList();
-        if (!perfect.isEmpty())
-            statsBox.getChildren().add(statChip("Unbeaten", String.join(", ", perfect), "#1A3A1A", "#4CAF50"));
-
-        List<String> zero = tableItems.stream()
-            .filter(d -> { int[] w = res.get(d); return w != null && w[0] == 0 && w[1] > 0; })
-            .map(d -> d.sample().displayName()).toList();
-        if (!zero.isEmpty())
-            statsBox.getChildren().add(statChip("Winless", String.join(", ", zero), "#3A1A1A", "#C8706A"));
-
-        // Closest race
-        double minGap = Double.MAX_VALUE; String closestPair = null;
-        for (int i = 0; i + 1 < tableItems.size(); i++) {
-            int[] wi = res.get(tableItems.get(i));
-            int[] wj = res.get(tableItems.get(i + 1));
-            if (wi == null || wj == null || wi[0]+wi[1] == 0 || wj[0]+wj[1] == 0) continue;
-            double gap = (double)wi[0]/(wi[0]+wi[1]) - (double)wj[0]/(wj[0]+wj[1]);
-            if (gap < minGap) {
-                minGap = gap;
-                closestPair = tableItems.get(i).sample().displayName() + " vs "
-                    + tableItems.get(i+1).sample().displayName();
-            }
-        }
-        if (closestPair != null && minGap < 0.06)
-            statsBox.getChildren().add(statChip("Closest race", closestPair
-                    + "  (" + (int)Math.round((1-minGap)*100) + "% each)", "#1A2A3A", "#3E68A8"));
-
-        statsBox.getChildren().add(statChip("Duration",
-                formatDuration(durationMs) + "  ·  " + strategies.size()
-                + " strategies  ·  " + runner.totalGames(strategies) + " games",
-                "#1A1A2A", "#8890A8"));
-
-        summaryBox.getChildren().add(statsBox);
-        summaryBox.getChildren().add(separator());
-
-        // ── Head-to-Head breakdown accordion ─────────────────────────────────
-        Label h2hTitle = new Label("HEAD-TO-HEAD BREAKDOWN");
-        h2hTitle.getStyleClass().add("tournament-section-title");
-        summaryBox.getChildren().add(h2hTitle);
-
-        Map<Difficulty, Map<Difficulty, Integer>> mw = runner.getMatchupWins();
-        for (Difficulty d : tableItems) {
-            int[] wr = res.getOrDefault(d, new int[]{0,0});
-            int w = wr[0], l = wr[1];
-            String pct = (w + l == 0) ? "—" : (int)Math.round(100.0*w/(w+l)) + "%";
-
-            VBox content = new VBox(4);
-            content.setPadding(new Insets(6, 10, 6, 10));
-            content.setStyle("-fx-background-color: #0C0E14;");
-
-            Map<Difficulty, Integer> wins = mw.get(d);
-            if (wins != null) {
-                List<Difficulty> opponents = new ArrayList<>(tableItems);
-                opponents.remove(d);
-                for (Difficulty opp : opponents) {
-                    int oppWins = wins.getOrDefault(opp, 0);
-                    int oppLosses = 2 - oppWins; // each pair plays twice
-                    content.getChildren().add(h2hRow(opp, oppWins, oppLosses, res));
-                }
-            }
-
-            TitledPane pane = new TitledPane();
-            pane.setExpanded(false);
-            pane.setAnimated(true);
-            pane.setContent(content);
-            pane.setStyle("-fx-background-color: #13151F; -fx-border-color: #1E2130;");
-            // Custom header label with strategy name + record
-            Label headerLabel = new Label(d.sample().displayName()
-                    + "     " + w + "W  " + l + "L  ·  " + pct);
-            headerLabel.setStyle("-fx-text-fill: #8890A8; -fx-font-size: 13px; -fx-font-weight: bold;");
-            pane.setGraphic(headerLabel);
-            pane.setText("");
-            summaryBox.getChildren().add(pane);
-        }
-    }
-
-    /** Builds a notable-game card with a self-sizing BoardPane and adds it to the row. */
-    private void addNotableCard(HBox row, GameRecord rec, String title, String stat, String accentColor) {
-        Label titleLbl = new Label(title);
-        titleLbl.setStyle("-fx-text-fill: " + accentColor + "; -fx-font-size: 10px; -fx-font-weight: bold;");
-
-        Label d1Lbl = new Label(rec.d1().sample().displayName());
-        d1Lbl.setStyle("-fx-text-fill: #9E4A40; -fx-font-size: 13px; -fx-font-weight: bold;");
-        Label vsLbl = new Label("vs");
-        vsLbl.setStyle("-fx-text-fill: #3A3F58; -fx-font-size: 11px;");
-        Label d2Lbl = new Label(rec.d2().sample().displayName());
-        d2Lbl.setStyle("-fx-text-fill: #3E68A8; -fx-font-size: 13px; -fx-font-weight: bold;");
-        HBox matchupRow = new HBox(6, d1Lbl, vsLbl, d2Lbl);
-        matchupRow.setAlignment(Pos.CENTER_LEFT);
-
-        String winnerColor = rec.winner() == rec.d1() ? "#9E4A40" : "#3E68A8";
-        Label winnerLbl = new Label(rec.winner() != null ? rec.winner().sample().displayName() : "—");
-        winnerLbl.setStyle("-fx-text-fill: " + winnerColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
-        Label statLbl = new Label(stat);
-        statLbl.setStyle("-fx-text-fill: #3A3F58; -fx-font-size: 11px;");
-        HBox winnerRow = new HBox(6, winnerLbl, statLbl);
-        winnerRow.setAlignment(Pos.CENTER_LEFT);
-
-        BoardPane boardPane = new BoardPane(rec.finalState(), rec.wallOwners());
-        VBox card = new VBox(5, titleLbl, matchupRow, winnerRow, boardPane);
-        card.setPadding(new Insets(12));
-        card.setStyle("-fx-background-color: #13151F; -fx-border-color: " + accentColor
-                + "; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4;");
-        HBox.setHgrow(card, Priority.ALWAYS);
-        card.setMaxWidth(Double.MAX_VALUE);
-        row.getChildren().add(card);
-    }
-
-    /**
-     * A Region that wraps a Canvas for square board rendering.
-     * minWidth=0 ensures the canvas never pushes the layout wider.
-     * computePrefHeight(w)=w so VBox always allocates a square slot.
-     */
-    private static final class BoardPane extends Region {
-        private final Canvas canvas = new Canvas(1, 1);
-        private final GameState state;
-        private final Map<Wall, Player> wallOwners;
-
-        BoardPane(GameState state, Map<Wall, Player> wallOwners) {
-            this.state = state;
-            this.wallOwners = wallOwners;
-            getChildren().add(canvas);
-            setMinSize(0, 0);
-            setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        }
-
-        @Override protected void layoutChildren() {
-            double w = getWidth();
-            if (w < 1) return;
-            canvas.setWidth(w);
-            canvas.setHeight(w);
-            canvas.setLayoutX(0);
-            canvas.setLayoutY(0);
-            drawBoard(canvas, state, wallOwners);
-            setClip(new javafx.scene.shape.Rectangle(w, w));
-        }
-
-        @Override protected double computeMinWidth(double h)   { return 0; }
-        @Override protected double computeMinHeight(double w)  { return 0; }
-        @Override protected double computePrefWidth(double h)  { return SUMMARY_BOARD_PX; }
-        @Override protected double computePrefHeight(double w) { return w > 0 ? w : SUMMARY_BOARD_PX; }
-        @Override protected double computeMaxWidth(double h)   { return Double.MAX_VALUE; }
-        @Override protected double computeMaxHeight(double w)  { return Double.MAX_VALUE; }
-    }
-
-    /** A row in the head-to-head breakdown for one opponent. */
-    private HBox h2hRow(Difficulty opp, int wins, int losses, Map<Difficulty, int[]> res) {
-        Label oppLabel = new Label(opp.sample().displayName());
-        oppLabel.setStyle("-fx-text-fill: #606880; -fx-font-size: 12px;");
-        oppLabel.setMinWidth(120);
-
-        // Win/loss chip
-        String chipBg, chipFg, chipText;
-        if (wins == 2)       { chipBg = "#1A3A1A"; chipFg = "#4CAF50"; chipText = "✓✓  2–0"; }
-        else if (wins == 1)  { chipBg = "#2A2A1A"; chipFg = "#B8960C"; chipText = "✓✗  1–1"; }
-        else                 { chipBg = "#3A1A1A"; chipFg = "#C8706A"; chipText = "✗✗  0–2"; }
-
-        Label chip = new Label(chipText);
-        chip.setStyle("-fx-background-color: " + chipBg + "; -fx-text-fill: " + chipFg
-                + "; -fx-font-size: 11px; -fx-font-weight: bold;"
-                + " -fx-padding: 2 8 2 8; -fx-background-radius: 3;");
-
-        HBox row = new HBox(10, oppLabel, chip);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setPadding(new Insets(3, 0, 3, 0));
-        row.setStyle("-fx-border-color: transparent transparent #191C2A transparent; -fx-border-width: 0 0 1 0;");
-        return row;
-    }
-
-    /** An info row with a colored left accent line for the key-stats section. */
-    private HBox statChip(String label, String value, String bg, String fg) {
-        Label key = new Label(label.toUpperCase());
-        key.setStyle("-fx-text-fill: " + fg + "; -fx-font-size: 10px; -fx-font-weight: bold; -fx-min-width: 86px;");
-        Label val = new Label(value);
-        val.setStyle("-fx-text-fill: #7880A0; -fx-font-size: 12px;");
-        HBox row = new HBox(14, key, val);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setPadding(new Insets(5, 12, 5, 14));
-        row.setStyle("-fx-background-color: " + bg + "44;"
-                + " -fx-border-color: " + fg + " transparent transparent transparent;"
-                + " -fx-border-width: 0 0 0 3;");
-        return row;
-    }
-
-    private Separator separator() {
-        Separator s = new Separator();
-        s.setStyle("-fx-background-color: #1E2130;");
-        return s;
-    }
-
-    private static String abbrev(String name) {
-        return name.length() > 14 ? name.substring(0, 13) + "…" : name;
-    }
-
-    // ── Board canvas drawing ──────────────────────────────────────────────────
-
-    private static void drawBoard(Canvas canvas, GameState state, Map<Wall, Player> wallOwners) {
-        double boardPx = canvas.getWidth();
-        GraphicsContext g = canvas.getGraphicsContext2D();
-        double scale  = boardPx / DESIGN_SIZE;
-        double cell   = DESIGN_CELL * scale;
-        double gap    = DESIGN_GAP  * scale;
-        double step   = DESIGN_STEP * scale;
-        double stripH = GOAL_STRIP_RATIO * cell;
-        int    n      = GameState.BOARD_SIZE;
-
-        g.setFill(BG_COLOR); g.fillRect(0, 0, boardPx, boardPx);
-        for (int r = 0; r < n; r++) {
-            for (int c = 0; c < n; c++) {
-                double x = c * step, y = r * step;
-                g.setFill(CELL_CLR); g.fillRect(x, y, cell, cell);
-                if (r == Player.ONE.goalRow()) {
-                    g.setFill(P1_STRIP); g.fillRect(x, y, cell, stripH);
-                } else if (r == Player.TWO.goalRow()) {
-                    g.setFill(P2_STRIP); g.fillRect(x, y + cell - stripH, cell, stripH);
-                }
-            }
-        }
-        if (state != null) {
-            for (Wall w : state.getWalls()) {
-                Player owner = wallOwners != null ? wallOwners.get(w) : null;
-                g.setFill(owner == Player.TWO ? P2_COLOR : P1_COLOR);
-                double wx = w.col() * step, wy = w.row() * step, len = 2 * cell + gap;
-                if (w.orientation() == Wall.Orientation.HORIZONTAL) g.fillRect(wx, wy + cell, len, gap);
-                else                                                 g.fillRect(wx + cell, wy, gap, len);
-            }
-            double pad = cell * PAWN_PAD_RATIO;
-            Position pp1 = state.getPawnPosition(Player.ONE);
-            Position pp2 = state.getPawnPosition(Player.TWO);
-            g.setFill(P1_COLOR);
-            g.fillOval(pp1.col()*step+pad, pp1.row()*step+pad, cell-2*pad, cell-2*pad);
-            g.setFill(P2_COLOR);
-            g.fillOval(pp2.col()*step+pad, pp2.row()*step+pad, cell-2*pad, cell-2*pad);
-        }
     }
 
     // ── Pause / resume ────────────────────────────────────────────────────────
@@ -715,19 +375,19 @@ public final class TournamentView {
 
             GameState finalState = runner.getFinalGameStates().get(id);
             var finalWO = runner.getFinalWallOwners().getOrDefault(id,
-                                  new java.util.concurrent.ConcurrentHashMap<>());
+                              new java.util.concurrent.ConcurrentHashMap<>());
             if (finalState != null) mb.draw(finalState, finalWO);
 
             Difficulty winner = runner.getLiveWinners().get(id);
             String wName  = winner != null ? winner.sample().displayName() : null;
-            Color  wColor = (winner == mb.d1) ? P1_COLOR : P2_COLOR;
+            Color  wColor = (winner == mb.d1) ? BoardRenderer.P1_COLOR : BoardRenderer.P2_COLOR;
             mb.drawWinnerOverlay(wName, wColor);
 
             if (pinnedGameIds.remove(id)) {
                 mb.setPinned(true);
                 mb.card.setOnMouseClicked(ev -> dismissFrozen(id, mb));
                 var fo = runner.getFinalWallOwners().getOrDefault(id,
-                                  new java.util.concurrent.ConcurrentHashMap<>());
+                              new java.util.concurrent.ConcurrentHashMap<>());
                 pinnedOverlays.put(id, new PinnedOverlay(mb, now,
                     finalState != null ? finalState : new GameState(), fo));
             } else {
@@ -797,7 +457,7 @@ public final class TournamentView {
         tableItems.sort(Comparator
             .comparingDouble((Difficulty d) -> {
                 int[] wr = res.get(d);
-                return (wr == null || wr[0]+wr[1] == 0) ? 0.0 : -(double)wr[0]/(wr[0]+wr[1]);
+                return (wr == null || wr[0]+wr[1] == 0) ? 0.0 : -(double) wr[0] / (wr[0]+wr[1]);
             })
             .thenComparingInt(d -> { int[] wr = res.get(d); return wr == null ? 0 : -wr[0]; }));
         standingsTable.refresh();
@@ -855,7 +515,7 @@ public final class TournamentView {
         pctCol.setCellValueFactory(cd -> {
             int[] wr = runner.getResults().get(cd.getValue());
             if (wr == null || wr[0]+wr[1] == 0) return new SimpleStringProperty("—");
-            return new SimpleStringProperty(String.format("%d%%", (int)Math.round(100.0*wr[0]/(wr[0]+wr[1]))));
+            return new SimpleStringProperty(String.format("%d%%", (int) Math.round(100.0*wr[0]/(wr[0]+wr[1]))));
         });
         pctCol.setPrefWidth(52); pctCol.setMinWidth(46); pctCol.setMaxWidth(66); pctCol.setSortable(false);
 
@@ -896,81 +556,16 @@ public final class TournamentView {
             Map<Difficulty, Integer> wins = mw.get(d);
             if (wins != null) {
                 wins.entrySet().stream()
-                    .sorted(Comparator.<Map.Entry<Difficulty,Integer>>comparingInt(Map.Entry::getValue).reversed()
+                    .sorted(Comparator.<Map.Entry<Difficulty, Integer>>comparingInt(Map.Entry::getValue).reversed()
                         .thenComparing(e -> e.getKey().sample().displayName()))
                     .forEach(e -> {
-                        int ww = e.getValue(), ll = 2-ww;
-                        String m = ww==2?"✓✓":ww==1?"✓✗":"✗✗";
+                        int ww = e.getValue(), ll = 2 - ww;
+                        String m = ww==2 ? "✓✓" : ww==1 ? "✓✗" : "✗✗";
                         sb.append(String.format("  %s  %-16s  %d–%d%n", m, e.getKey().sample().displayName(), ww, ll));
                     });
             }
             sb.append("\n");
         }
         return sb.toString();
-    }
-
-    // ── MiniBoard ─────────────────────────────────────────────────────────────
-
-    private static final class MiniBoard {
-        final Difficulty d1, d2;
-        final VBox       card;
-        final Canvas     canvas  = new Canvas(BOARD_PX, BOARD_PX);
-        final FontIcon   pinIcon;
-
-        MiniBoard(Difficulty d1, Difficulty d2) {
-            this.d1 = d1; this.d2 = d2;
-
-            Label p1lbl = new Label(abbrev12(d1.sample().displayName()));
-            p1lbl.getStyleClass().add("mini-p1");
-            Label vs = new Label("vs");
-            vs.getStyleClass().add("mini-vs");
-            Label p2lbl = new Label(abbrev12(d2.sample().displayName()));
-            p2lbl.getStyleClass().add("mini-p2");
-
-            pinIcon = new FontIcon(FontAwesomeSolid.THUMBTACK);
-            pinIcon.setIconSize(10);
-            pinIcon.setIconColor(Color.web("#D4AC0D"));
-            pinIcon.setVisible(false);
-
-            HBox names = new HBox(6, p1lbl, vs, p2lbl, pinIcon);
-            names.setAlignment(Pos.CENTER);
-
-            card = new VBox(6, names, canvas);
-            card.getStyleClass().add("mini-board-card");
-            card.setAlignment(Pos.CENTER);
-            card.setPadding(new Insets(10));
-        }
-
-        void setPinned(boolean pinned) { pinIcon.setVisible(pinned); }
-
-        void updateSelection(boolean d1Sel, boolean d2Sel) {
-            if (d1Sel && d2Sel) card.setStyle(BORDER_BOTH);
-            else if (d1Sel)     card.setStyle(BORDER_P1);
-            else if (d2Sel)     card.setStyle(BORDER_P2);
-            else                card.setStyle("");
-        }
-
-        void draw(GameState state, Map<Wall, Player> wallOwners) {
-            drawBoard(canvas, state, wallOwners);
-        }
-
-        void drawWinnerOverlay(String winnerName, Color winnerColor) {
-            GraphicsContext g = canvas.getGraphicsContext2D();
-            g.setFill(Color.color(0, 0, 0, 0.72));
-            g.fillRect(0, 0, BOARD_PX, BOARD_PX);
-            if (winnerName == null) return;
-            g.setTextAlign(TextAlignment.CENTER);
-            g.setTextBaseline(VPos.CENTER);
-            g.setFill(winnerColor.brighter());
-            g.setFont(Font.font("System", FontWeight.BOLD, BOARD_PX / 15));
-            g.fillText(winnerName, BOARD_PX / 2, BOARD_PX / 2 - BOARD_PX / 12);
-            g.setFill(Color.web("#8890A8"));
-            g.setFont(Font.font("System", BOARD_PX / 22));
-            g.fillText("wins!", BOARD_PX / 2, BOARD_PX / 2 + BOARD_PX / 14);
-        }
-
-        private static String abbrev12(String name) {
-            return name.length() > 12 ? name.substring(0, 11) + "…" : name;
-        }
     }
 }
