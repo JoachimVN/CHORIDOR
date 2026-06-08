@@ -1,7 +1,7 @@
 package io.github.joachimvn.ui.bars;
 
 import io.github.joachimvn.ui.GameController;
-import io.github.joachimvn.ui.board.BoardView;
+import io.github.joachimvn.ui.BoardView;
 import io.github.joachimvn.ui.common.LogoFactory;
 import io.github.joachimvn.ui.common.UiConstants;
 import io.github.joachimvn.core.model.GameState;

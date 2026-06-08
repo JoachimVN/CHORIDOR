@@ -36,14 +36,21 @@ Walls must never completely seal off a player's route, keeping every game solvab
     <em>Setup screen</em>
 </p>
 
+<p align="center">
+    <img src="docs/images/screenshots/Tournament_Example.png" alt="Tournament with AI vs AI and live boards"/>
+    <br>
+    <em>Tournament with AI vs AI and live boards</em>
+</p>
+
 ## Why This Project
 
 A personal project built to explore:
 
-- object-oriented domain modelling
+- Object-oriented domain modeling
 - JavaFX UI architecture and canvas rendering
-- rule engine design (move validation, BFS path-checking)
-- testability and maintainability
+- Rule engine design (move validation, BFS path-checking)
+- Game engines and game theory
+- Testability and maintainability
 
 ## Core Features
 

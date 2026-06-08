@@ -1,7 +1,7 @@
 package io.github.joachimvn;
 
 import io.github.joachimvn.ui.GameController;
-import io.github.joachimvn.ui.board.BoardView;
+import io.github.joachimvn.ui.BoardView;
 import io.github.joachimvn.ui.bars.BottomBar;
 import io.github.joachimvn.ui.bars.ReviewBar;
 import io.github.joachimvn.ui.bars.TopBar;

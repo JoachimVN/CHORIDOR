@@ -83,7 +83,7 @@ public final class TournamentView {
     private boolean running = false;
     private boolean paused  = false;
     private long    tournamentStartMs;
-    private int     doneCount, totalCount;
+    private int     totalCount;
     private long    etaDisplayMs = 0;
     private final ArrayDeque<Long> recentGameTimes = new ArrayDeque<>();
 
@@ -216,7 +216,6 @@ public final class TournamentView {
         running = true;
         paused  = false;
         tournamentStartMs = System.currentTimeMillis();
-        doneCount = 0;
         totalCount = runner.totalGames(strategies);
         etaDisplayMs = 0;
         recentGameTimes.clear();
@@ -254,7 +253,6 @@ public final class TournamentView {
 
         runner.start(strategies,
             (done, t) -> {
-                doneCount = done;
                 progressBar.setProgress((double) done / t);
                 progressLabel.setText(done + " / " + t);
                 resort();

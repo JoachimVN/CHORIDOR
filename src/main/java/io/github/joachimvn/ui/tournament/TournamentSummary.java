@@ -10,7 +10,6 @@ import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 
 import java.util.*;
 
@@ -114,11 +113,11 @@ final class TournamentSummary {
             boolean showFastest = (mean - fastestAvg) >= (slowestAvg - mean);
             if (showFastest)
                 statsBox.getChildren().add(statChip("Fastest finisher",
-                        fastest.sample().displayName() + "  avg " + (int) Math.round(fastestAvg) + " moves per game",
+                        fastest.sample().displayName() + " average " + (int) Math.round(fastestAvg) + " moves per game",
                         "#1A2A1A", "#5ABF78"));
             else
                 statsBox.getChildren().add(statChip("Slowest finisher",
-                        slowest.sample().displayName() + "  avg " + (int) Math.round(slowestAvg) + " moves per game",
+                        slowest.sample().displayName() + " average " + (int) Math.round(slowestAvg) + " moves per game",
                         "#2A1A1A", "#C8706A"));
         }
 
