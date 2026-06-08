@@ -80,11 +80,22 @@ jobs:
         shell: pwsh
         run: Rename-Item -Path "target/dist/CHORIDOR-$env:APP_VERSION.exe" -NewName "CHORIDOR-$env:APP_VERSION-windows.exe"
 
+      - name: Extract release notes from merged PR
+        shell: pwsh
+        run: |
+          $body = gh pr list --state merged --base main --limit 1 --json body --jq '.[0].body'
+          if ([string]::IsNullOrWhiteSpace($body) -or $body -eq 'null') {
+            $body = "## ${{ steps.version.outputs.tag_name }}`n`nSee commit history for changes."
+          }
+          $body | Out-File -FilePath release-notes.md -Encoding UTF8
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish release with Windows assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag_name }}
-          generate_release_notes: true
+          body_path: release-notes.md
           prerelease: ${{ steps.version.outputs.pre_release == 'true' }}
           files: |
             target/CHORIDOR-${{ steps.version.outputs.app_version }}-portable.jar
