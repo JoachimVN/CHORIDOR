@@ -15,7 +15,6 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Full-screen overlay that runs and displays a round-robin AI tournament.

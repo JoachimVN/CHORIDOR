@@ -4,16 +4,17 @@ import io.github.joachimvn.ai.Difficulty;
 import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.tournament.TournamentRunner;
 
-import javafx.animation.AnimationTimer;
-import javafx.animation.FadeTransition;
+import javafx.animation.*;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
@@ -30,7 +31,6 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Full-screen tournament view with live boards, standings, and recent results.
@@ -40,10 +40,15 @@ import java.util.stream.Collectors;
  * (P1 red / P2 blue / both = gold). Multiple strategies can be selected simultaneously.
  *
  * <p><b>Pinning</b>: clicking a live board card pins it. Pinned boards survive the game
- * finishing — they freeze on the final position and stay until clicked again to dismiss.
+ * finishing — they freeze on the final position with the winner overlay and stay until
+ * clicked again to dismiss.
  *
- * <p><b>Winner overlay</b>: when an un-pinned game finishes, the board shows a 1.5-second
- * dark overlay naming the winner, then fades out.
+ * <p><b>Winner overlay</b>: when a game finishes, the board shows a dark overlay naming
+ * the winner in the player's colour. Un-pinned boards fade out after 1.5 s; pinned
+ * boards stay indefinitely.
+ *
+ * <p><b>Animated shift</b>: when a board card is removed, remaining cards slide into
+ * their new positions with a short ease-out transition.
  */
 public final class TournamentView {
 
@@ -72,8 +77,8 @@ public final class TournamentView {
     private static final String ICON_COLOR_BTN  = "#8890A8";
     private static final String ICON_COLOR_STOP = "#C8706A";
 
-    private static final long   FINISH_OVERLAY_NS = 1_500_000_000L; // 1.5 s
-    private static final int    MAX_RESULTS        = 20;
+    private static final long FINISH_OVERLAY_NS = 1_500_000_000L;
+    private static final int  MAX_RESULTS        = 20;
 
     // ── State ─────────────────────────────────────────────────────────────
     private final StackPane root;
@@ -85,30 +90,39 @@ public final class TournamentView {
     private final Label       titleLabel    = new Label("TOURNAMENT");
     private final ProgressBar progressBar   = new ProgressBar(0);
     private final Label       progressLabel = new Label();
+    private final Label       etaLabel      = new Label();
     private final FontIcon    pauseIcon     = new FontIcon(FontAwesomeSolid.PAUSE);
     private final FontIcon    stopIcon      = new FontIcon(FontAwesomeSolid.ARROW_LEFT);
+    private final FontIcon    restartIcon   = new FontIcon(FontAwesomeSolid.REDO);
     private final Button      pauseBtn      = new Button("Pause");
+    private final Button      restartBtn    = new Button("Restart");
     private final Button      actionBtn     = new Button("Back");
 
-    private final TilePane boardGrid = new TilePane(10, 10);
+    private final TilePane boardGrid    = new TilePane(10, 10);
+    private final VBox     summaryBox   = new VBox(5);
 
     // Active games: gameId → MiniBoard (game still running)
     private final Map<Integer, MiniBoard> activeBoards  = new LinkedHashMap<>();
-    // Finishing games: board stays 1.5 s showing winner overlay (already drawn), then fades out
+    // Finishing games: board stays 1.5 s showing winner overlay, then fades + shifts out
     private record FinishingGame(MiniBoard board, long startNs) {}
     private final Map<Integer, FinishingGame> finishingGames = new LinkedHashMap<>();
-    // Frozen boards: pinned games whose match has ended — stay until clicked again
+    // Pinned overlays: pinned boards showing 1.5 s winner overlay; after timeout the overlay
+    // is cleared and the final board position is shown until the user dismisses it
+    private record PinnedOverlay(MiniBoard board, long startNs,
+                                 GameState finalState,
+                                 java.util.concurrent.ConcurrentHashMap<Wall, Player> finalWO) {}
+    private final Map<Integer, PinnedOverlay> pinnedOverlays = new LinkedHashMap<>();
+    // Frozen boards: pinned boards with overlay cleared — show final position until dismissed
     private final Map<Integer, MiniBoard>     frozenBoards   = new LinkedHashMap<>();
 
-    // Persistent leaderboard selection
     private final Set<Difficulty> selectedStrategies = new HashSet<>();
-    // Games pinned by the user (active game IDs)
     private final Set<Integer>    pinnedGameIds      = new HashSet<>();
 
     private TableView<Difficulty> standingsTable;
     private AnimationTimer animTimer;
     private boolean running = false;
     private boolean paused  = false;
+    private long    tournamentStartMs;
 
     public TournamentView(Runnable onClose) {
         root = new StackPane();
@@ -121,6 +135,8 @@ public final class TournamentView {
         // ── Top bar ───────────────────────────────────────────────────────
         titleLabel.getStyleClass().add("tournament-title");
         progressLabel.getStyleClass().add("tournament-progress-label");
+        etaLabel.getStyleClass().add("tournament-progress-label");
+
         progressBar.getStyleClass().add("tournament-progress-bar");
 
         pauseIcon.setIconSize(12);
@@ -137,6 +153,14 @@ public final class TournamentView {
         copyBtn.getStyleClass().add("tournament-copy-btn");
         copyBtn.setOnAction(e -> copyToClipboard());
 
+        restartIcon.setIconSize(12);
+        restartIcon.setIconColor(Color.web(ICON_COLOR_BTN));
+        restartBtn.setGraphic(restartIcon);
+        restartBtn.getStyleClass().add("new-game-button");
+        restartBtn.setVisible(false);
+        restartBtn.setManaged(false);
+        restartBtn.setOnAction(e -> start());
+
         stopIcon.setIconSize(12);
         stopIcon.setIconColor(Color.web(ICON_COLOR_STOP));
         actionBtn.setGraphic(stopIcon);
@@ -148,8 +172,8 @@ public final class TournamentView {
             onClose.run();
         });
 
-        HBox topBar = new HBox(12, titleLabel, progressBar, progressLabel,
-                               pauseBtn, copyBtn, actionBtn);
+        HBox topBar = new HBox(12, titleLabel, progressBar, progressLabel, etaLabel,
+                               pauseBtn, copyBtn, restartBtn, actionBtn);
         topBar.setAlignment(Pos.CENTER_LEFT);
         topBar.getStyleClass().add("tournament-top-bar");
         topBar.setPadding(new Insets(14, 20, 14, 20));
@@ -198,8 +222,12 @@ public final class TournamentView {
         VBox.setVgrow(resultsList, Priority.ALWAYS);
         VBox.setVgrow(standingsTable, Priority.ALWAYS);
 
+        // summaryBox is empty until tournament completes (takes no space)
+        summaryBox.setPadding(new Insets(4, 0, 4, 0));
+
         VBox rightPanel = new VBox(10,
                 standingsTitle, standingsTable,
+                summaryBox,
                 resultsTitle, resultsList);
         rightPanel.getStyleClass().add("tournament-panel");
         rightPanel.setPadding(new Insets(14));
@@ -222,17 +250,23 @@ public final class TournamentView {
     public void start() {
         running = true;
         paused  = false;
+        tournamentStartMs = System.currentTimeMillis();
         selectedStrategies.clear();
         pinnedGameIds.clear();
         finishingGames.clear();
+        pinnedOverlays.clear();
         frozenBoards.clear();
+        summaryBox.getChildren().clear();
         titleLabel.setText("TOURNAMENT");
         stopIcon.setIconCode(FontAwesomeSolid.ARROW_LEFT);
         actionBtn.setText("Back");
         pauseIcon.setIconCode(FontAwesomeSolid.PAUSE);
         pauseBtn.setText("Pause");
         pauseBtn.setDisable(false);
+        restartBtn.setVisible(false);
+        restartBtn.setManaged(false);
         progressBar.setProgress(0);
+        etaLabel.setText("");
         int total = runner.totalGames(strategies);
         progressLabel.setText("0 / " + total);
         tableItems.setAll(strategies);
@@ -247,6 +281,7 @@ public final class TournamentView {
             (done, t) -> {
                 progressBar.setProgress((double) done / t);
                 progressLabel.setText(done + " / " + t);
+                updateEta(done, t);
                 resort();
             },
             (winner, loser) -> {
@@ -260,14 +295,69 @@ public final class TournamentView {
             },
             () -> {
                 running = false;
+                long durationMs = System.currentTimeMillis() - tournamentStartMs;
                 titleLabel.setText("TOURNAMENT RESULTS");
                 stopIcon.setIconCode(FontAwesomeSolid.TIMES);
                 actionBtn.setText("Close");
                 pauseBtn.setDisable(true);
                 progressBar.setProgress(1.0);
-                progressLabel.setText(runner.totalGames(strategies) + " games complete");
+                progressLabel.setText(runner.totalGames(strategies) + " games");
+                etaLabel.setText("  " + formatDuration(durationMs));
+                restartBtn.setVisible(true);
+                restartBtn.setManaged(true);
                 resort();
+                populateSummary(durationMs);
             });
+    }
+
+    // ── ETA ───────────────────────────────────────────────────────────────
+
+    private void updateEta(int done, int total) {
+        if (done == 0) return;
+        long elapsed = System.currentTimeMillis() - tournamentStartMs;
+        long remaining = elapsed * (total - done) / done;
+        etaLabel.setText("  ~" + formatDuration(remaining));
+    }
+
+    private static String formatDuration(long ms) {
+        long s = ms / 1000;
+        if (s < 60) return s + "s";
+        return (s / 60) + "m " + (s % 60) + "s";
+    }
+
+    // ── Summary ───────────────────────────────────────────────────────────
+
+    private void populateSummary(long durationMs) {
+        summaryBox.getChildren().clear();
+
+        Separator sep = new Separator();
+        sep.setStyle("-fx-background-color: #1E2130;");
+        summaryBox.getChildren().add(sep);
+
+        Label title = new Label("SUMMARY");
+        title.getStyleClass().add("tournament-section-title");
+        summaryBox.getChildren().add(title);
+
+        Label dur = new Label("Completed in " + formatDuration(durationMs)
+                + "  ·  " + strategies.size() + " strategies");
+        dur.setStyle("-fx-text-fill: #606880; -fx-font-size: 12px;");
+        summaryBox.getChildren().add(dur);
+
+        String[] rankColors = {"#B8960C", "#8896A0", "#8B6040"};
+        String[] rankNames  = {"1st", "2nd", "3rd"};
+        Map<Difficulty, int[]> res = runner.getResults();
+        for (int i = 0; i < Math.min(3, tableItems.size()); i++) {
+            Difficulty d = tableItems.get(i);
+            int[] wr = res.get(d);
+            int w = wr == null ? 0 : wr[0];
+            int l = wr == null ? 0 : wr[1];
+            String pct = (w + l == 0) ? "—" : (int) Math.round(100.0 * w / (w + l)) + "%";
+            Label lbl = new Label(rankNames[i] + "  " + d.sample().displayName()
+                    + "  —  " + w + "W " + l + "L  " + pct);
+            lbl.setStyle("-fx-text-fill: " + rankColors[i]
+                    + "; -fx-font-size: 12px; -fx-font-weight: bold;");
+            summaryBox.getChildren().add(lbl);
+        }
     }
 
     // ── Pause / resume ────────────────────────────────────────────────────
@@ -301,10 +391,9 @@ public final class TournamentView {
     }
 
     private void refreshLiveBoards(long now) {
-        var liveStates     = runner.getLiveStates();
-        var liveMatchups   = runner.getLiveMatchups();
-        var liveWallOwners = runner.getLiveWallOwners();
-        var liveWinners    = runner.getLiveWinners();
+        var liveStates   = runner.getLiveStates();
+        var liveMatchups = runner.getLiveMatchups();
+        var liveWO       = runner.getLiveWallOwners();
         Set<Integer> current = new HashSet<>(liveStates.keySet());
 
         // ── 1. Add / update active boards ────────────────────────────────
@@ -312,8 +401,7 @@ public final class TournamentView {
             GameState state    = liveStates.get(id);
             Difficulty[] match = liveMatchups.get(id);
             if (state == null || match == null) continue;
-            var wallOwners = liveWallOwners.getOrDefault(
-                    id, new java.util.concurrent.ConcurrentHashMap<>());
+            var wallOwners = liveWO.getOrDefault(id, new java.util.concurrent.ConcurrentHashMap<>());
 
             MiniBoard mb = activeBoards.computeIfAbsent(id, k -> {
                 MiniBoard b = new MiniBoard(match[0], match[1]);
@@ -323,9 +411,7 @@ public final class TournamentView {
                 return b;
             });
             mb.draw(state, wallOwners);
-            mb.updateSelection(
-                    selectedStrategies.contains(mb.d1),
-                    selectedStrategies.contains(mb.d2));
+            mb.updateSelection(selectedStrategies.contains(mb.d1), selectedStrategies.contains(mb.d2));
         }
 
         // ── 2. Detect newly finished active boards ────────────────────────
@@ -334,51 +420,63 @@ public final class TournamentView {
             if (current.contains(id)) return false;
             MiniBoard mb = e.getValue();
 
-            // Redraw the actual final position (stored before liveStates was cleared)
+            // Draw true final position (captured before liveStates was cleared)
             GameState finalState = runner.getFinalGameStates().get(id);
             var finalWO = runner.getFinalWallOwners().getOrDefault(id,
                                   new java.util.concurrent.ConcurrentHashMap<>());
             if (finalState != null) mb.draw(finalState, finalWO);
 
-            // Draw winner overlay once — canvas retains it
+            // Overlay winner once — canvas retains it
             Difficulty winner = runner.getLiveWinners().get(id);
             String wName  = winner != null ? winner.sample().displayName() : null;
             Color  wColor = (winner == mb.d1) ? P1_COLOR : P2_COLOR;
             mb.drawWinnerOverlay(wName, wColor);
 
             if (pinnedGameIds.remove(id)) {
-                // Pinned: keep overlay and board permanently, click to dismiss
+                // Pinned: show overlay for 1.5 s, then clear to reveal final position
                 mb.setPinned(true);
                 mb.card.setOnMouseClicked(ev -> dismissFrozen(id, mb));
-                frozenBoards.put(id, mb);
+                var fo = (java.util.concurrent.ConcurrentHashMap<Wall, Player>) runner
+                        .getFinalWallOwners().getOrDefault(id,
+                        new java.util.concurrent.ConcurrentHashMap<>());
+                pinnedOverlays.put(id, new PinnedOverlay(mb, now, finalState != null ? finalState : new GameState(), fo));
             } else {
-                // Not pinned: overlay visible 1.5 s then fades out
                 finishingGames.put(id, new FinishingGame(mb, now));
             }
             return true;
         });
 
-        // ── 3. Age finishing boards (winner overlay → fade out → remove) ──
+        // ── 3. Age finishing boards → fade + animated shift out ───────────
         finishingGames.entrySet().removeIf(e -> {
             FinishingGame fg = e.getValue();
             if (now - fg.startNs() < FINISH_OVERLAY_NS) return false;
-            FadeTransition ft = new FadeTransition(Duration.millis(300), fg.board().card);
+            MiniBoard mb = fg.board();
+            FadeTransition ft = new FadeTransition(Duration.millis(300), mb.card);
             ft.setToValue(0);
             ft.setOnFinished(ev -> {
-                boardGrid.getChildren().remove(fg.board().card);
-                fg.board().card.setOpacity(1);
+                mb.card.setOpacity(1);
+                removeWithShift(mb.card);
             });
             ft.play();
             return true;
         });
 
-        // ── 4. Keep frozen board selection borders current ────────────────
+        // ── 4. Age pinned overlays — clear overlay after 1.5 s, reveal final state ──
+        pinnedOverlays.entrySet().removeIf(e -> {
+            PinnedOverlay po = e.getValue();
+            if (now - po.startNs() < FINISH_OVERLAY_NS) return false;
+            po.board().draw(po.finalState(), po.finalWO()); // clear the overlay
+            frozenBoards.put(e.getKey(), po.board());
+            return true;
+        });
+
+        // ── 5. Keep frozen board selection borders current ────────────────
         for (MiniBoard mb : frozenBoards.values()) {
-            mb.updateSelection(
-                    selectedStrategies.contains(mb.d1),
-                    selectedStrategies.contains(mb.d2));
+            mb.updateSelection(selectedStrategies.contains(mb.d1), selectedStrategies.contains(mb.d2));
         }
     }
+
+    // ── Board grid helpers ────────────────────────────────────────────────
 
     private void togglePin(int gameId, MiniBoard board) {
         if (!pinnedGameIds.remove(gameId)) {
@@ -391,7 +489,40 @@ public final class TournamentView {
 
     private void dismissFrozen(int gameId, MiniBoard board) {
         frozenBoards.remove(gameId);
-        boardGrid.getChildren().remove(board.card);
+        pinnedOverlays.remove(gameId); // also handles dismiss during overlay phase
+        removeWithShift(board.card);
+    }
+
+    /**
+     * Removes {@code card} from the board grid and slides the remaining cards into
+     * their new positions with a short ease-out transition.
+     */
+    private void removeWithShift(Node card) {
+        List<Node> siblings = new ArrayList<>(boardGrid.getChildren());
+        siblings.remove(card);
+
+        // Snapshot positions before removal
+        Map<Node, Point2D> before = new LinkedHashMap<>();
+        for (Node n : siblings) before.put(n, new Point2D(n.getLayoutX(), n.getLayoutY()));
+
+        boardGrid.getChildren().remove(card);
+        boardGrid.applyCss();
+        boardGrid.layout();
+
+        // Animate each card from its old position to its new one
+        for (Map.Entry<Node, Point2D> entry : before.entrySet()) {
+            Node n = entry.getKey();
+            double dx = entry.getValue().getX() - n.getLayoutX();
+            double dy = entry.getValue().getY() - n.getLayoutY();
+            if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
+            n.setTranslateX(dx);
+            n.setTranslateY(dy);
+            TranslateTransition tt = new TranslateTransition(Duration.millis(300), n);
+            tt.setToX(0);
+            tt.setToY(0);
+            tt.setInterpolator(Interpolator.EASE_OUT);
+            tt.play();
+        }
     }
 
     // ── Standings ─────────────────────────────────────────────────────────
@@ -567,9 +698,7 @@ public final class TournamentView {
             card.setPadding(new Insets(10));
         }
 
-        void setPinned(boolean pinned) {
-            pinIcon.setVisible(pinned);
-        }
+        void setPinned(boolean pinned) { pinIcon.setVisible(pinned); }
 
         void updateSelection(boolean d1Selected, boolean d2Selected) {
             if (d1Selected && d2Selected) card.setStyle(BORDER_BOTH);
@@ -613,7 +742,6 @@ public final class TournamentView {
             paintPawn(g, pp2.col(), pp2.row(), P2_COLOR, step, cell, pad);
         }
 
-        /** Draws a semi-transparent overlay naming the winner in their player colour. */
         void drawWinnerOverlay(String winnerName, Color winnerColor) {
             GraphicsContext g = canvas.getGraphicsContext2D();
             g.setFill(Color.color(0, 0, 0, 0.72));
