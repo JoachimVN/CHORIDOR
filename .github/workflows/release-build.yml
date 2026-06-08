@@ -83,10 +83,15 @@ jobs:
       - name: Extract release notes from merged PR
         shell: pwsh
         run: |
-          $body = gh pr list --state merged --base main --limit 1 --json body --jq '.[0].body'
+          $pr     = gh pr list --state merged --base main --limit 1 --json number,body,author --jq '.[0]' | ConvertFrom-Json
+          $number = $pr.number
+          $author = $pr.author.login
+          $body   = $pr.body
           if ([string]::IsNullOrWhiteSpace($body) -or $body -eq 'null') {
             $body = "## ${{ steps.version.outputs.tag_name }}`n`nSee commit history for changes."
           }
+          $body = $body.TrimEnd()
+          $body += "`n`n---`n_#${number} by @${author}_"
           $body | Out-File -FilePath release-notes.md -Encoding UTF8
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
