@@ -205,6 +205,63 @@
     -fx-text-fill: #8AAADA;
 }
 
+/* ── Stop / close button (compact, red tint) ────────────────────────────── */
+
+.tournament-stop-btn {
+    -fx-background-color: #2A1A1A;
+    -fx-text-fill: #C8706A;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 16 5 16;
+    -fx-background-radius: 4;
+    -fx-border-color: #5A2A2A;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.tournament-stop-btn:hover {
+    -fx-background-color: #3A2020;
+    -fx-text-fill: #FF9090;
+    -fx-border-color: #8A3A3A;
+}
+
+.tournament-stop-btn:pressed {
+    -fx-background-color: #8A3A3A;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #AA4444;
+}
+
+/* ── Boards scroll pane ─────────────────────────────────────────────────── */
+
+.tournament-board-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+}
+
+.tournament-board-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.tournament-board-scroll > .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 8;
+}
+
+.tournament-board-scroll > .scroll-bar:vertical .track {
+    -fx-background-color: #1E2130;
+    -fx-background-radius: 4;
+}
+
+.tournament-board-scroll > .scroll-bar:vertical .thumb {
+    -fx-background-color: #3A3F58;
+    -fx-background-radius: 4;
+}
+
+.tournament-board-scroll > .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #5A5F78;
+}
+
 /* Legacy: old TournamentOverlay card variant */
 .tournament-card {
     -fx-padding: 36 52 36 52;
