@@ -6,9 +6,9 @@ version-resolver:
   major:
     labels: ['breaking']
   minor:
-    labels: ['backend', 'ui']
+    labels: ['feature']
   patch:
-    labels: ['bug', 'tests', 'ci', 'dependencies', 'assets', 'docs']
+    labels: ['bug', 'refactor', 'tests', 'ci', 'dependencies', 'assets', 'docs', 'backend', 'ui']
   default: patch
 
 template: |
