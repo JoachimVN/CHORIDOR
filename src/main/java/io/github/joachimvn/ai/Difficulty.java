@@ -7,26 +7,22 @@ import java.util.function.Function;
 
 public enum Difficulty {
 
-    RANDOM   (p -> new RandomStrategy()),
-    GREEDY   (p -> new GreedyStrategy()),
-    MINIMAX  (p -> new MinimaxStrategy(p, 1000)),
-    TACTICAL (TacticalStrategy::new),
-    RUSHER   (RusherStrategy::new),
-    BALANCED (BalancedStrategy::new),
-    ADAPTIVE (AdaptiveStrategy::new),
-    ECONOMIST(EconomistStrategy::new),
-    SHARP    (SharpStrategy::new),
-    SPRINTER (SprinterStrategy::new),
-    BLITZER  (BlitzerStrategy::new),
-    AGGRESSOR(AggressorStrategy::new),
-    TRAPPER  (TrapperStrategy::new),
-    CLOSER   (CloserStrategy::new),
-    SNIPER      (SniperStrategy::new),
-    GAMBLER     (GamblerStrategy::new),
-    MONTE_CARLO (MonteCarloStrategy::new),
-    ONE_STEP    (OneStepStrategy::new),
-    WALL_DUMPER (WallDumperStrategy::new),
-    COPYCAT     (CopycatStrategy::new);
+    RANDOM          (p -> new RandomStrategy()),
+    GREEDY          (p -> new GreedyStrategy()),
+    MINIMAX         (p -> new MinimaxStrategy(p, 1000)),
+    ECONOMIST       (EconomistStrategy::new),
+    SHARP           (SharpStrategy::new),
+    TRAPPER         (TrapperStrategy::new),
+    SNIPER          (SniperStrategy::new),
+    COPYCAT         (CopycatStrategy::new),
+    ONE_STEP        (OneStepStrategy::new),
+    WALL_DUMPER     (WallDumperStrategy::new),
+    MONTE_CARLO     (MonteCarloStrategy::new),
+    TERRITORY       (TerritoryStrategy::new),
+    RACE_PLANNER    (RacePlannerStrategy::new),
+    BEAM_SEARCH     (BeamSearchStrategy::new),
+    THREAT_RESPONDER(ThreatResponderStrategy::new),
+    OPENING_BOOK    (OpeningBookStrategy::new);
 
     private final Function<Player, Strategy> factory;
     private final Strategy sample;

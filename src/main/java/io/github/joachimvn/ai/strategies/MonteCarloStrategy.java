@@ -8,24 +8,27 @@ import io.github.joachimvn.core.rules.PathChecker;
 import java.util.*;
 
 /**
- * Allocates the full 1-second budget to random rollouts rather than minimax search.
+ * Monte Carlo tree search with UCB1 candidate selection and heuristic rollouts.
  *
- * <p>Each candidate move is evaluated by repeatedly playing both sides with random pawn
- * moves until someone wins or the rollout depth cap is reached. Candidates are cycled
- * round-robin so they each accumulate roughly equal trials. The candidate with the best
- * win rate across all its trials is chosen.
+ * <p>Candidates are the pruned move set (Chebyshev-4). The time budget is spent doing
+ * rollouts in round-UCB1 order — candidates with high win rates are visited more, but
+ * unvisited candidates are always tried first (UCB1 infinity rule).
  *
- * <p>Rollouts use pawn moves only so each step is O(1) (row comparison) rather than a BFS
- * call, keeping thousands of rollouts feasible inside the budget. At the depth cap, BFS
- * is called once to break the tie by distance.
+ * <p>Rollout policy (both players): row-progress pawn advance; with probability
+ * {@value #WALL_PROB} place the highest-impact wall from a small random sample instead.
+ * This makes rollouts simulate real Quoridor play rather than a wall-free pawn race,
+ * which was the core flaw of the previous random-pawn-only implementation.
  */
 public class MonteCarloStrategy implements Strategy {
 
-    private static final long TIME_LIMIT_MS      = 1000;
-    private static final int  MAX_ROLLOUT_DEPTH  = 60;
-    private static final int  WALL_PRUNE_DIST    = 4;
+    private static final long TIME_LIMIT_MS     = 1000;
+    private static final int  MAX_ROLLOUT_DEPTH = 60;
+    private static final int  WALL_PRUNE_DIST   = 4;
+    private static final float WALL_PROB        = 0.30f;
+    private static final int  WALL_SAMPLES      = 5;
+    private static final double UCB_C           = Math.sqrt(2);
 
-    private final Player      aiPlayer;
+    private final Player        aiPlayer;
     private final MoveValidator validator   = new MoveValidator();
     private final PathChecker   pathChecker = new PathChecker();
     private final Random        random      = new Random();
@@ -36,7 +39,7 @@ public class MonteCarloStrategy implements Strategy {
 
     @Override public String displayName() { return "Monte Carlo"; }
     @Override public String description() {
-        return "Runs thousands of random game simulations and picks the move that wins most often";
+        return "UCB1-guided simulations with heuristic rollouts that include wall placement";
     }
 
     @Override
@@ -44,40 +47,91 @@ public class MonteCarloStrategy implements Strategy {
         List<Move> candidates = buildCandidates(state);
         if (candidates.isEmpty()) throw new NoSuchElementException("No legal moves");
 
-        long deadline  = System.currentTimeMillis() + TIME_LIMIT_MS;
-        int[] wins     = new int[candidates.size()];
-        int[] trials   = new int[candidates.size()];
-        int   idx      = 0;
+        int n = candidates.size();
+        int[] wins   = new int[n];
+        int[] visits = new int[n];
+        int   total  = 0;
 
+        long deadline = System.currentTimeMillis() + TIME_LIMIT_MS;
         while (System.currentTimeMillis() < deadline) {
+            int idx = selectUCB1(wins, visits, total, n);
             GameState after = apply(state, candidates.get(idx));
             if (rollout(after, deadline)) wins[idx]++;
-            trials[idx]++;
-            idx = (idx + 1) % candidates.size();
+            visits[idx]++;
+            total++;
         }
 
+        // Pick candidate with best win rate (most visits breaks ties)
         int best = 0;
-        for (int i = 1; i < candidates.size(); i++) {
-            double ri = trials[i]    == 0 ? 0 : (double) wins[i]    / trials[i];
-            double rb = trials[best] == 0 ? 0 : (double) wins[best] / trials[best];
-            if (ri > rb) best = i;
+        for (int i = 1; i < n; i++) {
+            double rateI = visits[i]    == 0 ? 0 : (double) wins[i]    / visits[i];
+            double rateB = visits[best] == 0 ? 0 : (double) wins[best] / visits[best];
+            if (rateI > rateB || (rateI == rateB && visits[i] > visits[best])) best = i;
         }
         return candidates.get(best);
     }
 
+    private int selectUCB1(int[] wins, int[] visits, int total, int n) {
+        // Always visit unvisited candidates first
+        for (int i = 0; i < n; i++) { if (visits[i] == 0) return i; }
+        double best = Double.NEGATIVE_INFINITY;
+        int    bestIdx = 0;
+        double lnTotal = Math.log(total);
+        for (int i = 0; i < n; i++) {
+            double score = (double) wins[i] / visits[i]
+                         + UCB_C * Math.sqrt(lnTotal / visits[i]);
+            if (score > best) { best = score; bestIdx = i; }
+        }
+        return bestIdx;
+    }
+
+    /** Heuristic rollout: row-progress advance, occasionally place the best sampled wall. */
     private boolean rollout(GameState state, long deadline) {
         GameState cur = state;
         for (int d = 0; d < MAX_ROLLOUT_DEPTH; d++) {
             if (hasWon(cur, aiPlayer))            return true;
             if (hasWon(cur, aiPlayer.opponent())) return false;
             if (System.currentTimeMillis() >= deadline) break;
-            List<PawnMove> pawns = validator.getLegalPawnMoves(cur);
-            if (pawns.isEmpty()) break;
-            cur = cur.withPawnMove(pawns.get(random.nextInt(pawns.size())).target());
+            cur = heuristicStep(cur);
         }
         int myDist  = pathChecker.shortestPathWithJumps(cur, aiPlayer);
         int oppDist = pathChecker.shortestPathWithJumps(cur, aiPlayer.opponent());
         return myDist <= oppDist;
+    }
+
+    private GameState heuristicStep(GameState state) {
+        Player current = state.getCurrentPlayer();
+        Player opp     = current.opponent();
+
+        // With WALL_PROB: try placing a sampled high-impact wall
+        if (state.getWallCount(current) > 0 && random.nextFloat() < WALL_PROB) {
+            List<WallMove> walls = validator.getLegalWallMoves(state);
+            if (!walls.isEmpty()) {
+                int oppDist = pathChecker.shortestPathWithJumps(state, opp);
+                WallMove bestWall  = null;
+                int      bestImpact = 0;
+                int      samples   = Math.min(WALL_SAMPLES, walls.size());
+                for (int i = 0; i < samples; i++) {
+                    WallMove wm = walls.get(random.nextInt(walls.size()));
+                    int impact = pathChecker.shortestPathWithJumps(state.withWallMove(wm.wall()), opp) - oppDist;
+                    if (impact > bestImpact) { bestImpact = impact; bestWall = wm; }
+                }
+                if (bestWall != null && bestImpact > 0)
+                    return state.withWallMove(bestWall.wall());
+            }
+        }
+
+        // Row-progress pawn advance (no BFS — O(1), keeps rollouts fast)
+        List<PawnMove> pawns = validator.getLegalPawnMoves(state);
+        if (pawns.isEmpty()) return state;
+        int goalRow  = current.goalRow();
+        PawnMove best     = pawns.get(0);
+        int      bestDist = Math.abs(best.target().row() - goalRow);
+        for (PawnMove pm : pawns) {
+            int d = Math.abs(pm.target().row() - goalRow);
+            if (d < bestDist) { bestDist = d; best = pm; }
+        }
+        return state.withPawnMove(best.target());
     }
 
     private boolean hasWon(GameState state, Player player) {
