@@ -8,6 +8,7 @@ import io.github.joachimvn.ui.GameController;
 import javafx.animation.*;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -27,63 +28,75 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-/** Full-screen landing page with horizontally-expanding animated mode cards. */
+/**
+ * Full-screen landing page. Three cards in a radial carousel — clicking a side card rotates it
+ * to centre; clicking the centre card expands its body. Exiting to a game plays a scale-fade
+ * transition that reveals the live board underneath.
+ */
 public final class LandingView {
 
-    // Animation timings
-    private static final Duration DUR_EXPAND    = Duration.millis(320);
-    private static final Duration DUR_COLLAPSE  = Duration.millis(220);
-    private static final Duration DUR_FADE_OUT  = Duration.millis(120);
-    private static final Duration DUR_GROW      = Duration.millis(360);
-    private static final Duration DUR_DIM       = Duration.millis(220);
-    private static final Interpolator EASE      = Interpolator.EASE_BOTH;
+    // ── Carousel positions ────────────────────────────────────────────────────
+    private record Pos3D(double tx, double ty, double rot, double sc, double op) {}
 
-    // Card accent colours
-    private static final String ACCENT_PLAY     = "#9E4A40";
-    private static final String ACCENT_SIMULATE = "#3E68A8";
-    private static final String ACCENT_SETTINGS = "#5A6090";
+    private static final Pos3D P_LEFT   = new Pos3D(-430, 28, -7.5, 0.78, 0.40);
+    private static final Pos3D P_CENTER = new Pos3D(0,     0,  0.0, 1.00, 1.00);
+    private static final Pos3D P_RIGHT  = new Pos3D( 430, 28,  7.5, 0.78, 0.40);
+    private static final Pos3D P_L_HOV  = new Pos3D(-430, 16, -7.5, 0.87, 0.70);
+    private static final Pos3D P_R_HOV  = new Pos3D( 430, 16,  7.5, 0.87, 0.70);
+    /** Side cards drift back this many px when centre card is expanded. */
+    private static final double EXPAND_DRIFT = 22;
+    private static final Pos3D[] SLOTS = { P_LEFT, P_CENTER, P_RIGHT };
 
-    // Width distribution when a card is expanded
-    private static final double W_WIDE   = 0.46; // selected card fraction
-    private static final double W_NARROW = 0.27; // each other card fraction
-    private static final double MAX_W    = 8_000; // "unconstrained" sentinel
-    private static final int    COMBO_ROWS = 4;
-    private static final double CHEVRON_DIM = 0.25;
+    // ── Durations ─────────────────────────────────────────────────────────────
+    private static final Duration DUR_ROTATE  = Duration.millis(420);
+    private static final Duration DUR_EXPAND  = Duration.millis(300);
+    private static final Duration DUR_FADE_IO = Duration.millis(110);
+    private static final Duration DUR_GROW    = Duration.millis(360);
+    private static final Duration DUR_HOVER   = Duration.millis(160);
+    private static final Duration DUR_EXIT    = Duration.millis(400);
+    private static final Duration DUR_STAGGER = Duration.millis(170);
+    private static final Interpolator EASE    = Interpolator.EASE_BOTH;
 
+    // ── Accents ───────────────────────────────────────────────────────────────
+    private static final String ACC_PLAY = "#9E4A40";
+    private static final String ACC_SIM  = "#3E68A8";
+    private static final String ACC_SET  = "#5A6090";
+
+    private static final double CARD_W   = 460;
+    private static final int    ROWS     = 4;
+
+    // ── Mutable state ─────────────────────────────────────────────────────────
     private final StackPane root;
-    private HBox cardsHBox;
+    private Canvas bgCanvas;
+    private final StackPane arena  = new StackPane();
     private List<VBox> allCards;
-    private final Map<Node, Timeline>        widthTl  = new HashMap<>();
-    private final Map<Node, FadeTransition>  fadeMap  = new HashMap<>();
+    /** order[slot] = card index occupying that slot (0=left, 1=centre, 2=right). */
+    private final int[] order = {0, 1, 2};
+    private boolean  rotating = false;
+    private VBox     openBody = null;
+    private final Map<VBox, Timeline> rotTl = new HashMap<>();
+
+    // ── Constructor ───────────────────────────────────────────────────────────
 
     public LandingView(GameController ctrl, BoardView board,
                        Consumer<Boolean> flipSelected, Runnable onTournament) {
         root = new StackPane();
         root.getStyleClass().add("landing-root");
 
-        // ── Board-silhouette background ───────────────────────────────────────
-        Canvas bgCanvas = new Canvas(1, 1);
+        bgCanvas = new Canvas(1, 1);
         bgCanvas.setMouseTransparent(true);
-        root.widthProperty().addListener((o, ov, w) -> {
-            bgCanvas.setWidth(w.doubleValue());
-            drawSilhouette(bgCanvas);
-        });
-        root.heightProperty().addListener((o, ov, h) -> {
-            bgCanvas.setHeight(h.doubleValue());
-            drawSilhouette(bgCanvas);
-        });
+        root.widthProperty().addListener((o, ov, w)  -> { bgCanvas.setWidth(w.doubleValue());  drawBg(bgCanvas); });
+        root.heightProperty().addListener((o, ov, h) -> { bgCanvas.setHeight(h.doubleValue()); drawBg(bgCanvas); });
 
-        // ── Logo ──────────────────────────────────────────────────────────────
         ImageView logo = new ImageView(new Image(
             getClass().getResourceAsStream("/images/logos/CHORIDOR_Logo.png")));
         logo.setPreserveRatio(true);
         logo.setFitWidth(310);
         logo.setSmooth(true);
 
-        // ── Cards ─────────────────────────────────────────────────────────────
-        VBox[] play = makeCard(FontAwesomeSolid.CHESS,   "PLAY",     "Local or vs AI",    ACCENT_PLAY,     "landing-card-play");
-        VBox[] sim  = makeCard(FontAwesomeSolid.ROBOT,   "SIMULATE", "Watch AIs compete", ACCENT_SIMULATE, "landing-card-sim");
-        VBox[] set  = makeCard(FontAwesomeSolid.COG,     "SETTINGS", "Preferences",       ACCENT_SETTINGS, "landing-card-set");
+        VBox[] play = card(FontAwesomeSolid.CHESS,  "PLAY",     "Local or vs AI",    ACC_PLAY, "landing-card-play");
+        VBox[] sim  = card(FontAwesomeSolid.ROBOT,  "SIMULATE", "Watch AIs compete", ACC_SIM,  "landing-card-sim");
+        VBox[] set  = card(FontAwesomeSolid.COG,    "SETTINGS", "Preferences",       ACC_SET,  "landing-card-set");
 
         VBox playCard = play[0], playBody = play[1];
         VBox simCard  = sim[0],  simBody  = sim[1];
@@ -94,23 +107,23 @@ public final class LandingView {
         populateSimulate(simBody, ctrl, board, flipSelected, onTournament);
         populateSettings(setBody);
 
-        wireToggle(playCard,  playBody, ACCENT_PLAY);
-        wireToggle(simCard,   simBody,  ACCENT_SIMULATE);
-        wireToggle(setCard,   setBody,  ACCENT_SETTINGS);
-
-        // ── Layout ────────────────────────────────────────────────────────────
-        cardsHBox = new HBox(16, playCard, simCard, setCard);
-        cardsHBox.setAlignment(Pos.TOP_CENTER);
-        for (VBox c : allCards) {
-            HBox.setHgrow(c, Priority.ALWAYS);
-            c.setMaxWidth(MAX_W);
+        arena.setAlignment(Pos.CENTER);
+        arena.setMinHeight(220);
+        for (int i = 0; i < 3; i++) {
+            VBox c = allCards.get(i);
+            c.setPrefWidth(CARD_W);
+            c.setMaxWidth(CARD_W);
+            place(c, SLOTS[slotOf(i)]);
+            arena.getChildren().add(c);
         }
+        bringCenterFront();
+        wireCarousel();
 
-        VBox page = new VBox(44, logo, cardsHBox);
+        VBox page = new VBox(48, logo, arena);
         page.setAlignment(Pos.TOP_CENTER);
         page.setPadding(new Insets(0, 40, 64, 40));
-        page.setMaxWidth(1180);
-        page.setMaxHeight(Region.USE_PREF_SIZE); // required for vertical centering
+        page.setMaxWidth(1280);
+        page.setMaxHeight(Region.USE_PREF_SIZE);
 
         StackPane centred = new StackPane(page);
         centred.setAlignment(Pos.CENTER);
@@ -126,229 +139,272 @@ public final class LandingView {
 
     public StackPane getRoot() { return root; }
 
-    // ── Board silhouette background ───────────────────────────────────────────
+    // ── Background board silhouette ───────────────────────────────────────────
 
-    private static void drawSilhouette(Canvas canvas) {
-        double cw = canvas.getWidth();
-        double ch = canvas.getHeight();
+    private static void drawBg(Canvas canvas) {
+        double cw = canvas.getWidth(), ch = canvas.getHeight();
+        if (cw < 1 || ch < 1) return;
         GraphicsContext g = canvas.getGraphicsContext2D();
         g.clearRect(0, 0, cw, ch);
 
-        int n    = 9;
-        double cell = 54, gap = 10, step = 64;
-        double total = n * cell + (n - 1) * gap;
-        double boardPx = Math.min(cw, ch) * 0.62;
-        double sc = boardPx / total;
-        double cs = cell * sc, gs = gap * sc, ss = step * sc;
-        double ox = (cw - boardPx) / 2.0;
-        double oy = (ch - boardPx) / 2.0;
+        int n = 9;
+        double cell = 54, gap = 10, step = 64, total = n * cell + (n - 1) * gap;
+        double bp = Math.min(cw, ch) * 0.60;
+        double sc = bp / total, cs = cell * sc, gs = gap * sc, ss = step * sc;
+        double ox = (cw - bp) / 2.0, oy = (ch - bp) / 2.0;
 
-        // Cells
-        g.setFill(Color.web("#B0C0FF", 0.020));
+        g.setFill(Color.web("#B0C0FF", 0.018));
         for (int r = 0; r < n; r++)
             for (int c = 0; c < n; c++)
                 g.fillRoundRect(ox + c * ss, oy + r * ss, cs, cs, 3 * sc, 3 * sc);
 
-        // Goal strips
-        g.setFill(Color.web("#9E4A40", 0.032));
-        for (int c = 0; c < n; c++)
-            g.fillRect(ox + c * ss, oy + (n - 1) * ss + cs - cs * 3 / 54, cs, cs * 3 / 54);
-        g.setFill(Color.web("#3E68A8", 0.032));
-        for (int c = 0; c < n; c++)
-            g.fillRect(ox + c * ss, oy, cs, cs * 3 / 54);
+        double strip = cs * 3.0 / 54;
+        g.setFill(Color.web("#9E4A40", 0.028));
+        for (int c = 0; c < n; c++) g.fillRect(ox + c * ss, oy + (n-1)*ss + cs - strip, cs, strip);
+        g.setFill(Color.web("#3E68A8", 0.028));
+        for (int c = 0; c < n; c++) g.fillRect(ox + c * ss, oy, cs, strip);
 
-        // Decorative walls
-        g.setFill(Color.web("#9E4A40", 0.042));
-        g.fillRoundRect(ox + 2 * ss, oy + 4 * ss + cs, cs * 2 + gs, gs, 2, 2);
-        g.fillRoundRect(ox + 5 * ss, oy + 6 * ss + cs, cs * 2 + gs, gs, 2, 2);
-        g.setFill(Color.web("#3E68A8", 0.042));
-        g.fillRoundRect(ox + 5 * ss + cs, oy + 2 * ss, gs, cs * 2 + gs, 2, 2);
-        g.fillRoundRect(ox + 3 * ss + cs, oy + 4 * ss, gs, cs * 2 + gs, 2, 2);
+        g.setFill(Color.web("#9E4A40", 0.038));
+        g.fillRoundRect(ox + 2*ss, oy + 4*ss + cs, cs*2 + gs, gs, 2*sc, 2*sc);
+        g.fillRoundRect(ox + 5*ss, oy + 6*ss + cs, cs*2 + gs, gs, 2*sc, 2*sc);
+        g.setFill(Color.web("#3E68A8", 0.038));
+        g.fillRoundRect(ox + 5*ss + cs, oy + 2*ss, gs, cs*2 + gs, 2*sc, 2*sc);
+        g.fillRoundRect(ox + 3*ss + cs, oy + 4*ss, gs, cs*2 + gs, 2*sc, 2*sc);
 
-        // Pawns
         double pad = cs * 0.16;
-        g.setFill(Color.web("#9E4A40", 0.07));
-        g.fillOval(ox + 4 * ss + pad, oy + 8 * ss + pad, cs - 2 * pad, cs - 2 * pad);
-        g.setFill(Color.web("#3E68A8", 0.07));
-        g.fillOval(ox + 4 * ss + pad, oy + pad, cs - 2 * pad, cs - 2 * pad);
+        g.setFill(Color.web("#9E4A40", 0.060));
+        g.fillOval(ox + 4*ss + pad, oy + 8*ss + pad, cs - 2*pad, cs - 2*pad);
+        g.setFill(Color.web("#3E68A8", 0.060));
+        g.fillOval(ox + 4*ss + pad, oy + pad, cs - 2*pad, cs - 2*pad);
     }
 
-    // ── Card factory ──────────────────────────────────────────────────────────
+    // ── Game exit transition ──────────────────────────────────────────────────
 
-    /** Returns [card, body]. Body is pre-added to card, hidden. */
-    private static VBox[] makeCard(FontAwesomeSolid iconCode, String title,
-                                    String subtitle, String accent, String styleClass) {
-        FontIcon icon = new FontIcon(iconCode);
-        icon.setIconSize(24);
-        icon.setIconColor(Color.web(accent));
+    /**
+     * Runs {@code gameStart}, then plays a scale+fade-out on the landing root
+     * to reveal the live board that is already rendered beneath it in the scene.
+     */
+    private void exitToGame(Runnable gameStart) {
+        gameStart.run();
+        root.setMouseTransparent(true);
 
-        Label titleLbl = new Label(title);
-        titleLbl.getStyleClass().add("landing-card-title");
-        Label subLbl = new Label(subtitle);
-        subLbl.getStyleClass().add("landing-card-sub");
-        VBox textBox = new VBox(6, titleLbl, subLbl);
-        HBox.setHgrow(textBox, Priority.ALWAYS);
+        // Zoom past the landing view — the real board is revealed underneath
+        ScaleTransition st = new ScaleTransition(DUR_EXIT, root);
+        st.setToX(1.06); st.setToY(1.06);
+        FadeTransition  ft = new FadeTransition(DUR_EXIT, root);
+        ft.setToValue(0);
 
-        FontIcon chevron = new FontIcon(FontAwesomeSolid.CHEVRON_DOWN);
-        chevron.setIconSize(11);
-        chevron.setIconColor(Color.web(accent, CHEVRON_DIM));
-
-        HBox foreground = new HBox(18, icon, textBox, chevron);
-        foreground.setAlignment(Pos.CENTER_LEFT);
-
-        FontIcon watermark = new FontIcon(iconCode);
-        watermark.setIconSize(120);
-        watermark.setIconColor(Color.web(accent, 0.08));
-        watermark.setMouseTransparent(true);
-
-        StackPane header = new StackPane(watermark, foreground);
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(34, 28, 34, 28));
-        header.getStyleClass().add("landing-card-header");
-        StackPane.setAlignment(watermark, Pos.CENTER_RIGHT);
-
-        VBox body = new VBox(10);
-        body.setPadding(new Insets(0, 24, 28, 24));
-        body.setManaged(false);
-        body.setVisible(false);
-        body.setMinHeight(0);
-        body.setMaxHeight(0);
-
-        VBox card = new VBox(header, body);
-        card.getStyleClass().addAll("landing-card", styleClass);
-        return new VBox[]{card, body};
-    }
-
-    // ── Card toggle ───────────────────────────────────────────────────────────
-
-    private void wireToggle(VBox card, VBox body, String accent) {
-        StackPane header = (StackPane) card.getChildren().get(0);
-        HBox fg          = (HBox)      header.getChildren().get(1);
-        FontIcon chevron = (FontIcon)  fg.getChildren().get(2);
-        header.setOnMouseClicked(e -> {
-            boolean wasOpen = body.isManaged();
-            collapseAll();
-            if (!wasOpen) expandCard(card, body, chevron, accent);
+        ParallelTransition pt = new ParallelTransition(st, ft);
+        pt.setInterpolator(EASE);
+        pt.setOnFinished(e -> {
+            root.setVisible(false);
+            root.setOpacity(1);
+            root.setScaleX(1); root.setScaleY(1);
+            root.setMouseTransparent(false);
         });
+        pt.play();
     }
 
-    private void expandCard(VBox card, VBox body, FontIcon chevron, String accent) {
-        // Height animation
-        body.setManaged(true);
-        body.setVisible(true);
-        body.setMinHeight(0);
-        body.setMaxHeight(0);
-        double targetH = Math.max(body.prefHeight(card.getWidth() - 48), 160.0);
-        Rectangle clip = new Rectangle(MAX_W, 0);
-        body.setClip(clip);
-        new Timeline(new KeyFrame(DUR_EXPAND,
-            new KeyValue(body.minHeightProperty(), targetH, EASE),
-            new KeyValue(body.maxHeightProperty(), targetH, EASE),
-            new KeyValue(clip.heightProperty(),    targetH, EASE)))
-            .play();
-        body.getParent().getParent(); // force layout
-        Timeline finish = new Timeline(new KeyFrame(DUR_EXPAND, e2 -> {
-            body.setClip(null);
-            body.setMinHeight(Region.USE_COMPUTED_SIZE);
-            body.setMaxHeight(Double.MAX_VALUE);
-        }));
-        finish.play();
+    // ── Carousel ──────────────────────────────────────────────────────────────
 
-        // Width animation: expand selected, narrow others
-        double avail  = cardsHBox.getWidth() - 32;
-        double wideW  = avail * W_WIDE;
-        double narrowW = avail * W_NARROW;
-        for (VBox c : allCards) {
-            double target = (c == card) ? wideW : narrowW;
-            animateWidth(c, target);
-            if (c != card) fadeTo(c, 0.42);
+    private void wireCarousel() {
+        for (int i = 0; i < 3; i++) {
+            int idx = i;
+            VBox c = allCards.get(idx);
+            StackPane header = (StackPane) c.getChildren().get(0);
+            header.setOnMouseClicked(e -> { if (!rotating) onCardClick(idx); });
+            c.setOnMouseEntered(e -> { if (slotOf(idx) != 1 && !rotating) hoverSide(idx, true); });
+            c.setOnMouseExited(e ->  { if (slotOf(idx) != 1)               hoverSide(idx, false); });
+            c.setCursor(Cursor.HAND);
         }
-
-        // Style
-        card.setStyle("-fx-border-color: " + accent + ";"
-                    + "-fx-effect: dropshadow(gaussian," + accent + ",22,0.18,0,0);");
-        chevron.setIconCode(FontAwesomeSolid.CHEVRON_UP);
-        chevron.setIconColor(Color.web(accent));
     }
 
-    private void collapseAll() {
-        for (VBox c : allCards) {
-            VBox b         = (VBox)      c.getChildren().get(1);
-            StackPane h    = (StackPane) c.getChildren().get(0);
-            HBox fg        = (HBox)      h.getChildren().get(1);
-            FontIcon chv   = (FontIcon)  fg.getChildren().get(2);
-
-            if (b.isManaged()) {
-                double fromH = b.getHeight();
-                Rectangle clip = new Rectangle(MAX_W, fromH);
-                b.setClip(clip);
-                b.setMinHeight(fromH);
-                b.setMaxHeight(fromH);
-                Timeline tl = new Timeline(new KeyFrame(DUR_COLLAPSE,
-                    new KeyValue(b.minHeightProperty(), 0, EASE),
-                    new KeyValue(b.maxHeightProperty(), 0, EASE),
-                    new KeyValue(clip.heightProperty(), 0, EASE)));
-                tl.setOnFinished(ev -> {
-                    b.setClip(null);
-                    b.setManaged(false);
-                    b.setVisible(false);
-                    b.setMinHeight(0);
-                    b.setMaxHeight(0);
-                });
-                tl.play();
+    private void onCardClick(int cardIdx) {
+        if (slotOf(cardIdx) == 1) {
+            toggleBody(cardIdx);
+        } else {
+            if (openBody != null) {
+                VBox cc = allCards.get(order[1]);
+                collapseBody(cc, openBody);
+                new Timeline(new KeyFrame(DUR_EXPAND, e -> rotate(cardIdx))).play();
+            } else {
+                rotate(cardIdx);
             }
-
-            animateWidth(c, MAX_W);
-            fadeTo(c, 1.0);
-            c.setStyle("");
-            chv.setIconCode(FontAwesomeSolid.CHEVRON_DOWN);
-            chv.setIconColor(Color.web(getAccent(c), CHEVRON_DIM));
         }
     }
 
-    private String getAccent(VBox card) {
-        if (card.getStyleClass().contains("landing-card-play"))     return ACCENT_PLAY;
-        if (card.getStyleClass().contains("landing-card-sim"))      return ACCENT_SIMULATE;
-        return ACCENT_SETTINGS;
+    private void rotate(int targetIdx) {
+        int tSlot  = slotOf(targetIdx);
+        int shift  = (tSlot == 0) ? 1 : -1;
+        int[] nw   = new int[3];
+        for (int i = 0; i < 3; i++) nw[((i + shift) % 3 + 3) % 3] = order[i];
+        System.arraycopy(nw, 0, order, 0, 3);
+
+        rotating = true;
+        for (int p = 0; p < 3; p++) animTo(allCards.get(order[p]), SLOTS[p]);
+        new Timeline(new KeyFrame(DUR_ROTATE, e -> { bringCenterFront(); rotating = false; })).play();
     }
 
-    private void animateWidth(VBox card, double target) {
-        Timeline prev = widthTl.get(card);
+    private void animTo(VBox c, Pos3D pos) {
+        Timeline prev = rotTl.get(c);
         if (prev != null) prev.stop();
-        Timeline tl = new Timeline(new KeyFrame(DUR_EXPAND,
-            new KeyValue(card.maxWidthProperty(), target, EASE)));
-        widthTl.put(card, tl);
+        Timeline tl = new Timeline(new KeyFrame(DUR_ROTATE,
+            new KeyValue(c.translateXProperty(), pos.tx(), EASE),
+            new KeyValue(c.translateYProperty(), pos.ty(), EASE),
+            new KeyValue(c.rotateProperty(),     pos.rot(), EASE),
+            new KeyValue(c.scaleXProperty(),     pos.sc(),  EASE),
+            new KeyValue(c.scaleYProperty(),     pos.sc(),  EASE),
+            new KeyValue(c.opacityProperty(),    pos.op(),  EASE)));
+        rotTl.put(c, tl);
         tl.play();
     }
 
-    private void fadeTo(Node node, double target) {
-        FadeTransition prev = fadeMap.get(node);
-        if (prev != null) prev.stop();
-        FadeTransition ft = new FadeTransition(DUR_DIM, node);
-        ft.setToValue(target);
-        fadeMap.put(node, ft);
-        ft.play();
+    private void place(VBox c, Pos3D pos) {
+        c.setTranslateX(pos.tx()); c.setTranslateY(pos.ty()); c.setRotate(pos.rot());
+        c.setScaleX(pos.sc()); c.setScaleY(pos.sc()); c.setOpacity(pos.op());
     }
 
-    // ── Animated tab switch ───────────────────────────────────────────────────
+    private void bringCenterFront() {
+        VBox centre = allCards.get(order[1]);
+        arena.getChildren().remove(centre);
+        arena.getChildren().add(centre);
+    }
+
+    private int slotOf(int cardIdx) {
+        for (int p = 0; p < 3; p++) if (order[p] == cardIdx) return p;
+        return -1;
+    }
+
+    private void hoverSide(int cardIdx, boolean enter) {
+        Timeline prev = rotTl.get(allCards.get(cardIdx));
+        if (prev != null && prev.getStatus() == Animation.Status.RUNNING) return;
+        int slot = slotOf(cardIdx);
+        Pos3D tgt = enter ? (slot == 0 ? P_L_HOV : P_R_HOV) : SLOTS[slot];
+        VBox c = allCards.get(cardIdx);
+        new Timeline(new KeyFrame(DUR_HOVER,
+            new KeyValue(c.scaleXProperty(),     tgt.sc(),  EASE),
+            new KeyValue(c.scaleYProperty(),     tgt.sc(),  EASE),
+            new KeyValue(c.opacityProperty(),    tgt.op(),  EASE),
+            new KeyValue(c.translateYProperty(), tgt.ty(),  EASE))).play();
+    }
+
+    // ── Body expansion ────────────────────────────────────────────────────────
+
+    private void toggleBody(int cardIdx) {
+        VBox c = allCards.get(cardIdx);
+        VBox b = (VBox) c.getChildren().get(1);
+        if (openBody == b) collapseBody(c, b);
+        else               expandBody(c, b);
+    }
+
+    private void expandBody(VBox card, VBox body) {
+        if (openBody != null && openBody != body) collapseBody(allCards.get(order[1]), openBody);
+        openBody = body;
+
+        body.setManaged(true);
+        body.setVisible(true);
+        body.setOpacity(1);
+        for (Node child : body.getChildren()) { child.setOpacity(0); child.setTranslateY(-6); }
+
+        // Force a CSS + layout pass so prefHeight is accurate
+        card.applyCss();
+        card.layout();
+        double h = body.prefHeight(CARD_W - 48);
+        if (h < 20) h = 220;
+
+        Rectangle clip = new Rectangle(CARD_W, 0);
+        body.setClip(clip);
+
+        final double finalH = h;
+        Timeline open = new Timeline(new KeyFrame(DUR_EXPAND,
+            new KeyValue(clip.heightProperty(), finalH, EASE)));
+        open.setOnFinished(ev -> {
+            body.setClip(null);
+            // Stagger each child settling into place
+            List<Node> kids = body.getChildren();
+            for (int i = 0; i < kids.size(); i++) {
+                Node kid = kids.get(i);
+                long delay = i * 55L;
+                new Timeline(
+                    new KeyFrame(Duration.millis(delay)),
+                    new KeyFrame(Duration.millis(delay + DUR_STAGGER.toMillis()),
+                        new KeyValue(kid.opacityProperty(),    1.0, EASE),
+                        new KeyValue(kid.translateYProperty(), 0.0, EASE))
+                ).play();
+            }
+        });
+        open.play();
+
+        // Side cards drift back to create depth
+        driftSides(card, true);
+        setChevron(card, true);
+        card.setStyle("-fx-border-color: " + accent(card) + ";");
+    }
+
+    private void collapseBody(VBox card, VBox body) {
+        if (openBody == body) openBody = null;
+
+        double fromH = body.getHeight() > 0 ? body.getHeight() : body.prefHeight(CARD_W - 48);
+        Rectangle clip = new Rectangle(CARD_W, fromH);
+        body.setClip(clip);
+
+        Timeline close = new Timeline(new KeyFrame(DUR_EXPAND,
+            new KeyValue(clip.heightProperty(), 0.0,  EASE),
+            new KeyValue(body.opacityProperty(), 0.0,  EASE)));
+        close.setOnFinished(e -> {
+            body.setClip(null);
+            body.setManaged(false);
+            body.setVisible(false);
+            body.setOpacity(1);
+            for (Node child : body.getChildren()) { child.setTranslateY(0); child.setOpacity(1); }
+        });
+        close.play();
+
+        driftSides(card, false);
+        setChevron(card, false);
+        card.setStyle("");
+    }
+
+    /** Animates side cards toward (drift=true) or back from a depth offset. */
+    private void driftSides(VBox centreCard, boolean deeper) {
+        for (int i = 0; i < allCards.size(); i++) {
+            VBox other = allCards.get(i);
+            if (other == centreCard) continue;
+            int slot = slotOf(i);
+            double baseY = SLOTS[slot].ty();
+            double targetY = deeper ? baseY + EXPAND_DRIFT : baseY;
+            new Timeline(new KeyFrame(DUR_EXPAND,
+                new KeyValue(other.translateYProperty(), targetY, EASE))).play();
+        }
+    }
+
+    private void setChevron(VBox card, boolean up) {
+        StackPane h  = (StackPane) card.getChildren().get(0);
+        HBox fg      = (HBox) h.getChildren().get(1);
+        FontIcon chv = (FontIcon) fg.getChildren().get(2);
+        chv.setIconCode(up ? FontAwesomeSolid.CHEVRON_UP : FontAwesomeSolid.CHEVRON_DOWN);
+        chv.setIconColor(Color.web(accent(card), up ? 1.0 : 0.25));
+    }
+
+    private String accent(VBox card) {
+        if (card.getStyleClass().contains("landing-card-play")) return ACC_PLAY;
+        if (card.getStyleClass().contains("landing-card-sim"))  return ACC_SIM;
+        return ACC_SET;
+    }
+
+    // ── Tab switch ────────────────────────────────────────────────────────────
 
     private void switchTab(VBox body, VBox from, VBox to) {
-        FadeTransition fo = new FadeTransition(DUR_FADE_OUT, from);
+        FadeTransition fo = new FadeTransition(DUR_FADE_IO, from);
         fo.setToValue(0);
         fo.setOnFinished(ev -> {
             double fromH = body.getHeight();
-            from.setManaged(false);
-            from.setVisible(false);
-            to.setManaged(true);
-            to.setVisible(true);
-            to.setOpacity(0);
-
+            from.setManaged(false); from.setVisible(false);
+            to.setManaged(true); to.setVisible(true); to.setOpacity(0);
             double toH = Math.max(body.prefHeight(body.getWidth()), 40.0);
-            body.setMinHeight(fromH);
-            body.setMaxHeight(fromH);
-            Rectangle clip = new Rectangle(MAX_W, fromH);
+            body.setMinHeight(fromH); body.setMaxHeight(fromH);
+            Rectangle clip = new Rectangle(CARD_W, fromH);
             body.setClip(clip);
-
             Timeline grow = new Timeline(new KeyFrame(DUR_GROW,
                 new KeyValue(body.minHeightProperty(), toH, EASE),
                 new KeyValue(body.maxHeightProperty(), toH, EASE),
@@ -359,17 +415,51 @@ public final class LandingView {
                 body.setMaxHeight(Double.MAX_VALUE);
             });
             grow.play();
-
-            FadeTransition fi = new FadeTransition(Duration.millis(220), to);
-            fi.setDelay(Duration.millis(80));
-            fi.setFromValue(0);
-            fi.setToValue(1);
-            fi.play();
+            FadeTransition fi = new FadeTransition(Duration.millis(200), to);
+            fi.setDelay(Duration.millis(70)); fi.setFromValue(0); fi.setToValue(1); fi.play();
         });
         fo.play();
     }
 
-    // ── Play body ─────────────────────────────────────────────────────────────
+    // ── Card factory ──────────────────────────────────────────────────────────
+
+    private static VBox[] card(FontAwesomeSolid icon, String title,
+                                String sub, String accent, String styleClass) {
+        FontIcon fg = new FontIcon(icon);
+        fg.setIconSize(26); fg.setIconColor(Color.web(accent));
+
+        Label tl = new Label(title); tl.getStyleClass().add("landing-card-title");
+        Label sl = new Label(sub);   sl.getStyleClass().add("landing-card-sub");
+        VBox txt = new VBox(7, tl, sl);
+        HBox.setHgrow(txt, Priority.ALWAYS);
+
+        FontIcon chv = new FontIcon(FontAwesomeSolid.CHEVRON_DOWN);
+        chv.setIconSize(11); chv.setIconColor(Color.web(accent, 0.25));
+
+        HBox fore = new HBox(20, fg, txt, chv);
+        fore.setAlignment(Pos.CENTER_LEFT);
+
+        FontIcon wm = new FontIcon(icon);
+        wm.setIconSize(130); wm.setIconColor(Color.web(accent, 0.08));
+        wm.setMouseTransparent(true);
+
+        StackPane header = new StackPane(wm, fore);
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(36, 32, 36, 32));
+        header.getStyleClass().add("landing-card-header");
+        StackPane.setAlignment(wm, Pos.CENTER_RIGHT);
+
+        VBox body = new VBox(12);
+        body.setPadding(new Insets(0, 28, 32, 28));
+        body.setManaged(false); body.setVisible(false);
+        body.setMinHeight(0);  body.setMaxHeight(0);
+
+        VBox cardBox = new VBox(header, body);
+        cardBox.getStyleClass().addAll("landing-card", styleClass);
+        return new VBox[]{cardBox, body};
+    }
+
+    // ── Body content: Play ────────────────────────────────────────────────────
 
     private void populatePlay(VBox body, GameController ctrl,
                                BoardView board, Consumer<Boolean> flipSelected) {
@@ -377,51 +467,47 @@ public final class LandingView {
         ToggleButton hvhTab  = tabBtn("2 Players", tabs);
         ToggleButton vsAiTab = tabBtn("vs AI",     tabs);
 
-        Button startHvH = actionBtn("Start Game", ACCENT_PLAY);
+        Button startHvH = actionBtn("Start Game", ACC_PLAY);
         VBox hvhPanel = new VBox(startHvH);
-        hvhPanel.setPadding(new Insets(16, 0, 0, 0));
+        hvhPanel.setPadding(new Insets(18, 0, 0, 0));
 
-        ComboBox<Difficulty> stratCombo = stratCombo();
-        ToggleGroup colorGroup = new ToggleGroup();
-        ToggleButton pickRed  = colorDot("color-pick-p1", colorGroup);
-        ToggleButton pickBlue = colorDot("color-pick-p2", colorGroup);
-        pickRed.setSelected(true);
-        HBox colorRow = new HBox(10, configLabel("PLAY AS"), pickRed, pickBlue);
-        colorRow.setAlignment(Pos.CENTER_LEFT);
-        Button startVsAi = actionBtn("Start Game", ACCENT_PLAY);
-        VBox vsAiPanel = new VBox(14, configLabel("OPPONENT"), stratCombo, colorRow, startVsAi);
-        vsAiPanel.setPadding(new Insets(16, 0, 0, 0));
-        vsAiPanel.setManaged(false);
-        vsAiPanel.setVisible(false);
-        vsAiPanel.setOpacity(0);
+        ComboBox<Difficulty> combo = combo();
+        ToggleGroup cg = new ToggleGroup();
+        ToggleButton pr = dot("color-pick-p1", cg), pb = dot("color-pick-p2", cg);
+        pr.setSelected(true);
+        HBox cr = new HBox(10, cfgLabel("PLAY AS"), pr, pb);
+        cr.setAlignment(Pos.CENTER_LEFT);
+        Button startAi = actionBtn("Start Game", ACC_PLAY);
+        VBox aiPanel = new VBox(14, cfgLabel("OPPONENT"), combo, cr, startAi);
+        aiPanel.setPadding(new Insets(18, 0, 0, 0));
+        aiPanel.setManaged(false); aiPanel.setVisible(false); aiPanel.setOpacity(0);
 
         hvhTab.setSelected(true);
-        tabs.selectedToggleProperty().addListener((obs, old, sel) -> {
-            if (sel == hvhTab) switchTab(body, vsAiPanel, hvhPanel);
-            else               switchTab(body, hvhPanel, vsAiPanel);
+        tabs.selectedToggleProperty().addListener((o, ov, v) -> {
+            if (v == hvhTab) switchTab(body, aiPanel, hvhPanel);
+            else             switchTab(body, hvhPanel, aiPanel);
         });
 
         startHvH.setOnAction(e -> {
             ctrl.startGame(null, null, "Player 1", "Player 2");
             board.setFlipped(false); flipSelected.accept(false);
-            root.setVisible(false);
+            exitToGame(() -> {});
         });
-        startVsAi.setOnAction(e -> {
-            Difficulty d = stratCombo.getValue();
-            boolean blue = pickBlue.isSelected();
+        startAi.setOnAction(e -> {
+            Difficulty d = combo.getValue(); boolean blue = pb.isSelected();
             ctrl.startGame(
                 blue ? d.createStrategy(Player.ONE) : null,
                 blue ? null : d.createStrategy(Player.TWO),
                 blue ? d.sample().displayName() : "Player 1",
                 blue ? "Player 2" : d.sample().displayName());
             board.setFlipped(blue); flipSelected.accept(blue);
-            root.setVisible(false);
+            exitToGame(() -> {});
         });
 
-        body.getChildren().addAll(tabRow(hvhTab, vsAiTab), hvhPanel, vsAiPanel);
+        body.getChildren().addAll(tabRow(hvhTab, vsAiTab), hvhPanel, aiPanel);
     }
 
-    // ── Simulate body ─────────────────────────────────────────────────────────
+    // ── Body content: Simulate ────────────────────────────────────────────────
 
     private void populateSimulate(VBox body, GameController ctrl, BoardView board,
                                    Consumer<Boolean> flipSelected, Runnable onTournament) {
@@ -429,25 +515,21 @@ public final class LandingView {
         ToggleButton tourTab = tabBtn("Tournament", tabs);
         ToggleButton oneTab  = tabBtn("1 vs 1",     tabs);
 
-        Button launchTour = actionBtn("Launch Tournament", ACCENT_SIMULATE);
+        Button launchTour = actionBtn("Launch Tournament", ACC_SIM);
         VBox tourPanel = new VBox(launchTour);
-        tourPanel.setPadding(new Insets(16, 0, 0, 0));
+        tourPanel.setPadding(new Insets(18, 0, 0, 0));
 
-        ComboBox<Difficulty> s1 = stratCombo();
-        ComboBox<Difficulty> s2 = stratCombo();
+        ComboBox<Difficulty> s1 = combo(), s2 = combo();
         if (s2.getItems().size() > 1) s2.getSelectionModel().select(1);
-        Button startMatch = actionBtn("Start Match", ACCENT_SIMULATE);
-        VBox onePanel = new VBox(12,
-            configLabel("RED AI"), s1, configLabel("BLUE AI"), s2, startMatch);
-        onePanel.setPadding(new Insets(16, 0, 0, 0));
-        onePanel.setManaged(false);
-        onePanel.setVisible(false);
-        onePanel.setOpacity(0);
+        Button startMatch = actionBtn("Start Match", ACC_SIM);
+        VBox onePanel = new VBox(12, cfgLabel("RED AI"), s1, cfgLabel("BLUE AI"), s2, startMatch);
+        onePanel.setPadding(new Insets(18, 0, 0, 0));
+        onePanel.setManaged(false); onePanel.setVisible(false); onePanel.setOpacity(0);
 
         tourTab.setSelected(true);
-        tabs.selectedToggleProperty().addListener((obs, old, sel) -> {
-            if (sel == tourTab) switchTab(body, onePanel, tourPanel);
-            else                switchTab(body, tourPanel, onePanel);
+        tabs.selectedToggleProperty().addListener((o, ov, v) -> {
+            if (v == tourTab) switchTab(body, onePanel, tourPanel);
+            else              switchTab(body, tourPanel, onePanel);
         });
 
         launchTour.setOnAction(e -> {
@@ -457,94 +539,78 @@ public final class LandingView {
         startMatch.setOnAction(e -> {
             Difficulty d1 = s1.getValue(), d2 = s2.getValue();
             ctrl.startGame(d1.createStrategy(Player.ONE), d2.createStrategy(Player.TWO),
-                           d1.sample().displayName(), d2.sample().displayName());
+                d1.sample().displayName(), d2.sample().displayName());
             board.setFlipped(false); flipSelected.accept(false);
-            root.setVisible(false);
+            exitToGame(() -> {});
         });
 
         body.getChildren().addAll(tabRow(tourTab, oneTab), tourPanel, onePanel);
     }
 
-    // ── Settings body ─────────────────────────────────────────────────────────
+    // ── Body content: Settings ────────────────────────────────────────────────
 
     private static void populateSettings(VBox body) {
-        Label soon   = new Label("Coming Soon");
-        soon.getStyleClass().add("landing-coming-soon");
-        Label detail = new Label("Sound, themes, and more.");
-        detail.getStyleClass().add("landing-card-sub");
-        VBox content = new VBox(8, soon, detail);
-        content.setPadding(new Insets(10, 0, 4, 0));
-        body.getChildren().add(content);
+        Label soon = new Label("Coming Soon"); soon.getStyleClass().add("landing-coming-soon");
+        Label det  = new Label("Sound, themes, and more."); det.getStyleClass().add("landing-card-sub");
+        VBox c = new VBox(10, soon, det); c.setPadding(new Insets(12, 0, 4, 0));
+        body.getChildren().add(c);
     }
 
-    // ── Widget helpers ────────────────────────────────────────────────────────
+    // ── Widgets ───────────────────────────────────────────────────────────────
 
-    private static ToggleButton tabBtn(String text, ToggleGroup group) {
-        ToggleButton btn = new ToggleButton(text);
-        btn.setToggleGroup(group);
-        btn.getStyleClass().add("landing-tab-btn");
-        HBox.setHgrow(btn, Priority.ALWAYS);
-        btn.setMaxWidth(Double.MAX_VALUE);
-        return btn;
+    private static ToggleButton tabBtn(String text, ToggleGroup g) {
+        ToggleButton b = new ToggleButton(text);
+        b.setToggleGroup(g); b.getStyleClass().add("landing-tab-btn");
+        HBox.setHgrow(b, Priority.ALWAYS); b.setMaxWidth(Double.MAX_VALUE);
+        return b;
     }
 
     private static HBox tabRow(ToggleButton... btns) {
-        HBox row = new HBox(0);
-        row.getChildren().addAll(btns);
-        row.getStyleClass().add("landing-tab-row");
-        return row;
+        HBox r = new HBox(0);
+        r.getChildren().addAll(btns);
+        r.getStyleClass().add("landing-tab-row");
+        return r;
     }
 
     private static Button actionBtn(String text, String accent) {
-        Button btn = new Button(text);
-        btn.getStyleClass().add("landing-action-btn");
-        btn.setStyle("-fx-background-color: " + accent + "; "
-                   + "-fx-border-color: derive(" + accent + ", 25%);");
-        btn.setMaxWidth(Double.MAX_VALUE);
-        return btn;
+        Button b = new Button(text); b.getStyleClass().add("landing-action-btn");
+        b.setStyle("-fx-background-color:" + accent + ";-fx-border-color:derive(" + accent + ",22%);");
+        b.setMaxWidth(Double.MAX_VALUE);
+        return b;
     }
 
-    private static Label configLabel(String text) {
-        Label lbl = new Label(text);
-        lbl.getStyleClass().add("landing-config-label");
-        return lbl;
+    private static Label cfgLabel(String t) {
+        Label l = new Label(t); l.getStyleClass().add("landing-config-label"); return l;
     }
 
-    private static ComboBox<Difficulty> stratCombo() {
-        ComboBox<Difficulty> combo = new ComboBox<>();
-        combo.getItems().addAll(Difficulty.values());
-        combo.getStyleClass().add("strategy-combo");
-        combo.setMaxWidth(Double.MAX_VALUE);
-        combo.setVisibleRowCount(COMBO_ROWS);
-        combo.setCellFactory(lv -> new ListCell<>() {
-            @Override protected void updateItem(Difficulty d, boolean empty) {
-                super.updateItem(d, empty);
-                if (empty || d == null) { setGraphic(null); setText(null); return; }
-                Label name = new Label(d.sample().displayName());
-                name.getStyleClass().add("strategy-name");
-                Label desc = new Label(d.sample().description());
-                desc.getStyleClass().add("strategy-desc");
-                desc.setWrapText(true);
-                setGraphic(new VBox(2, name, desc));
-                setText(null);
+    private static ComboBox<Difficulty> combo() {
+        ComboBox<Difficulty> c = new ComboBox<>();
+        c.getItems().addAll(Difficulty.values());
+        c.getStyleClass().add("strategy-combo"); c.setMaxWidth(Double.MAX_VALUE);
+        c.setVisibleRowCount(ROWS);
+        c.setCellFactory(lv -> new ListCell<>() {
+            @Override protected void updateItem(Difficulty d, boolean e) {
+                super.updateItem(d, e);
+                if (e || d == null) { setGraphic(null); setText(null); return; }
+                Label n  = new Label(d.sample().displayName()); n.getStyleClass().add("strategy-name");
+                Label ds = new Label(d.sample().description()); ds.getStyleClass().add("strategy-desc"); ds.setWrapText(true);
+                setGraphic(new VBox(2, n, ds)); setText(null);
             }
         });
-        combo.setButtonCell(new ListCell<>() {
-            @Override protected void updateItem(Difficulty d, boolean empty) {
-                super.updateItem(d, empty);
-                setText(empty || d == null ? "" : d.sample().displayName());
-                setStyle("-fx-text-fill: #8AAADA; -fx-font-weight: bold; -fx-font-size: 15px;");
+        c.setButtonCell(new ListCell<>() {
+            @Override protected void updateItem(Difficulty d, boolean e) {
+                super.updateItem(d, e);
+                setText(e || d == null ? "" : d.sample().displayName());
+                setStyle("-fx-text-fill:#8AAADA;-fx-font-weight:bold;-fx-font-size:15px;");
             }
         });
-        combo.getSelectionModel().selectFirst();
-        return combo;
+        c.getSelectionModel().selectFirst();
+        return c;
     }
 
-    private static ToggleButton colorDot(String styleClass, ToggleGroup group) {
-        ToggleButton btn = new ToggleButton();
-        btn.getStyleClass().addAll("color-pick-button", styleClass);
-        btn.setToggleGroup(group);
-        btn.setPrefSize(30, 30); btn.setMinSize(30, 30); btn.setMaxSize(30, 30);
-        return btn;
+    private static ToggleButton dot(String cls, ToggleGroup g) {
+        ToggleButton b = new ToggleButton(); b.getStyleClass().addAll("color-pick-button", cls);
+        b.setToggleGroup(g); b.setPrefSize(30, 30); b.setMinSize(30, 30); b.setMaxSize(30, 30);
+        return b;
     }
 }

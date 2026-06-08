@@ -9,101 +9,96 @@
     -fx-background-color: transparent;
     -fx-border-color: transparent;
 }
-
-.landing-scroll > .viewport {
-    -fx-background-color: transparent;
-}
-
-.landing-scroll > .scroll-bar:vertical {
-    -fx-background-color: transparent;
-    -fx-pref-width: 4;
-}
-
+.landing-scroll > .viewport              { -fx-background-color: transparent; }
+.landing-scroll > .scroll-bar:vertical   { -fx-background-color: transparent; -fx-pref-width: 4; }
 .landing-scroll > .scroll-bar:vertical > .thumb {
-    -fx-background-color: #1E2130;
+    -fx-background-color: #1A1D2C;
     -fx-background-radius: 2;
 }
-
 .landing-scroll > .scroll-bar:vertical > .track,
 .landing-scroll > .scroll-bar:vertical > .increment-button,
 .landing-scroll > .scroll-bar:vertical > .decrement-button {
     -fx-background-color: transparent;
-    -fx-pref-height: 0;
-    -fx-min-height: 0;
+    -fx-pref-height: 0; -fx-min-height: 0;
 }
-
-.landing-scroll > .corner {
-    -fx-background-color: transparent;
-}
+.landing-scroll > .corner { -fx-background-color: transparent; }
 
 /* ── Cards ────────────────────────────────────────────────────────────────── */
 
 .landing-card {
     -fx-border-width: 1;
-    -fx-border-radius: 10;
-    -fx-background-radius: 10;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
 }
 
 .landing-card-play {
-    -fx-background-color: linear-gradient(to bottom, #120C0C, #0D0E1A 55%);
-    -fx-border-color: #5A2820 #191C2C #191C2C #191C2C;
+    -fx-background-color: linear-gradient(to bottom, #110C0C, #0C0E18 52%);
+    -fx-border-color: #5C2C26 #17192A #17192A #17192A;
 }
-
 .landing-card-sim {
-    -fx-background-color: linear-gradient(to bottom, #0A0E1A, #0D0E1A 55%);
-    -fx-border-color: #1E3A62 #191C2C #191C2C #191C2C;
+    -fx-background-color: linear-gradient(to bottom, #090D1A, #0C0E18 52%);
+    -fx-border-color: #1C3860 #17192A #17192A #17192A;
 }
-
 .landing-card-set {
-    -fx-background-color: linear-gradient(to bottom, #0D0D1A, #0D0E1A 55%);
-    -fx-border-color: #2C2E58 #191C2C #191C2C #191C2C;
+    -fx-background-color: linear-gradient(to bottom, #0C0C1A, #0C0E18 52%);
+    -fx-border-color: #2A2C56 #17192A #17192A #17192A;
 }
 
-/* Expanded state: border set via inline style from Java */
+/* Inline style from Java overrides these when expanded (full-accent border). */
+
+/* ── Card header ──────────────────────────────────────────────────────────── */
 
 .landing-card-header {
     -fx-cursor: hand;
-    -fx-min-height: 140;
-    -fx-background-radius: 10;
+    -fx-min-height: 150;
+    -fx-background-radius: 12;
 }
 
-.landing-card-header:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.016);
-    -fx-background-radius: 10 10 0 0;
+.landing-card-play > .landing-card-header:hover {
+    -fx-background-color: rgba(158, 74, 64, 0.07);
+    -fx-background-radius: 12 12 0 0;
+}
+.landing-card-sim > .landing-card-header:hover {
+    -fx-background-color: rgba(62, 104, 168, 0.07);
+    -fx-background-radius: 12 12 0 0;
+}
+.landing-card-set > .landing-card-header:hover {
+    -fx-background-color: rgba(90, 96, 144, 0.07);
+    -fx-background-radius: 12 12 0 0;
 }
 
-/* ── Card typography ──────────────────────────────────────────────────────── */
+/* ── Typography ───────────────────────────────────────────────────────────── */
 
 .landing-card-title {
-    -fx-text-fill: #BDC2DC;
+    -fx-text-fill: #C0C6DC;
     -fx-font-size: 17px;
     -fx-font-weight: bold;
     -fx-letter-spacing: 2.5;
 }
 
 .landing-card-sub {
-    -fx-text-fill: #28293C;
+    -fx-text-fill: #363A54;
     -fx-font-size: 12px;
 }
 
 /* ── Tab row ──────────────────────────────────────────────────────────────── */
 
 .landing-tab-row {
-    -fx-background-color: #060710;
-    -fx-border-color: #14172A;
+    -fx-background-color: #06070E;
+    -fx-border-color: #13162A;
     -fx-border-width: 1;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
+    -fx-border-radius: 7;
+    -fx-background-radius: 7;
 }
 
 .landing-tab-btn {
     -fx-background-color: transparent;
-    -fx-text-fill: #2C2F48;
+    -fx-text-fill: #2A2E46;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-padding: 11 16 11 16;
+    -fx-padding: 12 16 12 16;
     -fx-cursor: hand;
-    -fx-background-radius: 5;
+    -fx-background-radius: 6;
     -fx-border-color: transparent;
     -fx-border-width: 0;
     -fx-focus-color: transparent;
@@ -111,52 +106,50 @@
 }
 
 .landing-tab-btn:hover {
-    -fx-text-fill: #484C78;
-    -fx-background-color: rgba(255, 255, 255, 0.016);
+    -fx-text-fill: #464B72;
+    -fx-background-color: rgba(255, 255, 255, 0.018);
 }
 
 .landing-tab-btn:selected {
-    -fx-background-color: #14172A;
-    -fx-text-fill: #8088B8;
+    -fx-background-color: #12152A;
+    -fx-text-fill: #7880B0;
 }
 
-/* ── Labels ───────────────────────────────────────────────────────────────── */
+/* ── Config labels ────────────────────────────────────────────────────────── */
 
 .landing-config-label {
-    -fx-text-fill: #262840;
+    -fx-text-fill: #2C2F48;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-letter-spacing: 1.5;
 }
 
-/* ── Action button ────────────────────────────────────────────────────────── */
+/* ── Action buttons ───────────────────────────────────────────────────────── */
 
 .landing-action-btn {
-    -fx-text-fill: rgba(255, 255, 255, 0.9);
+    -fx-text-fill: rgba(255, 255, 255, 0.88);
     -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-padding: 14 0 14 0;
-    -fx-background-radius: 6;
-    -fx-border-radius: 6;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
     -fx-border-width: 1;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 10, 0, 0, 3);
 }
 
 .landing-action-btn:hover {
     -fx-text-fill: #ffffff;
-    -fx-opacity: 0.84;
+    -fx-opacity: 0.82;
 }
 
 .landing-action-btn:pressed {
     -fx-opacity: 1.0;
-    -fx-effect: none;
 }
 
 /* ── Coming soon ──────────────────────────────────────────────────────────── */
 
 .landing-coming-soon {
-    -fx-text-fill: #20223A;
-    -fx-font-size: 22px;
+    -fx-text-fill: #1E2038;
+    -fx-font-size: 24px;
     -fx-font-weight: bold;
 }
