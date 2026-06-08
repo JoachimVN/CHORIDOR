@@ -11,6 +11,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 /**
@@ -42,6 +43,11 @@ public class TournamentRunner {
     private final ConcurrentHashMap<Integer, GameState>                       finalGameStates = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> finalWallOwners = new ConcurrentHashMap<>();
 
+    /** Notable games updated atomically by worker threads as games complete. */
+    private final AtomicReference<GameRecord> shortestGame    = new AtomicReference<>();
+    private final AtomicReference<GameRecord> longestGame     = new AtomicReference<>();
+    private final AtomicReference<GameRecord> mostTacticalGame = new AtomicReference<>();
+
     // ── Control ─────────────────────────────────────────────────────────────
     private final AtomicBoolean  cancelled   = new AtomicBoolean(false);
     private volatile boolean     paused      = false;
@@ -57,6 +63,9 @@ public class TournamentRunner {
     public ConcurrentHashMap<Integer, Difficulty>                      getLiveWinners()     { return liveWinners; }
     public ConcurrentHashMap<Integer, GameState>                       getFinalGameStates() { return finalGameStates; }
     public ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> getFinalWallOwners() { return finalWallOwners; }
+    public GameRecord getShortestGame()     { return shortestGame.get(); }
+    public GameRecord getLongestGame()      { return longestGame.get(); }
+    public GameRecord getMostTacticalGame() { return mostTacticalGame.get(); }
     public boolean isPaused()  { return paused; }
 
     public int totalGames(List<Difficulty> strategies) {
@@ -84,6 +93,9 @@ public class TournamentRunner {
         liveWinners.clear();
         finalGameStates.clear();
         finalWallOwners.clear();
+        shortestGame.set(null);
+        longestGame.set(null);
+        mostTacticalGame.set(null);
         results.clear();
         matchupWins.clear();
         for (Difficulty a : strategies) {
@@ -161,9 +173,10 @@ public class TournamentRunner {
         liveWallOwners.put(gameId, wallOwners);
 
         Difficulty winner = null;
+        int moveCount = 0;
         try {
             Player current = null;
-            for (int moves = 0; moves < MAX_MOVES; moves++) {
+            for (int m = 0; m < MAX_MOVES; m++) {
                 while (paused && !cancelled.get()) {
                     try { Thread.sleep(50); } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -180,6 +193,7 @@ public class TournamentRunner {
                     if (move instanceof WallMove wm) wallOwners.put(wm.wall(), current);
                     state = engine.applyMove(state, move);
                     liveStates.put(gameId, state);
+                    moveCount++;
                 } catch (Exception e) {
                     winner = current == Player.ONE ? d2 : d1;
                     return winner;
@@ -192,12 +206,23 @@ public class TournamentRunner {
                    <= pathChecker.shortestPathWithJumps(state, Player.TWO) ? d1 : d2);
             return winner;
         } finally {
-            // Expose final state and winner BEFORE clearing live maps so the UI
-            // can read the winning board position and show a result overlay.
+            // Expose final state and winner BEFORE clearing live maps.
             if (winner != null) {
                 liveWinners.put(gameId, winner);
                 finalGameStates.put(gameId, state);
                 finalWallOwners.put(gameId, wallOwners);
+
+                // Update notable game records atomically
+                int walls = state.getWalls().size();
+                final int mc = moveCount;
+                GameRecord rec = new GameRecord(d1, d2, winner, moveCount, walls,
+                                                state, new ConcurrentHashMap<>(wallOwners));
+                shortestGame.updateAndGet(cur ->
+                    (cur == null || mc < cur.moveCount()) ? rec : cur);
+                longestGame.updateAndGet(cur ->
+                    (cur == null || mc > cur.moveCount()) ? rec : cur);
+                mostTacticalGame.updateAndGet(cur ->
+                    (cur == null || walls > cur.wallCount()) ? rec : cur);
             }
             liveStates.remove(gameId);
             liveMatchups.remove(gameId);
