@@ -27,6 +27,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 
 /**
  * Full-screen tournament view: live boards during play, rich summary after.
@@ -36,16 +37,19 @@ import java.util.*;
  */
 public final class TournamentView {
 
-    private static final String ICON_COLOR_BTN  = "#8890A8";
-    private static final String ICON_COLOR_STOP = "#C8706A";
+    private static final String ICON_COLOR_BTN    = "#8890A8";
+    private static final String ICON_COLOR_STOP   = "#C8706A";
+    private static final String TITLE_TOURNAMENT  = "TOURNAMENT";
+    private static final String LBL_PAUSE         = "Pause";
+    private static final String STYLE_SECTION     = "tournament-section-title";
     private static final long   FINISH_OVERLAY_NS = 1_500_000_000L;
     private static final int    MAX_RESULTS       = 20;
-    private static final int    ETA_WINDOW = 20;
-    private static final double ETA_ALPHA  = 0.25;
+    private static final int    ETA_WINDOW        = 20;
+    private static final double ETA_ALPHA         = 0.25;
 
     private final AudioClip selectSound = new AudioClip(
         getClass().getResource("/audio/sfx/Select.wav").toExternalForm());
-        private final AudioClip pinSound = new AudioClip(
+    private final AudioClip pinSound = new AudioClip(
         getClass().getResource("/audio/sfx/Pin.wav").toExternalForm());
 
     // ── State ────────────────────────────────────────────────────────────────
@@ -55,14 +59,14 @@ public final class TournamentView {
     private final ObservableList<Difficulty> tableItems;
     private final ObservableList<String> recentResults = FXCollections.observableArrayList();
 
-    private final Label       titleLabel    = new Label("TOURNAMENT");
+    private final Label       titleLabel    = new Label(TITLE_TOURNAMENT);
     private final ProgressBar progressBar   = new ProgressBar(0);
     private final Label       progressLabel = new Label();
     private final Label       etaLabel      = new Label();
     private final FontIcon    pauseIcon     = new FontIcon(FontAwesomeSolid.PAUSE);
     private final FontIcon    stopIcon      = new FontIcon(FontAwesomeSolid.ARROW_LEFT);
     private final FontIcon    restartIcon   = new FontIcon(FontAwesomeSolid.REDO);
-    private final Button      pauseBtn      = new Button("Pause");
+    private final Button      pauseBtn      = new Button(LBL_PAUSE);
     private final Button      restartBtn    = new Button("Restart");
     private final Button      actionBtn     = new Button("Back");
 
@@ -87,10 +91,8 @@ public final class TournamentView {
     private ScrollPane summaryScroll;
     private AnimationTimer animTimer;
     private Timeline       etaTimeline;
-    private boolean running = false;
-    private boolean paused  = false;
-    private long    tournamentStartMs;
-    private int     totalCount;
+    private boolean running      = false;
+    private boolean paused       = false;
     private long    etaDisplayMs = 0;
     private final ArrayDeque<Long> recentGameTimes = new ArrayDeque<>();
     private final GameController ctrl;
@@ -150,13 +152,13 @@ public final class TournamentView {
         actionBtn.setGraphic(stopIcon);
         actionBtn.getStyleClass().add("tournament-stop-btn");
         actionBtn.setOnAction(e -> {
-            if (!ctrl.isMuted()) selectSound.play(); 
+            if (!ctrl.isMuted()) selectSound.play();
             if (running) { runner.cancel(); running = false; }
             stopAnimTimer();
             root.setVisible(false);
             onClose.run();
         });
-        
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
@@ -169,8 +171,8 @@ public final class TournamentView {
 
         // ── Live boards ───────────────────────────────────────────────────────
         boardGrid.getStyleClass().add("tournament-board-grid");
-        boardGrid.setPrefTileWidth((int) MiniBoard.BOARD_PX + 24);
-        boardGrid.setPrefTileHeight((int) MiniBoard.BOARD_PX + 52);
+        boardGrid.setPrefTileWidth(MiniBoard.BOARD_PX + 24);
+        boardGrid.setPrefTileHeight(MiniBoard.BOARD_PX + 52);
         boardGrid.setPadding(new Insets(10));
 
         Label noGamesLabel = new Label("Waiting for games to start…");
@@ -198,7 +200,7 @@ public final class TournamentView {
         VBox.setVgrow(mainContent, Priority.ALWAYS);
 
         boardsTitle = new Label("LIVE GAMES");
-        boardsTitle.getStyleClass().add("tournament-section-title");
+        boardsTitle.getStyleClass().add(STYLE_SECTION);
 
         VBox boardsSection = new VBox(8, boardsTitle, mainContent);
         boardsSection.getStyleClass().add("tournament-panel");
@@ -207,9 +209,9 @@ public final class TournamentView {
 
         // ── Right panel ───────────────────────────────────────────────────────
         Label standingsTitle = new Label("STANDINGS");
-        standingsTitle.getStyleClass().add("tournament-section-title");
+        standingsTitle.getStyleClass().add(STYLE_SECTION);
         Label resultsTitle = new Label("RECENT RESULTS");
-        resultsTitle.getStyleClass().add("tournament-section-title");
+        resultsTitle.getStyleClass().add(STYLE_SECTION);
 
         ListView<String> resultsList = new ListView<>(recentResults);
         resultsList.getStyleClass().add("tournament-results-list");
@@ -239,16 +241,21 @@ public final class TournamentView {
     // ── Start ─────────────────────────────────────────────────────────────────
 
     public void start() {
-        running = true;
-        paused  = false;
-        tournamentStartMs = System.currentTimeMillis();
-        totalCount = runner.totalGames(strategies);
+        running      = true;
+        paused       = false;
         etaDisplayMs = 0;
         recentGameTimes.clear();
         if (etaTimeline != null) etaTimeline.stop();
         etaTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> tickEta()));
-        etaTimeline.setCycleCount(Timeline.INDEFINITE);
+        etaTimeline.setCycleCount(Animation.INDEFINITE);
         etaTimeline.play();
+        int total = runner.totalGames(strategies);
+        final long startMs = System.currentTimeMillis();
+        resetUiForStart(total);
+        runner.start(strategies, buildProgressCallback(), buildResultCallback(), buildCompleteCallback(startMs));
+    }
+
+    private void resetUiForStart(int total) {
         selectedStrategies.clear();
         pinnedGameIds.clear();
         finishingGames.clear();
@@ -258,17 +265,17 @@ public final class TournamentView {
         boardsScroll.setVisible(true);
         summaryScroll.setVisible(false);
         boardsTitle.setText("LIVE GAMES");
-        titleLabel.setText("TOURNAMENT");
+        titleLabel.setText(TITLE_TOURNAMENT);
         stopIcon.setIconCode(FontAwesomeSolid.ARROW_LEFT);
         actionBtn.setText("Back");
         pauseIcon.setIconCode(FontAwesomeSolid.PAUSE);
-        pauseBtn.setText("Pause");
+        pauseBtn.setText(LBL_PAUSE);
         pauseBtn.setDisable(false);
         restartBtn.setVisible(false);
         restartBtn.setManaged(false);
         progressBar.setProgress(0);
         etaLabel.setText("");
-        progressLabel.setText("0 / " + totalCount);
+        progressLabel.setText("0 / " + total);
         tableItems.setAll(strategies);
         recentResults.clear();
         activeBoards.clear();
@@ -276,53 +283,60 @@ public final class TournamentView {
         standingsTable.refresh();
         root.setVisible(true);
         startAnimTimer();
+    }
 
-        runner.start(strategies,
-            (done, t) -> {
-                progressBar.setProgress((double) done / t);
-                progressLabel.setText(done + " / " + t);
-                resort();
-                long now = System.currentTimeMillis();
-                recentGameTimes.addLast(now);
-                if (recentGameTimes.size() > ETA_WINDOW) recentGameTimes.pollFirst();
-                if (recentGameTimes.size() >= 2) {
-                    long windowMs = recentGameTimes.peekLast() - recentGameTimes.peekFirst();
-                    if (windowMs > 0) {
-                        double rate  = (recentGameTimes.size() - 1.0) / windowMs;
-                        long newEta  = (long) ((t - done) / rate);
-                        etaDisplayMs = etaDisplayMs == 0 ? newEta
-                                     : (long) (ETA_ALPHA * newEta + (1.0 - ETA_ALPHA) * etaDisplayMs);
-                    }
+    private BiConsumer<Integer, Integer> buildProgressCallback() {
+        return (done, t) -> {
+            progressBar.setProgress((double) done / t);
+            progressLabel.setText(done + " / " + t);
+            resort();
+            long now = System.currentTimeMillis();
+            recentGameTimes.addLast(now);
+            if (recentGameTimes.size() > ETA_WINDOW) recentGameTimes.pollFirst();
+            if (recentGameTimes.size() >= 2) {
+                long windowMs = recentGameTimes.peekLast() - recentGameTimes.peekFirst();
+                if (windowMs > 0) {
+                    double rate   = (recentGameTimes.size() - 1.0) / windowMs;
+                    long   newEta = (long) ((t - done) / rate);
+                    etaDisplayMs  = etaDisplayMs == 0 ? newEta
+                                  : (long) (ETA_ALPHA * newEta + (1.0 - ETA_ALPHA) * etaDisplayMs);
                 }
-            },
-            (winner, loser) -> {
-                int[] wr = runner.getResults().get(winner);
-                String pct = (wr == null || wr[0] + wr[1] == 0) ? ""
-                    : String.format(" (%d%%)", (int) Math.round(100.0 * wr[0] / (wr[0] + wr[1])));
-                recentResults.add(0, winner.sample().displayName()
-                    + " beat " + loser.sample().displayName() + pct);
-                if (recentResults.size() > MAX_RESULTS)
-                    recentResults.remove(recentResults.size() - 1);
-            },
-            () -> {
-                running = false;
-                if (etaTimeline != null) { etaTimeline.stop(); etaTimeline = null; }
-                long durationMs = System.currentTimeMillis() - tournamentStartMs;
-                titleLabel.setText("TOURNAMENT RESULTS");
-                boardsTitle.setText("RESULTS SUMMARY");
-                stopIcon.setIconCode(FontAwesomeSolid.TIMES);
-                actionBtn.setText("Close");
-                pauseBtn.setDisable(true);
-                progressBar.setProgress(1.0);
-                progressLabel.setText(runner.totalGames(strategies) + " games");
-                etaLabel.setText("  " + formatDuration(durationMs));
-                restartBtn.setVisible(true);
-                restartBtn.setManaged(true);
-                resort();
-                boardsScroll.setVisible(false);
-                summaryScroll.setVisible(true);
-                TournamentSummary.populate(summaryBox, runner, tableItems, strategies, durationMs);
-            });
+            }
+        };
+    }
+
+    private BiConsumer<Difficulty, Difficulty> buildResultCallback() {
+        return (winner, loser) -> {
+            int[] wr = runner.getResults().get(winner);
+            String pct = (wr == null || wr[0] + wr[1] == 0) ? ""
+                : String.format(" (%d%%)", (int) Math.round(100.0 * wr[0] / (wr[0] + wr[1])));
+            recentResults.add(0, winner.sample().displayName()
+                + " beat " + loser.sample().displayName() + pct);
+            if (recentResults.size() > MAX_RESULTS)
+                recentResults.remove(recentResults.size() - 1);
+        };
+    }
+
+    private Runnable buildCompleteCallback(long startMs) {
+        return () -> {
+            running = false;
+            if (etaTimeline != null) { etaTimeline.stop(); etaTimeline = null; }
+            long durationMs = System.currentTimeMillis() - startMs;
+            titleLabel.setText("TOURNAMENT RESULTS");
+            boardsTitle.setText("RESULTS SUMMARY");
+            stopIcon.setIconCode(FontAwesomeSolid.TIMES);
+            actionBtn.setText("Close");
+            pauseBtn.setDisable(true);
+            progressBar.setProgress(1.0);
+            progressLabel.setText(runner.totalGames(strategies) + " games");
+            etaLabel.setText("  " + formatDuration(durationMs));
+            restartBtn.setVisible(true);
+            restartBtn.setManaged(true);
+            resort();
+            boardsScroll.setVisible(false);
+            summaryScroll.setVisible(true);
+            TournamentSummary.populate(summaryBox, runner, tableItems, strategies, durationMs);
+        };
     }
 
     // ── ETA ──────────────────────────────────────────────────────────────────
@@ -349,13 +363,13 @@ public final class TournamentView {
             if (etaTimeline != null) etaTimeline.pause();
             pauseIcon.setIconCode(FontAwesomeSolid.PLAY);
             pauseBtn.setText("Resume");
-            titleLabel.setText("TOURNAMENT — PAUSED");
+            titleLabel.setText(TITLE_TOURNAMENT + " — PAUSED");
         } else {
             runner.resume();
             if (etaTimeline != null) etaTimeline.play();
             pauseIcon.setIconCode(FontAwesomeSolid.PAUSE);
-            pauseBtn.setText("Pause");
-            titleLabel.setText("TOURNAMENT");
+            pauseBtn.setText(LBL_PAUSE);
+            titleLabel.setText(TITLE_TOURNAMENT);
         }
     }
 
@@ -373,56 +387,65 @@ public final class TournamentView {
     }
 
     private void refreshLiveBoards(long now) {
+        Set<Integer> current = new HashSet<>(runner.getLiveStates().keySet());
+        processActiveGames(current, now);
+        transitionFinishedGames(now);
+        transitionPinnedOverlays(now);
+        for (MiniBoard mb : frozenBoards.values())
+            mb.updateSelection(selectedStrategies.contains(mb.d1), selectedStrategies.contains(mb.d2));
+    }
+
+    private void processActiveGames(Set<Integer> current, long now) {
         var liveStates   = runner.getLiveStates();
         var liveMatchups = runner.getLiveMatchups();
         var liveWO       = runner.getLiveWallOwners();
-        Set<Integer> current = new HashSet<>(liveStates.keySet());
 
         for (int id : current) {
             GameState state    = liveStates.get(id);
             Difficulty[] match = liveMatchups.get(id);
             if (state == null || match == null) continue;
             var wallOwners = liveWO.getOrDefault(id, new java.util.concurrent.ConcurrentHashMap<>());
-
-            MiniBoard mb = activeBoards.computeIfAbsent(id, k -> {
-                MiniBoard b = new MiniBoard(match[0], match[1]);
-                b.card.setCursor(Cursor.HAND);
-                b.card.setOnMouseClicked(e -> { togglePin(k, b); if (!ctrl.isMuted()) pinSound.play(); });
-                boardGrid.getChildren().add(b.card);
-                return b;
-            });
+            MiniBoard mb = activeBoards.computeIfAbsent(id, k -> createMiniBoard(k, match));
             mb.draw(state, wallOwners);
             mb.updateSelection(selectedStrategies.contains(mb.d1), selectedStrategies.contains(mb.d2));
         }
 
         activeBoards.entrySet().removeIf(e -> {
-            int id = e.getKey();
-            if (current.contains(id)) return false;
-            MiniBoard mb = e.getValue();
-
-            GameState finalState = runner.getFinalGameStates().get(id);
-            var finalWO = runner.getFinalWallOwners().getOrDefault(id,
-                              new java.util.concurrent.ConcurrentHashMap<>());
-            if (finalState != null) mb.draw(finalState, finalWO);
-
-            Difficulty winner = runner.getLiveWinners().get(id);
-            String wName  = winner != null ? winner.sample().displayName() : null;
-            Color  wColor = (winner == mb.d1) ? BoardRenderer.P1_COLOR : BoardRenderer.P2_COLOR;
-            mb.drawWinnerOverlay(wName, wColor);
-
-            if (pinnedGameIds.remove(id)) {
-                mb.setPinned(true);
-                mb.card.setOnMouseClicked(ev -> { dismissFrozen(id, mb); if (!ctrl.isMuted()) pinSound.play(); });
-                var fo = runner.getFinalWallOwners().getOrDefault(id,
-                              new java.util.concurrent.ConcurrentHashMap<>());
-                pinnedOverlays.put(id, new PinnedOverlay(mb, now,
-                    finalState != null ? finalState : new GameState(), fo));
-            } else {
-                finishingGames.put(id, new FinishingGame(mb, now));
-            }
+            if (current.contains(e.getKey())) return false;
+            onGameFinished(e.getKey(), e.getValue(), now);
             return true;
         });
+    }
 
+    private MiniBoard createMiniBoard(int id, Difficulty[] match) {
+        MiniBoard b = new MiniBoard(match[0], match[1]);
+        b.card.setCursor(Cursor.HAND);
+        b.card.setOnMouseClicked(e -> { togglePin(id, b); if (!ctrl.isMuted()) pinSound.play(); });
+        boardGrid.getChildren().add(b.card);
+        return b;
+    }
+
+    private void onGameFinished(int id, MiniBoard mb, long now) {
+        GameState finalState = runner.getFinalGameStates().get(id);
+        var finalWO = runner.getFinalWallOwners().getOrDefault(id,
+                          new java.util.concurrent.ConcurrentHashMap<>());
+        if (finalState != null) mb.draw(finalState, finalWO);
+
+        Difficulty winner = runner.getLiveWinners().get(id);
+        Color wColor = (winner == mb.d1) ? BoardRenderer.P1_COLOR : BoardRenderer.P2_COLOR;
+        mb.drawWinnerOverlay(winner != null ? winner.sample().displayName() : null, wColor);
+
+        if (pinnedGameIds.remove(id)) {
+            mb.setPinned(true);
+            mb.card.setOnMouseClicked(ev -> { dismissFrozen(id, mb); if (!ctrl.isMuted()) pinSound.play(); });
+            var fo = runner.getFinalWallOwners().getOrDefault(id, new java.util.concurrent.ConcurrentHashMap<>());
+            pinnedOverlays.put(id, new PinnedOverlay(mb, now, finalState != null ? finalState : new GameState(), fo));
+        } else {
+            finishingGames.put(id, new FinishingGame(mb, now));
+        }
+    }
+
+    private void transitionFinishedGames(long now) {
         finishingGames.entrySet().removeIf(e -> {
             if (now - e.getValue().startNs() < FINISH_OVERLAY_NS) return false;
             MiniBoard mb = e.getValue().board();
@@ -432,7 +455,9 @@ public final class TournamentView {
             ft.play();
             return true;
         });
+    }
 
+    private void transitionPinnedOverlays(long now) {
         pinnedOverlays.entrySet().removeIf(e -> {
             PinnedOverlay po = e.getValue();
             if (now - po.startNs() < FINISH_OVERLAY_NS) return false;
@@ -440,9 +465,6 @@ public final class TournamentView {
             frozenBoards.put(e.getKey(), po.board());
             return true;
         });
-
-        for (MiniBoard mb : frozenBoards.values())
-            mb.updateSelection(selectedStrategies.contains(mb.d1), selectedStrategies.contains(mb.d2));
     }
 
     private void togglePin(int gameId, MiniBoard board) {
@@ -462,7 +484,7 @@ public final class TournamentView {
         Map<Node, Point2D> before = new LinkedHashMap<>();
         for (Node n : siblings) before.put(n, new Point2D(n.getLayoutX(), n.getLayoutY()));
         boardGrid.getChildren().remove(card);
-        boardGrid.applyCss();
+        boardGrid.requestLayout();
         boardGrid.layout();
         for (Map.Entry<Node, Point2D> entry : before.entrySet()) {
             Node n = entry.getKey();
@@ -484,7 +506,7 @@ public final class TournamentView {
         tableItems.sort(Comparator
             .comparingDouble((Difficulty d) -> {
                 int[] wr = res.get(d);
-                return (wr == null || wr[0]+wr[1] == 0) ? 0.0 : -(double) wr[0] / (wr[0]+wr[1]);
+                return (wr == null || wr[0] + wr[1] == 0) ? 0.0 : -(double) wr[0] / (wr[0] + wr[1]);
             })
             .thenComparingInt(d -> { int[] wr = res.get(d); return wr == null ? 0 : -wr[0]; }));
         standingsTable.refresh();
@@ -496,8 +518,15 @@ public final class TournamentView {
         tv.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         tv.getStyleClass().add("tournament-table");
         tv.setFocusTraversable(false);
+        tv.setRowFactory(t -> buildRow());
+        tv.getColumns().addAll(
+            buildRankColumn(), buildNameColumn(),
+            buildWinColumn(), buildLossColumn(), buildWinPctColumn());
+        return tv;
+    }
 
-        tv.setRowFactory(t -> new TableRow<Difficulty>() {
+    private TableRow<Difficulty> buildRow() {
+        return new TableRow<>() {
             {
                 setCursor(Cursor.HAND);
                 setOnMouseClicked(e -> {
@@ -521,34 +550,52 @@ public final class TournamentView {
                     setStyle("-fx-border-color: transparent transparent #191C2A #D4AC0D;"
                            + "-fx-border-width: 0 0 1 3;");
             }
-        });
+        };
+    }
 
-        TableColumn<Difficulty, Number> rankCol = new TableColumn<>("#");
-        rankCol.setCellValueFactory(cd -> new SimpleIntegerProperty(tableItems.indexOf(cd.getValue()) + 1));
-        rankCol.setPrefWidth(36); rankCol.setMinWidth(32); rankCol.setMaxWidth(44); rankCol.setSortable(false);
+    private TableColumn<Difficulty, Number> buildRankColumn() {
+        TableColumn<Difficulty, Number> col = new TableColumn<>("#");
+        col.setCellValueFactory(cd -> new SimpleIntegerProperty(tableItems.indexOf(cd.getValue()) + 1));
+        col.setPrefWidth(36); col.setMinWidth(32); col.setMaxWidth(44); col.setSortable(false);
+        return col;
+    }
 
-        TableColumn<Difficulty, String> nameCol = new TableColumn<>("Strategy");
-        nameCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().sample().displayName()));
-        nameCol.setMinWidth(100); nameCol.setSortable(false);
+    private TableColumn<Difficulty, String> buildNameColumn() {
+        TableColumn<Difficulty, String> col = new TableColumn<>("Strategy");
+        col.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().sample().displayName()));
+        col.setMinWidth(100); col.setSortable(false);
+        return col;
+    }
 
-        TableColumn<Difficulty, Number> wCol = new TableColumn<>("W");
-        wCol.setCellValueFactory(cd -> { int[] wr = runner.getResults().get(cd.getValue()); return new SimpleIntegerProperty(wr == null ? 0 : wr[0]); });
-        wCol.setPrefWidth(44); wCol.setMinWidth(38); wCol.setMaxWidth(56); wCol.setSortable(false);
-
-        TableColumn<Difficulty, Number> lCol = new TableColumn<>("L");
-        lCol.setCellValueFactory(cd -> { int[] wr = runner.getResults().get(cd.getValue()); return new SimpleIntegerProperty(wr == null ? 0 : wr[1]); });
-        lCol.setPrefWidth(44); lCol.setMinWidth(38); lCol.setMaxWidth(56); lCol.setSortable(false);
-
-        TableColumn<Difficulty, String> pctCol = new TableColumn<>("Win%");
-        pctCol.setCellValueFactory(cd -> {
+    private TableColumn<Difficulty, Number> buildWinColumn() {
+        TableColumn<Difficulty, Number> col = new TableColumn<>("W");
+        col.setCellValueFactory(cd -> {
             int[] wr = runner.getResults().get(cd.getValue());
-            if (wr == null || wr[0]+wr[1] == 0) return new SimpleStringProperty("—");
-            return new SimpleStringProperty(String.format("%d%%", (int) Math.round(100.0*wr[0]/(wr[0]+wr[1]))));
+            return new SimpleIntegerProperty(wr == null ? 0 : wr[0]);
         });
-        pctCol.setPrefWidth(52); pctCol.setMinWidth(46); pctCol.setMaxWidth(66); pctCol.setSortable(false);
+        col.setPrefWidth(44); col.setMinWidth(38); col.setMaxWidth(56); col.setSortable(false);
+        return col;
+    }
 
-        tv.getColumns().addAll(rankCol, nameCol, wCol, lCol, pctCol);
-        return tv;
+    private TableColumn<Difficulty, Number> buildLossColumn() {
+        TableColumn<Difficulty, Number> col = new TableColumn<>("L");
+        col.setCellValueFactory(cd -> {
+            int[] wr = runner.getResults().get(cd.getValue());
+            return new SimpleIntegerProperty(wr == null ? 0 : wr[1]);
+        });
+        col.setPrefWidth(44); col.setMinWidth(38); col.setMaxWidth(56); col.setSortable(false);
+        return col;
+    }
+
+    private TableColumn<Difficulty, String> buildWinPctColumn() {
+        TableColumn<Difficulty, String> col = new TableColumn<>("Win%");
+        col.setCellValueFactory(cd -> {
+            int[] wr = runner.getResults().get(cd.getValue());
+            if (wr == null || wr[0] + wr[1] == 0) return new SimpleStringProperty("—");
+            return new SimpleStringProperty(String.format("%d%%", (int) Math.round(100.0 * wr[0] / (wr[0] + wr[1]))));
+        });
+        col.setPrefWidth(52); col.setMinWidth(46); col.setMaxWidth(66); col.setSortable(false);
+        return col;
     }
 
     // ── Clipboard export ──────────────────────────────────────────────────────
@@ -566,34 +613,53 @@ public final class TournamentView {
         StringBuilder sb = new StringBuilder();
         sb.append("CHORIDOR TOURNAMENT RESULTS\n")
           .append(strategies.size()).append(" strategies · ").append(total).append(" games\n\n");
+        appendStandingsTable(sb, res);
+        appendH2hSection(sb, res, mw);
+        return sb.toString();
+    }
+
+    private void appendStandingsTable(StringBuilder sb, Map<Difficulty, int[]> res) {
         sb.append(String.format("%-4s  %-18s  %-6s  %-6s  %-5s%n", "#", "Strategy", "+WINS", "-LOSS", "Win%"));
         sb.append("─".repeat(46)).append("\n");
         for (int i = 0; i < tableItems.size(); i++) {
             Difficulty d = tableItems.get(i);
             int[] wr = res.get(d);
-            int w = wr == null ? 0 : wr[0], l = wr == null ? 0 : wr[1];
-            String pct = (w+l == 0) ? "—" : String.format("%.0f%%", 100.0*w/(w+l));
-            sb.append(String.format("%-4d  %-18s  %-6d  %-6d  %-5s%n", i+1, d.sample().displayName(), w, l, pct));
+            int w = wr == null ? 0 : wr[0];
+            int l = wr == null ? 0 : wr[1];
+            String pct = (w + l == 0) ? "—" : String.format("%.0f%%", 100.0 * w / (w + l));
+            sb.append(String.format("%-4d  %-18s  %-6d  %-6d  %-5s%n",
+                i + 1, d.sample().displayName(), w, l, pct));
         }
+    }
+
+    private void appendH2hSection(StringBuilder sb, Map<Difficulty, int[]> res,
+                                   Map<Difficulty, Map<Difficulty, Integer>> mw) {
         sb.append("\n\nHEAD-TO-HEAD BREAKDOWN\n").append("─".repeat(40)).append("\n");
         for (Difficulty d : tableItems) {
             int[] wr = res.get(d);
-            int w = wr == null ? 0 : wr[0], l = wr == null ? 0 : wr[1];
-            String pct = (w+l == 0) ? "—" : String.format("%.0f%%", 100.0*w/(w+l));
-            sb.append(d.sample().displayName()).append("  (").append(w).append("W–").append(l).append("L  ").append(pct).append(")\n");
+            int w = wr == null ? 0 : wr[0];
+            int l = wr == null ? 0 : wr[1];
+            String pct = (w + l == 0) ? "—" : String.format("%.0f%%", 100.0 * w / (w + l));
+            sb.append(d.sample().displayName()).append("  (")
+              .append(w).append("W–").append(l).append("L  ").append(pct).append(")\n");
             Map<Difficulty, Integer> wins = mw.get(d);
             if (wins != null) {
                 wins.entrySet().stream()
                     .sorted(Comparator.<Map.Entry<Difficulty, Integer>>comparingInt(Map.Entry::getValue).reversed()
                         .thenComparing(e -> e.getKey().sample().displayName()))
                     .forEach(e -> {
-                        int ww = e.getValue(), ll = 2 - ww;
-                        String m = ww==2 ? "✓✓" : ww==1 ? "✓✗" : "✗✗";
-                        sb.append(String.format("  %s  %-16s  %d–%d%n", m, e.getKey().sample().displayName(), ww, ll));
+                        int ww = e.getValue();
+                        int ll = 2 - ww;
+                        String m = switch (ww) {
+                            case 2  -> "✓✓";
+                            case 1  -> "✓✗";
+                            default -> "✗✗";
+                        };
+                        sb.append(String.format("  %s  %-16s  %d–%d%n",
+                            m, e.getKey().sample().displayName(), ww, ll));
                     });
             }
             sb.append("\n");
         }
-        return sb.toString();
     }
 }
