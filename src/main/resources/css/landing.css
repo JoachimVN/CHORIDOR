@@ -1,0 +1,142 @@
+/* ── Root & scroll ────────────────────────────────────────────────────────── */
+
+.landing-root {
+    -fx-background-color: #0C0E14;
+}
+
+.landing-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.landing-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.landing-scroll > .scroll-bar:vertical,
+.landing-scroll > .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+    -fx-pref-width: 4;
+}
+
+.landing-scroll > .scroll-bar:vertical > .thumb {
+    -fx-background-color: #1E2130;
+    -fx-background-radius: 2;
+}
+
+.landing-scroll > .corner {
+    -fx-background-color: transparent;
+}
+
+/* ── Card ─────────────────────────────────────────────────────────────────── */
+
+.landing-card {
+    -fx-background-color: #111420;
+    -fx-border-color: #1C1F30;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 20, 0, 0, 6);
+}
+
+.landing-card-header {
+    -fx-cursor: hand;
+    -fx-background-radius: 10;
+}
+
+.landing-card-header:hover {
+    -fx-background-color: #161928;
+    -fx-background-radius: 10;
+}
+
+/* ── Card text ────────────────────────────────────────────────────────────── */
+
+.landing-card-title {
+    -fx-text-fill: #C8CCE0;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1.5;
+}
+
+.landing-card-sub {
+    -fx-text-fill: #3A3F58;
+    -fx-font-size: 12px;
+}
+
+/* ── Tab row ──────────────────────────────────────────────────────────────── */
+
+.landing-tab-row {
+    -fx-background-color: #0A0C14;
+    -fx-border-color: #1C1F30;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+
+.landing-tab-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #3E4460;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 16 10 16;
+    -fx-cursor: hand;
+    -fx-background-radius: 6;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.landing-tab-btn:hover {
+    -fx-text-fill: #606880;
+    -fx-background-color: #111420;
+}
+
+.landing-tab-btn:selected {
+    -fx-background-color: #191C2A;
+    -fx-text-fill: #A0A8C8;
+    -fx-background-radius: 5;
+}
+
+/* ── Config label ─────────────────────────────────────────────────────────── */
+
+.landing-config-label {
+    -fx-text-fill: #3A4060;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1;
+}
+
+/* ── Action button ────────────────────────────────────────────────────────── */
+
+.landing-action-btn {
+    -fx-text-fill: rgba(255, 255, 255, 0.85);
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 13 0 13 0;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 8, 0, 0, 2);
+}
+
+.landing-action-btn:hover {
+    -fx-text-fill: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 12, 0, 0, 3);
+    -fx-opacity: 0.92;
+}
+
+.landing-action-btn:pressed {
+    -fx-opacity: 1.0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 4, 0, 0, 1);
+}
+
+/* ── Coming soon ──────────────────────────────────────────────────────────── */
+
+.landing-coming-soon {
+    -fx-text-fill: #3A3F58;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}

@@ -7,7 +7,7 @@ import io.github.joachimvn.ui.bars.ReviewBar;
 import io.github.joachimvn.ui.bars.TopBar;
 import io.github.joachimvn.ui.common.UiScale;
 import io.github.joachimvn.ui.overlays.GameOverOverlay;
-import io.github.joachimvn.ui.overlays.SetupOverlay;
+import io.github.joachimvn.ui.overlays.LandingView;
 import io.github.joachimvn.ui.tournament.TournamentView;
 
 import javafx.application.Application;
@@ -55,17 +55,16 @@ public class App extends Application {
         // Tournament overlay is created first so setup can reference it; the start
         // callback is wired after setup is ready via a one-element array (lambda capture).
         Runnable[] startTournament = {null};
-        SetupOverlay setup = new SetupOverlay(ctrl, board, bottomBar::setFlipSelected,
+        LandingView landing = new LandingView(ctrl, board, bottomBar::setFlipSelected,
             () -> { if (startTournament[0] != null) startTournament[0].run(); });
-        TournamentView tournament = new TournamentView(() -> setup.getRoot().setVisible(true), ctrl);
+        TournamentView tournament = new TournamentView(() -> landing.getRoot().setVisible(true), ctrl);
         startTournament[0] = tournament::start;
 
-        GameOverOverlay gameOver = new GameOverOverlay(ctrl, setup.getRoot());
+        GameOverOverlay gameOver = new GameOverOverlay(ctrl, landing.getRoot());
 
-        // "Change Mode" on the bottom bar dismisses any game-over modal and reopens setup.
         bottomBar.setOnChangeMode(() -> {
             gameOver.getRoot().setVisible(false);
-            setup.getRoot().setVisible(true);
+            landing.getRoot().setVisible(true);
         });
 
         // The bottom of the window is the bottom bar during play and the review bar during review.
@@ -85,18 +84,18 @@ public class App extends Application {
             gamePane.setBottom(reviewing ? reviewBar.getRoot() : bottomBar.getRoot());
             if (reviewing) reviewBar.update();
 
-            gameOver.update(setup.getRoot().isVisible());
+            gameOver.update(landing.getRoot().isVisible());
         });
 
         board.refresh();
         topBar.update(ctrl);
         bottomBar.updateStatus();
 
-        StackPane sceneRoot = new StackPane(gamePane, gameOver.getRoot(), setup.getRoot(),
+        StackPane sceneRoot = new StackPane(gamePane, gameOver.getRoot(), landing.getRoot(),
                                             tournament.getRoot());
 
         Scene scene = new Scene(sceneRoot);
-        for (String sheet : new String[]{"base", "chrome", "setup", "game-over", "tournament"}) {
+        for (String sheet : new String[]{"base", "chrome", "setup", "landing", "game-over", "tournament"}) {
             scene.getStylesheets().add(getClass().getResource("/css/" + sheet + ".css").toExternalForm());
         }
         scene.addEventFilter(KeyEvent.KEY_PRESSED,
