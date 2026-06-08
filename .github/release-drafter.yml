@@ -2,27 +2,13 @@ name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 prerelease: false
 
-categories:
-  - title: 'Features'
-    labels: [backend, ui]
-  - title: 'Bug Fixes'
-    label: 'bug'
-  - title: 'Assets & Styling'
-    labels: [assets]
-  - title: 'Tests'
-    labels: [tests]
-  - title: 'Documentation'
-    labels: [docs]
-  - title: 'CI / Dependencies'
-    labels: [ci, dependencies]
-
 version-resolver:
   major:
     labels: ['breaking']
   minor:
-    labels: [backend, ui]
+    labels: ['backend', 'ui']
   patch:
-    labels: ['bug', tests, ci, dependencies, assets, docs]
+    labels: ['bug', 'tests', 'ci', 'dependencies', 'assets', 'docs']
   default: patch
 
 template: |
