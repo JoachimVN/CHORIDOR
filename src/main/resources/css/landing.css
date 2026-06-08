@@ -1,0 +1,166 @@
+/* ── Root & scroll ────────────────────────────────────────────────────────── */
+
+.landing-root {
+    /* Semi-transparent so the live BoardView behind it shows through;
+       fading this overlay reveals the real board — same element, no fake canvas. */
+    -fx-background-color: rgba(8, 10, 16, 0.87);
+}
+
+.landing-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.landing-scroll > .viewport              { -fx-background-color: transparent; }
+.landing-scroll > .scroll-bar:vertical   { -fx-background-color: transparent; -fx-pref-width: 4; }
+.landing-scroll > .scroll-bar:vertical > .thumb {
+    -fx-background-color: #1A1D2C;
+    -fx-background-radius: 2;
+}
+.landing-scroll > .scroll-bar:vertical > .track,
+.landing-scroll > .scroll-bar:vertical > .increment-button,
+.landing-scroll > .scroll-bar:vertical > .decrement-button {
+    -fx-background-color: transparent;
+    -fx-pref-height: 0; -fx-min-height: 0;
+}
+.landing-scroll > .corner { -fx-background-color: transparent; }
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+
+.landing-card {
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+}
+
+.landing-card-play {
+    -fx-background-color: linear-gradient(to bottom, #130E0E, #0D0F1C);
+    -fx-border-color: #5C2C26 #17192A #17192A #17192A;
+}
+.landing-card-sim {
+    -fx-background-color: linear-gradient(to bottom, #0A0E1C, #0D0F1C);
+    -fx-border-color: #1C3860 #17192A #17192A #17192A;
+}
+.landing-card-set {
+    -fx-background-color: linear-gradient(to bottom, #0D0D1C, #0D0F1C);
+    -fx-border-color: #2A2C56 #17192A #17192A #17192A;
+}
+
+/* Inline style from Java overrides these when expanded (full-accent border). */
+
+/* ── Card header ──────────────────────────────────────────────────────────── */
+
+.landing-card-header {
+    -fx-cursor: hand;
+    -fx-min-height: 150;
+    -fx-background-radius: 12;
+}
+
+/* Full-card hover: layered accent tint over base gradient, no percentage stops.
+   Both layers need explicit -fx-background-radius so the rounded corners apply
+   to each layer separately. */
+.landing-card-play:hover {
+    -fx-background-color: rgba(158,74,64,0.11), linear-gradient(to bottom, #150F0F, #0F1020);
+    -fx-background-radius: 12, 12;
+    -fx-background-insets: 0, 0;
+}
+.landing-card-sim:hover {
+    -fx-background-color: rgba(62,104,168,0.11), linear-gradient(to bottom, #0C1020, #0F1020);
+    -fx-background-radius: 12, 12;
+    -fx-background-insets: 0, 0;
+}
+.landing-card-set:hover {
+    -fx-background-color: rgba(90,96,144,0.11), linear-gradient(to bottom, #0E0E20, #0F1020);
+    -fx-background-radius: 12, 12;
+    -fx-background-insets: 0, 0;
+}
+
+/* No header-specific hover — the card-level :hover above covers the full card
+   background uniformly so there is no visible cut between header and body. */
+
+/* ── Typography ───────────────────────────────────────────────────────────── */
+
+.landing-card-title {
+    -fx-text-fill: #C0C6DC;
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 2.5;
+}
+
+.landing-card-sub {
+    -fx-text-fill: #484C68;
+    -fx-font-size: 12px;
+}
+
+/* ── Tab row ──────────────────────────────────────────────────────────────── */
+
+.landing-tab-row {
+    -fx-background-color: #06070E;
+    -fx-border-color: #13162A;
+    -fx-border-width: 1;
+    -fx-border-radius: 7;
+    -fx-background-radius: 7;
+}
+
+.landing-tab-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #2A2E46;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 16 12 16;
+    -fx-cursor: hand;
+    -fx-background-radius: 6;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.landing-tab-btn:hover {
+    -fx-text-fill: #464B72;
+    -fx-background-color: rgba(255, 255, 255, 0.018);
+}
+
+.landing-tab-btn:selected {
+    -fx-background-color: #12152A;
+    -fx-text-fill: #7880B0;
+}
+
+/* ── Config labels ────────────────────────────────────────────────────────── */
+
+.landing-config-label {
+    -fx-text-fill: #2C2F48;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1.5;
+}
+
+/* ── Action buttons ───────────────────────────────────────────────────────── */
+
+.landing-action-btn {
+    -fx-text-fill: rgba(255, 255, 255, 0.88);
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 14 0 14 0;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.landing-action-btn:hover {
+    -fx-text-fill: #ffffff;
+    -fx-opacity: 0.82;
+}
+
+.landing-action-btn:pressed {
+    -fx-opacity: 1.0;
+}
+
+/* ── Coming soon ──────────────────────────────────────────────────────────── */
+
+.landing-coming-soon {
+    -fx-text-fill: #1E2038;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
