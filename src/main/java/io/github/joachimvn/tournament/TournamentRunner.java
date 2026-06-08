@@ -36,6 +36,8 @@ public class TournamentRunner {
     private final ConcurrentHashMap<Integer, GameState>                       liveStates     = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, Difficulty[]>                    liveMatchups   = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> liveWallOwners = new ConcurrentHashMap<>();
+    /** Populated just before a game is removed from liveStates; lets the UI show a winner overlay. */
+    private final ConcurrentHashMap<Integer, Difficulty>                      liveWinners    = new ConcurrentHashMap<>();
 
     // ── Control ─────────────────────────────────────────────────────────────
     private final AtomicBoolean  cancelled   = new AtomicBoolean(false);
@@ -49,6 +51,7 @@ public class TournamentRunner {
     public ConcurrentHashMap<Integer, GameState>                       getLiveStates()     { return liveStates; }
     public ConcurrentHashMap<Integer, Difficulty[]>                    getLiveMatchups()   { return liveMatchups; }
     public ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> getLiveWallOwners() { return liveWallOwners; }
+    public ConcurrentHashMap<Integer, Difficulty>                      getLiveWinners()    { return liveWinners; }
     public boolean isPaused()  { return paused; }
 
     public int totalGames(List<Difficulty> strategies) {
@@ -73,7 +76,7 @@ public class TournamentRunner {
         liveStates.clear();
         liveMatchups.clear();
         liveWallOwners.clear();
-        liveWallOwners.clear();
+        liveWinners.clear();
         results.clear();
         matchupWins.clear();
         for (Difficulty a : strategies) {
@@ -87,7 +90,9 @@ public class TournamentRunner {
         int total = matchups.size();
         AtomicInteger completed = new AtomicInteger(0);
 
-        int threads = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+        // Cap concurrent games at half the strategy count so each AI gets reasonable CPU time.
+        int threads = Math.max(1, Math.min(strategies.size() / 2,
+                                           Runtime.getRuntime().availableProcessors() - 1));
         pool = Executors.newFixedThreadPool(threads, r -> {
             Thread t = new Thread(r, "tournament-worker");
             t.setDaemon(true);
@@ -148,9 +153,10 @@ public class TournamentRunner {
         liveMatchups.put(gameId, new Difficulty[]{d1, d2});
         liveWallOwners.put(gameId, wallOwners);
 
+        Difficulty winner = null;
         try {
+            Player current = null;
             for (int moves = 0; moves < MAX_MOVES; moves++) {
-                // Pause loop
                 while (paused && !cancelled.get()) {
                     try { Thread.sleep(50); } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -160,7 +166,7 @@ public class TournamentRunner {
                 if (cancelled.get()) return null;
                 if (engine.isGameOver(state)) break;
 
-                Player current = state.getCurrentPlayer();
+                current = state.getCurrentPlayer();
                 var strategy = current == Player.ONE ? s1 : s2;
                 try {
                     var move = strategy.decide(state);
@@ -168,15 +174,19 @@ public class TournamentRunner {
                     state = engine.applyMove(state, move);
                     liveStates.put(gameId, state);
                 } catch (Exception e) {
-                    return current == Player.ONE ? d2 : d1;
+                    winner = current == Player.ONE ? d2 : d1;
+                    return winner;
                 }
             }
 
-            Optional<Player> winner = engine.getWinner(state);
-            if (winner.isPresent()) return winner.get() == Player.ONE ? d1 : d2;
-            return pathChecker.shortestPathWithJumps(state, Player.ONE)
-                 <= pathChecker.shortestPathWithJumps(state, Player.TWO) ? d1 : d2;
+            Optional<Player> w = engine.getWinner(state);
+            winner = w.isPresent() ? (w.get() == Player.ONE ? d1 : d2)
+                   : (pathChecker.shortestPathWithJumps(state, Player.ONE)
+                   <= pathChecker.shortestPathWithJumps(state, Player.TWO) ? d1 : d2);
+            return winner;
         } finally {
+            // Expose winner before clearing live state so the UI can show a result overlay.
+            if (winner != null) liveWinners.put(gameId, winner);
             liveStates.remove(gameId);
             liveMatchups.remove(gameId);
             liveWallOwners.remove(gameId);

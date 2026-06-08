@@ -109,6 +109,7 @@ public class App extends Application {
         stage.setResizable(true);
         stage.setMinWidth(300);
         stage.setMinHeight(360);
+        stage.setMaximized(true);
         stage.show();
     }
 

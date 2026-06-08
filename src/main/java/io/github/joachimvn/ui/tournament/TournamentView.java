@@ -5,12 +5,14 @@ import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.tournament.TournamentRunner;
 
 import javafx.animation.AnimationTimer;
+import javafx.animation.FadeTransition;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -19,6 +21,10 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
+import javafx.util.Duration;
 
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -27,14 +33,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Full-screen tournament view: live mini boards on the left, standings and recent
- * results on the right.
+ * Full-screen tournament view with live boards, standings, and recent results.
  *
- * <p>Selection model: clicking a standings row persistently toggles that strategy as
- * "selected". All board cards whose game involves a selected strategy show a coloured
- * border (P1 colour if the first player is selected, P2 colour if the second player,
- * gold if both). Multiple strategies can be selected simultaneously; clicking a
- * selected row deselects it.
+ * <p><b>Selection</b>: clicking a standings row persistently toggles that strategy.
+ * Active board cards whose matchup involves a selected strategy show a coloured border
+ * (P1 red / P2 blue / both = gold). Multiple strategies can be selected simultaneously.
+ *
+ * <p><b>Pinning</b>: clicking a live board card pins it. Pinned boards survive the game
+ * finishing — they freeze on the final position and stay until clicked again to dismiss.
+ *
+ * <p><b>Winner overlay</b>: when an un-pinned game finishes, the board shows a 1.5-second
+ * dark overlay naming the winner, then fades out.
  */
 public final class TournamentView {
 
@@ -44,7 +53,7 @@ public final class TournamentView {
     private static final double DESIGN_STEP = DESIGN_CELL + DESIGN_GAP;
     private static final double DESIGN_SIZE = GameState.BOARD_SIZE * DESIGN_CELL
                                             + (GameState.BOARD_SIZE - 1) * DESIGN_GAP;
-    private static final double BOARD_PX    = 340;
+    private static final double BOARD_PX    = 370;
     private static final double GOAL_STRIP_RATIO = 3.0 / 54;
     private static final double PAWN_PAD_RATIO   = 0.16;
     private static final double STRIP_OPACITY    = 0.70;
@@ -56,20 +65,19 @@ public final class TournamentView {
     private static final Color P1_STRIP = P1_COLOR.deriveColor(0, 1, 1, STRIP_OPACITY);
     private static final Color P2_STRIP = P2_COLOR.deriveColor(0, 1, 1, STRIP_OPACITY);
 
-    // Border style applied to a board card when one or both players are selected
     private static final String BORDER_P1   = "-fx-border-color: #9E4A40; -fx-border-width: 2;";
     private static final String BORDER_P2   = "-fx-border-color: #3E68A8; -fx-border-width: 2;";
     private static final String BORDER_BOTH = "-fx-border-color: #D4AC0D; -fx-border-width: 2;";
 
-    // Colours for the icon in the stop button (distinct from new-game-button icon colour)
     private static final String ICON_COLOR_BTN  = "#8890A8";
     private static final String ICON_COLOR_STOP = "#C8706A";
 
-    private static final int MAX_RESULTS = 20;
+    private static final long   FINISH_OVERLAY_NS = 1_500_000_000L; // 1.5 s
+    private static final int    MAX_RESULTS        = 20;
 
     // ── State ─────────────────────────────────────────────────────────────
     private final StackPane root;
-    private final TournamentRunner runner = new TournamentRunner();
+    private final TournamentRunner runner    = new TournamentRunner();
     private final List<Difficulty> strategies = Arrays.asList(Difficulty.values());
     private final ObservableList<Difficulty> tableItems;
     private final ObservableList<String> recentResults = FXCollections.observableArrayList();
@@ -83,10 +91,19 @@ public final class TournamentView {
     private final Button      actionBtn     = new Button("Back");
 
     private final TilePane boardGrid = new TilePane(10, 10);
-    private final Map<Integer, MiniBoard> activeBoards = new LinkedHashMap<>();
 
-    /** Strategies whose games are persistently highlighted on the board grid. */
+    // Active games: gameId → MiniBoard (game still running)
+    private final Map<Integer, MiniBoard> activeBoards  = new LinkedHashMap<>();
+    // Finishing games: board stays 1.5 s showing winner overlay, then fades out
+    private record FinishingGame(MiniBoard board, String winnerName, long startNs) {}
+    private final Map<Integer, FinishingGame> finishingGames = new LinkedHashMap<>();
+    // Frozen boards: pinned games whose match has ended — stay until clicked again
+    private final Map<Integer, MiniBoard>     frozenBoards   = new LinkedHashMap<>();
+
+    // Persistent leaderboard selection
     private final Set<Difficulty> selectedStrategies = new HashSet<>();
+    // Games pinned by the user (active game IDs)
+    private final Set<Integer>    pinnedGameIds      = new HashSet<>();
 
     private TableView<Difficulty> standingsTable;
     private AnimationTimer animTimer;
@@ -114,10 +131,10 @@ public final class TournamentView {
 
         FontIcon copyIcon = new FontIcon(FontAwesomeSolid.CLIPBOARD);
         copyIcon.setIconSize(12);
-        copyIcon.setIconColor(Color.web(ICON_COLOR_BTN));
+        copyIcon.setIconColor(Color.web("#5A8ACA"));
         Button copyBtn = new Button("Copy");
         copyBtn.setGraphic(copyIcon);
-        copyBtn.getStyleClass().add("new-game-button");
+        copyBtn.getStyleClass().add("tournament-copy-btn");
         copyBtn.setOnAction(e -> copyToClipboard());
 
         stopIcon.setIconSize(12);
@@ -138,10 +155,10 @@ public final class TournamentView {
         topBar.setPadding(new Insets(14, 20, 14, 20));
         HBox.setHgrow(progressBar, Priority.ALWAYS);
 
-        // ── Live boards section ───────────────────────────────────────────
+        // ── Live boards ───────────────────────────────────────────────────
         boardGrid.getStyleClass().add("tournament-board-grid");
         boardGrid.setPrefTileWidth((int) BOARD_PX + 24);
-        boardGrid.setPrefTileHeight((int) BOARD_PX + 46);
+        boardGrid.setPrefTileHeight((int) BOARD_PX + 52);
         boardGrid.setPadding(new Insets(10));
 
         Label boardsTitle = new Label("LIVE GAMES");
@@ -179,9 +196,6 @@ public final class TournamentView {
         resultsList.setMaxHeight(Double.MAX_VALUE);
         resultsList.setPrefHeight(0);
         VBox.setVgrow(resultsList, Priority.ALWAYS);
-
-        // Both table and results list share the right panel's height equally;
-        // standingsTable gets no explicit pref so both expand to fill available space.
         VBox.setVgrow(standingsTable, Priority.ALWAYS);
 
         VBox rightPanel = new VBox(10,
@@ -192,7 +206,6 @@ public final class TournamentView {
         rightPanel.setPrefWidth(360);
         rightPanel.setMaxWidth(360);
 
-        // ── Main layout ───────────────────────────────────────────────────
         HBox center = new HBox(10, boardsSection, rightPanel);
         center.setPadding(new Insets(0, 10, 10, 10));
         VBox.setVgrow(center, Priority.ALWAYS);
@@ -210,6 +223,9 @@ public final class TournamentView {
         running = true;
         paused  = false;
         selectedStrategies.clear();
+        pinnedGameIds.clear();
+        finishingGames.clear();
+        frozenBoards.clear();
         titleLabel.setText("TOURNAMENT");
         stopIcon.setIconCode(FontAwesomeSolid.ARROW_LEFT);
         actionBtn.setText("Back");
@@ -275,7 +291,7 @@ public final class TournamentView {
 
     private void startAnimTimer() {
         animTimer = new AnimationTimer() {
-            @Override public void handle(long now) { refreshLiveBoards(); }
+            @Override public void handle(long now) { refreshLiveBoards(now); }
         };
         animTimer.start();
     }
@@ -284,30 +300,25 @@ public final class TournamentView {
         if (animTimer != null) { animTimer.stop(); animTimer = null; }
     }
 
-    private void refreshLiveBoards() {
+    private void refreshLiveBoards(long now) {
         var liveStates     = runner.getLiveStates();
         var liveMatchups   = runner.getLiveMatchups();
         var liveWallOwners = runner.getLiveWallOwners();
+        var liveWinners    = runner.getLiveWinners();
         Set<Integer> current = new HashSet<>(liveStates.keySet());
 
-        activeBoards.entrySet().removeIf(e -> {
-            if (!current.contains(e.getKey())) {
-                boardGrid.getChildren().remove(e.getValue().card);
-                return true;
-            }
-            return false;
-        });
-
+        // ── 1. Add / update active boards ────────────────────────────────
         for (int id : current) {
             GameState state    = liveStates.get(id);
             Difficulty[] match = liveMatchups.get(id);
             if (state == null || match == null) continue;
-
             var wallOwners = liveWallOwners.getOrDefault(
                     id, new java.util.concurrent.ConcurrentHashMap<>());
 
             MiniBoard mb = activeBoards.computeIfAbsent(id, k -> {
                 MiniBoard b = new MiniBoard(match[0], match[1]);
+                b.card.setCursor(Cursor.HAND);
+                b.card.setOnMouseClicked(e -> togglePin(k, b));
                 boardGrid.getChildren().add(b.card);
                 return b;
             });
@@ -316,6 +327,61 @@ public final class TournamentView {
                     selectedStrategies.contains(mb.d1),
                     selectedStrategies.contains(mb.d2));
         }
+
+        // ── 2. Detect newly finished active boards ────────────────────────
+        activeBoards.entrySet().removeIf(e -> {
+            int id = e.getKey();
+            if (current.contains(id)) return false;
+            MiniBoard mb = e.getValue();
+            if (pinnedGameIds.remove(id)) {
+                // Pinned: freeze the board, let user dismiss it manually
+                mb.setPinned(false); // hide the active-pin indicator
+                mb.card.setOnMouseClicked(ev -> dismissFrozen(id, mb));
+                frozenBoards.put(id, mb);
+            } else {
+                // Not pinned: show winner overlay, then fade out
+                Difficulty winner = liveWinners.get(id);
+                String wName = winner != null ? winner.sample().displayName() : null;
+                mb.drawWinnerOverlay(wName);
+                finishingGames.put(id, new FinishingGame(mb, wName, now));
+            }
+            return true; // removed from activeBoards
+        });
+
+        // ── 3. Age finishing boards (winner overlay → fade out → remove) ──
+        finishingGames.entrySet().removeIf(e -> {
+            FinishingGame fg = e.getValue();
+            if (now - fg.startNs() < FINISH_OVERLAY_NS) return false;
+            FadeTransition ft = new FadeTransition(Duration.millis(300), fg.board().card);
+            ft.setToValue(0);
+            ft.setOnFinished(ev -> {
+                boardGrid.getChildren().remove(fg.board().card);
+                fg.board().card.setOpacity(1);
+            });
+            ft.play();
+            return true;
+        });
+
+        // ── 4. Keep frozen board selection borders current ────────────────
+        for (MiniBoard mb : frozenBoards.values()) {
+            mb.updateSelection(
+                    selectedStrategies.contains(mb.d1),
+                    selectedStrategies.contains(mb.d2));
+        }
+    }
+
+    private void togglePin(int gameId, MiniBoard board) {
+        if (!pinnedGameIds.remove(gameId)) {
+            pinnedGameIds.add(gameId);
+            board.setPinned(true);
+        } else {
+            board.setPinned(false);
+        }
+    }
+
+    private void dismissFrozen(int gameId, MiniBoard board) {
+        frozenBoards.remove(gameId);
+        boardGrid.getChildren().remove(board.card);
     }
 
     // ── Standings ─────────────────────────────────────────────────────────
@@ -340,7 +406,6 @@ public final class TournamentView {
 
         tv.setRowFactory(t -> new TableRow<Difficulty>() {
             {
-                // Clicking a row toggles that strategy's selection persistently.
                 setCursor(Cursor.HAND);
                 setOnMouseClicked(e -> {
                     Difficulty item = getItem();
@@ -361,7 +426,6 @@ public final class TournamentView {
                 else if (idx == 1) getStyleClass().add("rank-second");
                 else if (idx == 2) getStyleClass().add("rank-third");
 
-                // Left-border accent when this strategy is selected
                 if (selectedStrategies.contains(item)) {
                     setStyle("-fx-border-color: transparent transparent #191C2A #D4AC0D;"
                            + "-fx-border-width: 0 0 1 3;");
@@ -464,21 +528,27 @@ public final class TournamentView {
 
     private static final class MiniBoard {
         final Difficulty d1, d2;
-        final VBox   card;
-        final Canvas canvas = new Canvas(BOARD_PX, BOARD_PX);
+        final VBox       card;
+        final Canvas     canvas  = new Canvas(BOARD_PX, BOARD_PX);
+        final FontIcon   pinIcon;
 
         MiniBoard(Difficulty d1, Difficulty d2) {
             this.d1 = d1;
             this.d2 = d2;
 
-            Label p1 = new Label(abbrev(d1.sample().displayName()));
-            p1.getStyleClass().add("mini-p1");
+            Label p1lbl = new Label(abbrev(d1.sample().displayName()));
+            p1lbl.getStyleClass().add("mini-p1");
             Label vs = new Label("vs");
             vs.getStyleClass().add("mini-vs");
-            Label p2 = new Label(abbrev(d2.sample().displayName()));
-            p2.getStyleClass().add("mini-p2");
+            Label p2lbl = new Label(abbrev(d2.sample().displayName()));
+            p2lbl.getStyleClass().add("mini-p2");
 
-            HBox names = new HBox(6, p1, vs, p2);
+            pinIcon = new FontIcon(FontAwesomeSolid.THUMBTACK);
+            pinIcon.setIconSize(10);
+            pinIcon.setIconColor(Color.web("#D4AC0D"));
+            pinIcon.setVisible(false);
+
+            HBox names = new HBox(6, p1lbl, vs, p2lbl, pinIcon);
             names.setAlignment(Pos.CENTER);
 
             card = new VBox(6, names, canvas);
@@ -487,17 +557,15 @@ public final class TournamentView {
             card.setPadding(new Insets(10));
         }
 
-        /** Updates the card's border to reflect which players in this game are selected. */
+        void setPinned(boolean pinned) {
+            pinIcon.setVisible(pinned);
+        }
+
         void updateSelection(boolean d1Selected, boolean d2Selected) {
-            if (d1Selected && d2Selected) {
-                card.setStyle(BORDER_BOTH);
-            } else if (d1Selected) {
-                card.setStyle(BORDER_P1);
-            } else if (d2Selected) {
-                card.setStyle(BORDER_P2);
-            } else {
-                card.setStyle("");
-            }
+            if (d1Selected && d2Selected) card.setStyle(BORDER_BOTH);
+            else if (d1Selected)          card.setStyle(BORDER_P1);
+            else if (d2Selected)          card.setStyle(BORDER_P2);
+            else                          card.setStyle("");
         }
 
         void draw(GameState state, Map<Wall, Player> wallOwners) {
@@ -509,40 +577,46 @@ public final class TournamentView {
             double stripH = GOAL_STRIP_RATIO * cell;
             int    n      = GameState.BOARD_SIZE;
 
-            g.setFill(BG_COLOR);
-            g.fillRect(0, 0, BOARD_PX, BOARD_PX);
-
+            g.setFill(BG_COLOR); g.fillRect(0, 0, BOARD_PX, BOARD_PX);
             for (int r = 0; r < n; r++) {
                 for (int c = 0; c < n; c++) {
                     double x = c * step, y = r * step;
-                    g.setFill(CELL_CLR);
-                    g.fillRect(x, y, cell, cell);
+                    g.setFill(CELL_CLR); g.fillRect(x, y, cell, cell);
                     if (r == Player.ONE.goalRow()) {
-                        g.setFill(P1_STRIP);
-                        g.fillRect(x, y, cell, stripH);
+                        g.setFill(P1_STRIP); g.fillRect(x, y, cell, stripH);
                     } else if (r == Player.TWO.goalRow()) {
-                        g.setFill(P2_STRIP);
-                        g.fillRect(x, y + cell - stripH, cell, stripH);
+                        g.setFill(P2_STRIP); g.fillRect(x, y + cell - stripH, cell, stripH);
                     }
                 }
             }
-
             for (Wall w : state.getWalls()) {
                 Player owner = wallOwners.get(w);
                 g.setFill(owner == Player.TWO ? P2_COLOR : P1_COLOR);
-                double wx = w.col() * step, wy = w.row() * step;
-                double len = 2 * cell + gap;
-                if (w.orientation() == Wall.Orientation.HORIZONTAL)
-                    g.fillRect(wx, wy + cell, len, gap);
-                else
-                    g.fillRect(wx + cell, wy, gap, len);
+                double wx = w.col() * step, wy = w.row() * step, len = 2 * cell + gap;
+                if (w.orientation() == Wall.Orientation.HORIZONTAL) g.fillRect(wx, wy + cell, len, gap);
+                else                                                 g.fillRect(wx + cell, wy, gap, len);
             }
-
             double pad = cell * PAWN_PAD_RATIO;
             Position pp1 = state.getPawnPosition(Player.ONE);
             Position pp2 = state.getPawnPosition(Player.TWO);
             paintPawn(g, pp1.col(), pp1.row(), P1_COLOR, step, cell, pad);
             paintPawn(g, pp2.col(), pp2.row(), P2_COLOR, step, cell, pad);
+        }
+
+        /** Draws a semi-transparent overlay naming the winner. Called once when the game ends. */
+        void drawWinnerOverlay(String winnerName) {
+            GraphicsContext g = canvas.getGraphicsContext2D();
+            g.setFill(Color.color(0, 0, 0, 0.72));
+            g.fillRect(0, 0, BOARD_PX, BOARD_PX);
+            if (winnerName == null) return;
+            g.setTextAlign(TextAlignment.CENTER);
+            g.setTextBaseline(VPos.CENTER);
+            g.setFill(Color.web("#D4AC0D"));
+            g.setFont(Font.font("System", FontWeight.BOLD, BOARD_PX / 15));
+            g.fillText(winnerName, BOARD_PX / 2, BOARD_PX / 2 - BOARD_PX / 12);
+            g.setFill(Color.web("#8890A8"));
+            g.setFont(Font.font("System", BOARD_PX / 22));
+            g.fillText("wins!", BOARD_PX / 2, BOARD_PX / 2 + BOARD_PX / 14);
         }
 
         private static void paintPawn(GraphicsContext g, int col, int row,

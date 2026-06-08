@@ -205,6 +205,33 @@
     -fx-text-fill: #8AAADA;
 }
 
+/* ── Copy button (dark blue) ────────────────────────────────────────────── */
+
+.tournament-copy-btn {
+    -fx-background-color: #12243A;
+    -fx-text-fill: #5A8ACA;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 16 5 16;
+    -fx-background-radius: 4;
+    -fx-border-color: #1E3A6A;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.tournament-copy-btn:hover {
+    -fx-background-color: #18304A;
+    -fx-text-fill: #8ABCFF;
+    -fx-border-color: #2E508A;
+}
+
+.tournament-copy-btn:pressed {
+    -fx-background-color: #3E68A8;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #5A84C4;
+}
+
 /* ── Stop / close button (compact, red tint) ────────────────────────────── */
 
 .tournament-stop-btn {
