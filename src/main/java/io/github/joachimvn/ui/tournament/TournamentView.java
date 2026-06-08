@@ -113,8 +113,10 @@ public final class TournamentView {
     private boolean paused   = false;
     private long    tournamentStartMs;
     private int     doneCount, totalCount;
-    private long    etaDisplayMs  = 0;   // displayed countdown value (ticks down each second)
-    private int     etaTicksSince = 0;   // seconds since last recalibration
+    private long    etaDisplayMs = 0;
+    private final ArrayDeque<Long> recentGameTimes = new ArrayDeque<>();
+    private static final int    ETA_WINDOW = 20;
+    private static final double ETA_ALPHA  = 0.25;
 
     public TournamentView(Runnable onClose) {
         root = new StackPane();
@@ -193,7 +195,7 @@ public final class TournamentView {
         summaryBox.setPadding(new Insets(4));
         summaryScroll = new ScrollPane(summaryBox);
         summaryScroll.setFitToWidth(true);
-        summaryScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        summaryScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED); // safety: scroll rather than push right panel
         summaryScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         summaryScroll.getStyleClass().add("tournament-board-scroll");
         summaryScroll.setVisible(false);
@@ -247,8 +249,8 @@ public final class TournamentView {
         tournamentStartMs = System.currentTimeMillis();
         doneCount = 0;
         totalCount = runner.totalGames(strategies);
-        etaDisplayMs  = 0;
-        etaTicksSince = 0;
+        etaDisplayMs = 0;
+        recentGameTimes.clear();
         if (etaTimeline != null) etaTimeline.stop();
         etaTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> tickEta()));
         etaTimeline.setCycleCount(Timeline.INDEFINITE);
@@ -287,6 +289,19 @@ public final class TournamentView {
                 progressBar.setProgress((double) done / t);
                 progressLabel.setText(done + " / " + t);
                 resort();
+                // Record completion time; compute rate over recent window and EWMA-blend into display
+                long now = System.currentTimeMillis();
+                recentGameTimes.addLast(now);
+                if (recentGameTimes.size() > ETA_WINDOW) recentGameTimes.pollFirst();
+                if (recentGameTimes.size() >= 2) {
+                    long windowMs = recentGameTimes.peekLast() - recentGameTimes.peekFirst();
+                    if (windowMs > 0) {
+                        double rate   = (recentGameTimes.size() - 1.0) / windowMs; // games/ms
+                        long   newEta = (long)((t - done) / rate);
+                        etaDisplayMs  = etaDisplayMs == 0 ? newEta
+                                      : (long)(ETA_ALPHA * newEta + (1.0 - ETA_ALPHA) * etaDisplayMs);
+                    }
+                }
             },
             (winner, loser) -> {
                 int[] wr = runner.getResults().get(winner);
@@ -321,16 +336,8 @@ public final class TournamentView {
     // ── ETA ──────────────────────────────────────────────────────────────────
 
     private void tickEta() {
-        if (doneCount == 0) return;
-        // Count down by 1s each tick; every 5 ticks recalibrate from actual progress
-        etaTicksSince++;
-        if (etaTicksSince >= 5 || etaDisplayMs == 0) {
-            long elapsed = System.currentTimeMillis() - tournamentStartMs;
-            etaDisplayMs = elapsed * (totalCount - doneCount) / doneCount;
-            etaTicksSince = 0;
-        } else {
-            etaDisplayMs = Math.max(0, etaDisplayMs - 1000);
-        }
+        if (etaDisplayMs <= 0) return;
+        etaDisplayMs = Math.max(0, etaDisplayMs - 1000);
         etaLabel.setText("  ~" + formatDuration(etaDisplayMs));
     }
 
@@ -355,16 +362,23 @@ public final class TournamentView {
         if (best != null || shortest != null || longest != null) {
             HBox notableRow = new HBox(12);
             notableRow.setAlignment(Pos.TOP_LEFT);
-            for (VBox card : List.of(
-                    best      != null ? notableGameCard(best,      "BEST GAME",     best.loserFinalDist() + "-step finish",  "#B8960C") : null,
-                    shortest  != null ? notableGameCard(shortest,  "SHORTEST GAME", shortest.moveCount()  + " moves",        "#3E68A8") : null,
-                    longest   != null ? notableGameCard(longest,   "LONGEST GAME",  longest.moveCount()   + " moves",        "#9E4A40") : null
-            )) {
-                if (card == null) continue;
-                HBox.setHgrow(card, Priority.ALWAYS);
-                card.setMaxWidth(Double.MAX_VALUE);
-                notableRow.getChildren().add(card);
-            }
+            if (best     != null) addNotableCard(notableRow, best,     "BEST GAME",     best.moveCount() + " moves · " + best.wallCount() + " walls · " + best.loserFinalDist() + "-step finish", "#B8960C");
+            if (shortest != null) addNotableCard(notableRow, shortest, "SHORTEST GAME", shortest.moveCount() + " moves",  "#3E68A8");
+            if (longest  != null) addNotableCard(notableRow, longest,  "LONGEST GAME",  longest.moveCount()  + " moves",  "#9E4A40");
+
+            // HBox.prefHeight(-1) hits the SUMMARY_BOARD_PX fallback, so the row height is too small
+            // for the actual board size. Correct it once the row width is known.
+            notableRow.widthProperty().addListener((obs, oldW, newW) -> {
+                int n = notableRow.getChildren().size();
+                if (n == 0 || newW.doubleValue() < 1) return;
+                double boardSize = (newW.doubleValue() - 12.0 * (n - 1)) / n - 24;
+                if (boardSize < 1) return;
+                // ~90px: title(15) + matchup(20) + winner(18) + 3×spacing(15) + padding(24)
+                double totalH = boardSize + 92;
+                notableRow.setMinHeight(totalH);
+                notableRow.setPrefHeight(totalH);
+            });
+
             summaryBox.getChildren().add(notableRow);
         }
 
@@ -481,46 +495,73 @@ public final class TournamentView {
         }
     }
 
-    /** A card showing a notable game's board position + stats. Canvas scales to fill card width. */
-    private VBox notableGameCard(GameRecord rec, String title, String stat, String accentColor) {
+    /** Builds a notable-game card with a self-sizing BoardPane and adds it to the row. */
+    private void addNotableCard(HBox row, GameRecord rec, String title, String stat, String accentColor) {
         Label titleLbl = new Label(title);
-        titleLbl.setStyle("-fx-text-fill: " + accentColor + "; -fx-font-size: 10px; -fx-font-weight: bold; -fx-letter-spacing: 1;");
+        titleLbl.setStyle("-fx-text-fill: " + accentColor + "; -fx-font-size: 10px; -fx-font-weight: bold;");
 
-        String d1Name = rec.d1().sample().displayName();
-        String d2Name = rec.d2().sample().displayName();
-        Label d1Lbl  = new Label(abbrev(d1Name));
+        Label d1Lbl = new Label(rec.d1().sample().displayName());
         d1Lbl.setStyle("-fx-text-fill: #9E4A40; -fx-font-size: 13px; -fx-font-weight: bold;");
-        Label vsLbl  = new Label("vs");
+        Label vsLbl = new Label("vs");
         vsLbl.setStyle("-fx-text-fill: #3A3F58; -fx-font-size: 11px;");
-        Label d2Lbl  = new Label(abbrev(d2Name));
+        Label d2Lbl = new Label(rec.d2().sample().displayName());
         d2Lbl.setStyle("-fx-text-fill: #3E68A8; -fx-font-size: 13px; -fx-font-weight: bold;");
         HBox matchupRow = new HBox(6, d1Lbl, vsLbl, d2Lbl);
         matchupRow.setAlignment(Pos.CENTER_LEFT);
 
-        String winnerName  = rec.winner() != null ? rec.winner().sample().displayName() : "—";
         String winnerColor = rec.winner() == rec.d1() ? "#9E4A40" : "#3E68A8";
-        Label statLbl   = new Label(stat);
-        statLbl.setStyle("-fx-text-fill: #3A3F58; -fx-font-size: 11px;");
-        Label winnerLbl = new Label(abbrev(winnerName));
+        Label winnerLbl = new Label(rec.winner() != null ? rec.winner().sample().displayName() : "—");
         winnerLbl.setStyle("-fx-text-fill: " + winnerColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
+        Label statLbl = new Label(stat);
+        statLbl.setStyle("-fx-text-fill: #3A3F58; -fx-font-size: 11px;");
         HBox winnerRow = new HBox(6, winnerLbl, statLbl);
         winnerRow.setAlignment(Pos.CENTER_LEFT);
 
-        Canvas canvas = new Canvas(SUMMARY_BOARD_PX, SUMMARY_BOARD_PX);
-
-        VBox card = new VBox(5, titleLbl, matchupRow, winnerRow, canvas);
+        BoardPane boardPane = new BoardPane(rec.finalState(), rec.wallOwners());
+        VBox card = new VBox(5, titleLbl, matchupRow, winnerRow, boardPane);
         card.setPadding(new Insets(12));
         card.setStyle("-fx-background-color: #13151F; -fx-border-color: " + accentColor
                 + "; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4;");
+        HBox.setHgrow(card, Priority.ALWAYS);
+        card.setMaxWidth(Double.MAX_VALUE);
+        row.getChildren().add(card);
+    }
 
-        card.widthProperty().addListener((obs, oldW, newW) -> {
-            double size = Math.max(80, newW.doubleValue() - 24);
-            canvas.setWidth(size);
-            canvas.setHeight(size);
-            drawBoard(canvas, rec.finalState(), rec.wallOwners());
-        });
+    /**
+     * A Region that wraps a Canvas for square board rendering.
+     * minWidth=0 ensures the canvas never pushes the layout wider.
+     * computePrefHeight(w)=w so VBox always allocates a square slot.
+     */
+    private static final class BoardPane extends Region {
+        private final Canvas canvas = new Canvas(1, 1);
+        private final GameState state;
+        private final Map<Wall, Player> wallOwners;
 
-        return card;
+        BoardPane(GameState state, Map<Wall, Player> wallOwners) {
+            this.state = state;
+            this.wallOwners = wallOwners;
+            getChildren().add(canvas);
+            setMinSize(0, 0);
+            setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        }
+
+        @Override protected void layoutChildren() {
+            double w = getWidth();
+            if (w < 1) return;
+            canvas.setWidth(w);
+            canvas.setHeight(w);
+            canvas.setLayoutX(0);
+            canvas.setLayoutY(0);
+            drawBoard(canvas, state, wallOwners);
+            setClip(new javafx.scene.shape.Rectangle(w, w));
+        }
+
+        @Override protected double computeMinWidth(double h)   { return 0; }
+        @Override protected double computeMinHeight(double w)  { return 0; }
+        @Override protected double computePrefWidth(double h)  { return SUMMARY_BOARD_PX; }
+        @Override protected double computePrefHeight(double w) { return w > 0 ? w : SUMMARY_BOARD_PX; }
+        @Override protected double computeMaxWidth(double h)   { return Double.MAX_VALUE; }
+        @Override protected double computeMaxHeight(double w)  { return Double.MAX_VALUE; }
     }
 
     /** A row in the head-to-head breakdown for one opponent. */

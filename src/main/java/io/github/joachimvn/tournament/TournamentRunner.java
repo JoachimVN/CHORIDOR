@@ -223,9 +223,15 @@ public class TournamentRunner {
                     (cur == null || mc < cur.moveCount()) ? rec : cur);
                 longestGame.updateAndGet(cur ->
                     (cur == null || mc > cur.moveCount()) ? rec : cur);
-                // Best game = loser was closest to winning (smallest remaining BFS distance)
-                bestGame.updateAndGet(cur ->
-                    (cur == null || loserDist < cur.loserFinalDist()) ? rec : cur);
+                // Best game = composite score: tactical richness × closeness of finish.
+                // Rewards walls placed and game length; divides by (loserDist+1) so close
+                // finishes score higher, but a short low-wall game can't win by luck.
+                double score = (walls * 3.0 + mc) / (loserDist + 1.0);
+                bestGame.updateAndGet(cur -> {
+                    if (cur == null) return rec;
+                    double curScore = (cur.wallCount() * 3.0 + cur.moveCount()) / (cur.loserFinalDist() + 1.0);
+                    return score > curScore ? rec : cur;
+                });
             }
             liveStates.remove(gameId);
             liveMatchups.remove(gameId);

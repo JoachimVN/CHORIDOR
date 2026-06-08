@@ -18,10 +18,10 @@ public enum Difficulty {
     // ONE_STEP        (OneStepStrategy::new),
     // WALL_DUMPER     (WallDumperStrategy::new),
     // MONTE_CARLO     (MonteCarloStrategy::new),
-    // RACE_PLANNER    (RacePlannerStrategy::new),
-    // THREAT_RESPONDER(ThreatResponderStrategy::new),
-    // PATH_COUNT      (PathCountStrategy::new),
-    // BAITER          (BaiterStrategy::new),
+    RACE_PLANNER    (RacePlannerStrategy::new),
+    THREAT_RESPONDER(ThreatResponderStrategy::new),
+    PATH_COUNT      (PathCountStrategy::new),
+    BAITER          (BaiterStrategy::new),
     WIKI            (WikipediaStrategy::new);
 
     private final Function<Player, Strategy> factory;
