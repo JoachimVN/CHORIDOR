@@ -30,7 +30,8 @@ final class MiniBoard {
     private static final String BORDER_P2   = "-fx-border-color: #3E68A8; -fx-border-width: 2;";
     private static final String BORDER_BOTH = "-fx-border-color: #D4AC0D; -fx-border-width: 2;";
 
-    final Difficulty d1, d2;
+    final Difficulty d1;
+    final Difficulty d2;
     final VBox       card;
     final Canvas     canvas  = new Canvas(BOARD_PX, BOARD_PX);
     final FontIcon   pinIcon;

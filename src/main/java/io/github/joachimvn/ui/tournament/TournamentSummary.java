@@ -173,27 +173,39 @@ final class TournamentSummary {
     /** Biggest upset → nemesis of #1 → most dominant — picks whichever is most interesting. */
     private static HBox buildCycleStatChip(Map<Difficulty, Map<Difficulty, Integer>> mw,
                                             List<Difficulty> tableItems) {
-        int n = tableItems.size();
+        HBox chip = buildUpsetChip(mw, tableItems);
+        if (chip != null) return chip;
+        chip = buildNemesisChip(mw, tableItems);
+        if (chip != null) return chip;
+        return buildDominantChip(mw, tableItems);
+    }
 
-        // Biggest upset: lower-ranked swept a higher-ranked opponent
+    private static HBox buildUpsetChip(Map<Difficulty, Map<Difficulty, Integer>> mw,
+                                        List<Difficulty> tableItems) {
+        int n = tableItems.size();
         int biggestGap = 0;
         Difficulty upsetter = null;
         Difficulty victim = null;
         for (int lo = 1; lo < n; lo++) {
-            Difficulty loD = tableItems.get(lo);
-            Map<Difficulty, Integer> loWins = mw.get(loD);
+            Map<Difficulty, Integer> loWins = mw.get(tableItems.get(lo));
             if (loWins == null) continue;
             for (int hi = 0; hi < lo; hi++) {
-                Difficulty hiD = tableItems.get(hi);
-                if (loWins.getOrDefault(hiD, 0) >= 2 && lo - hi > biggestGap) {
+                if (loWins.getOrDefault(tableItems.get(hi), 0) >= 2 && lo - hi > biggestGap) {
                     biggestGap = lo - hi;
-                    upsetter = loD;
-                    victim = hiD;
+                    upsetter = tableItems.get(lo);
+                    victim = tableItems.get(hi);
                 }
             }
         }
+        if (upsetter == null || biggestGap < Math.max(2, n / 3)) return null;
+        return statChip("Biggest upset",
+                upsetter.sample().displayName() + " (#" + (tableItems.indexOf(upsetter) + 1) + ")"
+                + " swept " + victim.sample().displayName() + " (#" + (tableItems.indexOf(victim) + 1) + ")",
+                "#2A1A2A", "#9B59B6");
+    }
 
-        // Nemesis: who beat #1 the most
+    private static HBox buildNemesisChip(Map<Difficulty, Map<Difficulty, Integer>> mw,
+                                          List<Difficulty> tableItems) {
         Difficulty top = tableItems.get(0);
         Difficulty nemesis = null;
         int nemesisWins = 0;
@@ -202,8 +214,15 @@ final class TournamentSummary {
             int w = mw.getOrDefault(d, Map.of()).getOrDefault(top, 0);
             if (w > nemesisWins) { nemesisWins = w; nemesis = d; }
         }
+        if (nemesis == null || nemesisWins < 2) return null;
+        return statChip("Nemesis of #1",
+                nemesis.sample().displayName() + " went " + nemesisWins + "-" + (2 - nemesisWins)
+                + " vs " + top.sample().displayName(),
+                "#2A1A1A", "#E67E22");
+    }
 
-        // Sweep count: who 2-0'd the most opponents
+    private static HBox buildDominantChip(Map<Difficulty, Map<Difficulty, Integer>> mw,
+                                           List<Difficulty> tableItems) {
         Difficulty sweeper = null;
         int maxSweeps = 0;
         for (Difficulty d : tableItems) {
@@ -212,25 +231,10 @@ final class TournamentSummary {
             int sweeps = (int) dWins.values().stream().filter(v -> v >= 2).count();
             if (sweeps > maxSweeps) { maxSweeps = sweeps; sweeper = d; }
         }
-
-        if (upsetter != null && biggestGap >= Math.max(2, n / 3)) {
-            return statChip("Biggest upset",
-                    upsetter.sample().displayName() + " (#" + (tableItems.indexOf(upsetter) + 1) + ")"
-                    + " swept " + victim.sample().displayName() + " (#" + (tableItems.indexOf(victim) + 1) + ")",
-                    "#2A1A2A", "#9B59B6");
-        }
-        if (nemesis != null && nemesisWins >= 2) {
-            return statChip("Nemesis of #1",
-                    nemesis.sample().displayName() + " went " + nemesisWins + "-" + (2 - nemesisWins)
-                    + " vs " + top.sample().displayName(),
-                    "#2A1A1A", "#E67E22");
-        }
-        if (sweeper != null && maxSweeps >= 2) {
-            return statChip("Most dominant",
-                    sweeper.sample().displayName() + " swept " + maxSweeps + " of " + (n - 1) + " opponents",
-                    "#1A1A2A", COLOR_BLUE);
-        }
-        return null;
+        if (sweeper == null || maxSweeps < 2) return null;
+        return statChip("Most dominant",
+                sweeper.sample().displayName() + " swept " + maxSweeps + " of " + (tableItems.size() - 1) + " opponents",
+                "#1A1A2A", COLOR_BLUE);
     }
 
     private static TitledPane buildH2hPane(Difficulty d, Map<Difficulty, Map<Difficulty, Integer>> mw,

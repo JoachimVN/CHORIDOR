@@ -55,7 +55,7 @@ jobs:
 
       - name: Set Maven version
         shell: pwsh
-        run: mvn --batch-mode versions:set "-DnewVersion=${{ env.APP_VERSION }}" "-DgenerateBackupPoms=false"
+        run: mvn --batch-mode versions:set "-DnewVersion=${{ steps.version.outputs.app_version }}" "-DgenerateBackupPoms=false"
 
       - name: Build portable JAR
         shell: pwsh
@@ -83,12 +83,12 @@ jobs:
       - name: Publish release with Windows assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.TAG_NAME }}
+          tag_name: ${{ steps.version.outputs.tag_name }}
           generate_release_notes: true
-          prerelease: ${{ env.PRE_RELEASE == 'true' }}
+          prerelease: ${{ steps.version.outputs.pre_release == 'true' }}
           files: |
-            target/CHORIDOR-${{ env.APP_VERSION }}-portable.jar
-            target/dist/CHORIDOR-${{ env.APP_VERSION }}-windows.exe
+            target/CHORIDOR-${{ steps.version.outputs.app_version }}-portable.jar
+            target/dist/CHORIDOR-${{ steps.version.outputs.app_version }}-windows.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

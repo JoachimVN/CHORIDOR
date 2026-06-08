@@ -263,7 +263,7 @@ public class GameController {
 
     private void seekReview(int index) {
         if (!isReviewing()) return;
-        int clamped = Math.max(0, Math.min(history.size() - 1, index));
+        int clamped = Math.clamp(index, 0, history.size() - 1);
         if (clamped == reviewCursor) return;
         reviewCursor = clamped;
         play(moveSound);
@@ -292,15 +292,12 @@ public class GameController {
      */
     public static String toNotation(Move move) {
         return switch (move) {
-            case PawnMove pm -> {
-                Position p = pm.target();
-                yield String.valueOf((char)('a' + p.col())) + (9 - p.row());
-            }
-            case WallMove wm -> {
-                Wall w = wm.wall();
-                char col = (char)('a' + w.col());
-                int  row = 8 - w.row();
-                char ori = w.orientation() == Wall.Orientation.HORIZONTAL ? 'h' : 'v';
+            case PawnMove(var target) ->
+                String.valueOf((char)('a' + target.col())) + (9 - target.row());
+            case WallMove(var wall) -> {
+                char col = (char)('a' + wall.col());
+                int  row = 8 - wall.row();
+                char ori = wall.orientation() == Wall.Orientation.HORIZONTAL ? 'h' : 'v';
                 yield "" + col + row + ori;
             }
         };
@@ -347,44 +344,14 @@ public class GameController {
         Position p1 = s.getPawnPosition(Player.ONE);
         Position p2 = s.getPawnPosition(Player.TWO);
 
-        // Move log
         StringBuilder sb = new StringBuilder();
         sb.append("Moves: ").append(fullNotation()).append("\n\n");
-
-        // Column header (a–i)
-        sb.append("   ");
-        for (int c = 0; c < GameState.BOARD_SIZE; c++)
-            sb.append(String.format(" %c  ", 'a' + c));
-        sb.append("\n");
-
+        appendColumnHeader(sb);
         for (int r = 0; r < GameState.BOARD_SIZE; r++) {
-            // Row of cells (label = standard row 9..1, top to bottom)
-            sb.append(String.format("%d  ", 9 - r));
-            for (int c = 0; c < GameState.BOARD_SIZE; c++) {
-                Position pos = new Position(r, c);
-                char cell = pos.equals(p1) ? 'R' : pos.equals(p2) ? 'B' : '·';
-                sb.append('[').append(cell).append(']');
-                // Vertical wall to the right of this cell?
-                if (c < GameState.BOARD_SIZE - 1) {
-                    boolean blocked = s.isEdgeBlocked(pos, new Position(r, c + 1));
-                    sb.append(blocked ? '║' : ' ');
-                }
-            }
-            sb.append("\n");
-
-            // Horizontal walls below this row
-            if (r < GameState.BOARD_SIZE - 1) {
-                sb.append("   ");
-                for (int c = 0; c < GameState.BOARD_SIZE; c++) {
-                    boolean blocked = s.isEdgeBlocked(new Position(r, c), new Position(r + 1, c));
-                    sb.append(blocked ? " ═══" : "    ");
-                    if (c < GameState.BOARD_SIZE - 1) sb.append(' ');
-                }
-                sb.append("\n");
-            }
+            appendCellRow(sb, s, r, p1, p2);
+            if (r < GameState.BOARD_SIZE - 1) appendWallRow(sb, s, r);
         }
 
-        // Summary line (jump-aware distances match what the AI actually sees)
         int d1 = pathChecker.shortestPathWithJumps(s, Player.ONE);
         int d2 = pathChecker.shortestPathWithJumps(s, Player.TWO);
         sb.append(String.format(
@@ -392,7 +359,38 @@ public class GameController {
             p1.row(), p1.col(), d1, s.getWallCount(Player.ONE),
             p2.row(), p2.col(), d2, s.getWallCount(Player.TWO),
             s.getCurrentPlayer() == Player.ONE ? "Red" : "Blue"));
-
         return sb.toString();
+    }
+
+    private static void appendColumnHeader(StringBuilder sb) {
+        sb.append("   ");
+        for (int c = 0; c < GameState.BOARD_SIZE; c++)
+            sb.append(String.format(" %c  ", 'a' + c));
+        sb.append("\n");
+    }
+
+    private static void appendCellRow(StringBuilder sb, GameState s, int r,
+                                       Position p1, Position p2) {
+        sb.append(String.format("%d  ", 9 - r));
+        for (int c = 0; c < GameState.BOARD_SIZE; c++) {
+            Position pos = new Position(r, c);
+            char cell;
+            if      (pos.equals(p1)) cell = 'R';
+            else if (pos.equals(p2)) cell = 'B';
+            else                     cell = '·';
+            sb.append('[').append(cell).append(']');
+            if (c < GameState.BOARD_SIZE - 1)
+                sb.append(s.isEdgeBlocked(pos, new Position(r, c + 1)) ? '║' : ' ');
+        }
+        sb.append("\n");
+    }
+
+    private static void appendWallRow(StringBuilder sb, GameState s, int r) {
+        sb.append("   ");
+        for (int c = 0; c < GameState.BOARD_SIZE; c++) {
+            sb.append(s.isEdgeBlocked(new Position(r, c), new Position(r + 1, c)) ? " ═══" : "    ");
+            if (c < GameState.BOARD_SIZE - 1) sb.append(' ');
+        }
+        sb.append("\n");
     }
 }

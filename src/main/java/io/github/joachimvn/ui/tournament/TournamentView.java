@@ -3,7 +3,7 @@ package io.github.joachimvn.ui.tournament;
 import io.github.joachimvn.ai.Difficulty;
 import io.github.joachimvn.core.model.*;
 import io.github.joachimvn.tournament.TournamentRunner;
-
+import io.github.joachimvn.ui.GameController;
 import javafx.animation.*;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -20,6 +20,8 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
+
+import javafx.scene.media.AudioClip;
 
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -40,6 +42,11 @@ public final class TournamentView {
     private static final int    MAX_RESULTS       = 20;
     private static final int    ETA_WINDOW = 20;
     private static final double ETA_ALPHA  = 0.25;
+
+    private final AudioClip selectSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Select.wav").toExternalForm());
+        private final AudioClip pinSound = new AudioClip(
+        getClass().getResource("/audio/sfx/Pin.wav").toExternalForm());
 
     // ── State ────────────────────────────────────────────────────────────────
     private final StackPane root;
@@ -86,8 +93,10 @@ public final class TournamentView {
     private int     totalCount;
     private long    etaDisplayMs = 0;
     private final ArrayDeque<Long> recentGameTimes = new ArrayDeque<>();
+    private final GameController ctrl;
 
-    public TournamentView(Runnable onClose) {
+    public TournamentView(Runnable onClose, GameController ctrl) {
+        this.ctrl = ctrl;
         root = new StackPane();
         root.getStyleClass().add("tournament-view");
         root.setVisible(false);
@@ -113,7 +122,7 @@ public final class TournamentView {
         Button copyBtn = new Button("Copy");
         copyBtn.setGraphic(copyIcon);
         copyBtn.getStyleClass().add("tournament-copy-btn");
-        copyBtn.setOnAction(e -> copyToClipboard());
+        copyBtn.setOnAction(e -> { copyToClipboard(); if (!ctrl.isMuted()) selectSound.play(); });
 
         restartIcon.setIconSize(12);
         restartIcon.setIconColor(Color.web(ICON_COLOR_BTN));
@@ -125,17 +134,34 @@ public final class TournamentView {
 
         stopIcon.setIconSize(12);
         stopIcon.setIconColor(Color.web(ICON_COLOR_STOP));
+
+        FontIcon muteIcon = new FontIcon(FontAwesomeSolid.VOLUME_UP);
+        muteIcon.getStyleClass().add("bar-icon");
+        Button muteBtn = new Button();
+        muteBtn.setGraphic(muteIcon);
+        muteBtn.setAlignment(Pos.CENTER_RIGHT);
+        muteBtn.getStyleClass().add("mute-button");
+        muteBtn.setOnAction(e -> {
+            ctrl.toggleMute();
+            muteIcon.setIconCode(ctrl.isMuted() ? FontAwesomeSolid.VOLUME_MUTE : FontAwesomeSolid.VOLUME_UP);
+        });
+
+        actionBtn.setAlignment(Pos.CENTER_RIGHT);
         actionBtn.setGraphic(stopIcon);
         actionBtn.getStyleClass().add("tournament-stop-btn");
         actionBtn.setOnAction(e -> {
+            if (!ctrl.isMuted()) selectSound.play(); 
             if (running) { runner.cancel(); running = false; }
             stopAnimTimer();
             root.setVisible(false);
             onClose.run();
         });
+        
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
         HBox topBar = new HBox(12, titleLabel, progressBar, progressLabel, etaLabel,
-                               pauseBtn, copyBtn, restartBtn, actionBtn);
+                               pauseBtn, copyBtn, restartBtn, spacer, muteBtn, actionBtn);
         topBar.setAlignment(Pos.CENTER_LEFT);
         topBar.getStyleClass().add("tournament-top-bar");
         topBar.setPadding(new Insets(14, 20, 14, 20));
@@ -317,13 +343,16 @@ public final class TournamentView {
 
     private void togglePause() {
         paused = !paused;
+        if (!ctrl.isMuted()) selectSound.play();
         if (paused) {
             runner.pause();
+            if (etaTimeline != null) etaTimeline.pause();
             pauseIcon.setIconCode(FontAwesomeSolid.PLAY);
             pauseBtn.setText("Resume");
             titleLabel.setText("TOURNAMENT — PAUSED");
         } else {
             runner.resume();
+            if (etaTimeline != null) etaTimeline.play();
             pauseIcon.setIconCode(FontAwesomeSolid.PAUSE);
             pauseBtn.setText("Pause");
             titleLabel.setText("TOURNAMENT");
@@ -358,7 +387,7 @@ public final class TournamentView {
             MiniBoard mb = activeBoards.computeIfAbsent(id, k -> {
                 MiniBoard b = new MiniBoard(match[0], match[1]);
                 b.card.setCursor(Cursor.HAND);
-                b.card.setOnMouseClicked(e -> togglePin(k, b));
+                b.card.setOnMouseClicked(e -> { togglePin(k, b); if (!ctrl.isMuted()) pinSound.play(); });
                 boardGrid.getChildren().add(b.card);
                 return b;
             });
@@ -383,7 +412,7 @@ public final class TournamentView {
 
             if (pinnedGameIds.remove(id)) {
                 mb.setPinned(true);
-                mb.card.setOnMouseClicked(ev -> dismissFrozen(id, mb));
+                mb.card.setOnMouseClicked(ev -> { dismissFrozen(id, mb); if (!ctrl.isMuted()) pinSound.play(); });
                 var fo = runner.getFinalWallOwners().getOrDefault(id,
                               new java.util.concurrent.ConcurrentHashMap<>());
                 pinnedOverlays.put(id, new PinnedOverlay(mb, now,
@@ -472,6 +501,7 @@ public final class TournamentView {
             {
                 setCursor(Cursor.HAND);
                 setOnMouseClicked(e -> {
+                    if (!ctrl.isMuted()) pinSound.play();
                     Difficulty item = getItem();
                     if (item == null || isEmpty()) return;
                     if (!selectedStrategies.remove(item)) selectedStrategies.add(item);

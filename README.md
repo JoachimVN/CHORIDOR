@@ -58,12 +58,12 @@ A personal project built to explore:
 - Human vs Human local play
 - Human vs AI
 - AI vs AI simulation
+- Live tournament for AIs
 - Dark-slate themed board with legal-move dot indicators and hover-preview for walls
 - Changing sides, flipping boards, and win overlay
 - Sound effects for moves, jumps, wall placements, wins, and more
 - Multiple AI strategies
 - Game review to look back on moves
-- Nine AI strategies: Random, Greedy, Minimax, Tactical, Rusher, Balanced, Adaptive, Economist, Sharp
 - Cross-platform packaging (Windows EXE, Linux zip, macOS DMG, portable JAR)
 
 ## Tech Stack
@@ -166,7 +166,7 @@ src/main/java/io/github/joachimvn
     ai/                      # Strategy interface, Difficulty enum, and all AI strategies
     ui/
         GameController.java  # game state bridge between AI/rules and the UI
-        board/               # BoardView canvas
+        BoardView.java       # BoardView canvas
         bars/                # TopBar, BottomBar, ReviewBar
         overlays/            # SetupOverlay, GameOverOverlay
         common/              # UiScale, UiConstants, LogoFactory

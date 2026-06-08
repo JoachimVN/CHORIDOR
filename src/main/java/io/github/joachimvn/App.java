@@ -57,7 +57,7 @@ public class App extends Application {
         Runnable[] startTournament = {null};
         SetupOverlay setup = new SetupOverlay(ctrl, board, bottomBar::setFlipSelected,
             () -> { if (startTournament[0] != null) startTournament[0].run(); });
-        TournamentView tournament = new TournamentView(() -> setup.getRoot().setVisible(true));
+        TournamentView tournament = new TournamentView(() -> setup.getRoot().setVisible(true), ctrl);
         startTournament[0] = tournament::start;
 
         GameOverOverlay gameOver = new GameOverOverlay(ctrl, setup.getRoot());
