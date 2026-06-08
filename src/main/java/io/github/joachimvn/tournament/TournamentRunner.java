@@ -153,6 +153,9 @@ public class TournamentRunner {
         liveStates.clear();
         liveMatchups.clear();
         liveWallOwners.clear();
+        liveWinners.clear();
+        finalGameStates.clear();
+        finalWallOwners.clear();
     }
 
     private static List<Difficulty[]> buildMatchups(List<Difficulty> strategies) {
@@ -200,6 +203,8 @@ public class TournamentRunner {
                     liveStates.put(gameId, state);
                     moveCount++;
                 } catch (Exception e) {
+                    System.err.printf("[tournament] %s threw %s: %s%n",
+                        strategy.getClass().getSimpleName(), e.getClass().getSimpleName(), e.getMessage());
                     winner = current == Player.ONE ? d2 : d1;
                     return winner;
                 }
