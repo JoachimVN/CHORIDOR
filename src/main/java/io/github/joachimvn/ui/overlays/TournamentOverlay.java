@@ -230,7 +230,7 @@ public final class TournamentOverlay {
         sb.append(strategies.size()).append(" strategies · ").append(total).append(" games\n\n");
 
         // Standings
-        sb.append(String.format("%-4s  %-16s  %3s  %3s  %5s%n", "#", "Strategy", "W", "L", "Win%"));
+        sb.append(String.format("%-4s  %-16s  %-4s  %-4s  %-5s%n", "#", "Strategy", "W", "L", "Win%"));
         sb.append("─".repeat(40)).append("\n");
         for (int i = 0; i < tableItems.size(); i++) {
             Difficulty d = tableItems.get(i);
@@ -238,7 +238,7 @@ public final class TournamentOverlay {
             int w = wr == null ? 0 : wr[0];
             int l = wr == null ? 0 : wr[1];
             String pct = (w + l == 0) ? "—" : String.format("%.0f%%", 100.0 * w / (w + l));
-            sb.append(String.format("%-4d  %-16s  %3d  %3d  %5s%n",
+            sb.append(String.format("%-4d  %-16s  %-4d  %-4d  %-5s%n",
                 i + 1, d.sample().displayName(), w, l, pct));
         }
 

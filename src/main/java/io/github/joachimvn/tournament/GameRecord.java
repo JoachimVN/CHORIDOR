@@ -8,8 +8,10 @@ import io.github.joachimvn.core.model.Wall;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Snapshot of a completed game, used to record notable matches
- * (shortest, longest, most walls placed) for the post-tournament summary.
+ * Snapshot of a completed game, used to record notable matches for the post-tournament summary.
+ *
+ * @param loserFinalDist BFS distance the loser still had to cover when the winner finished;
+ *                       lower = closer game (used for "best game" tracking)
  */
 public record GameRecord(
     Difficulty d1,
@@ -17,6 +19,7 @@ public record GameRecord(
     Difficulty winner,
     int moveCount,
     int wallCount,
+    int loserFinalDist,
     GameState finalState,
     ConcurrentHashMap<Wall, Player> wallOwners
 ) {}

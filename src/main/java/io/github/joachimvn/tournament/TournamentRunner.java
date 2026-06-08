@@ -44,9 +44,9 @@ public class TournamentRunner {
     private final ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> finalWallOwners = new ConcurrentHashMap<>();
 
     /** Notable games updated atomically by worker threads as games complete. */
-    private final AtomicReference<GameRecord> shortestGame    = new AtomicReference<>();
-    private final AtomicReference<GameRecord> longestGame     = new AtomicReference<>();
-    private final AtomicReference<GameRecord> mostTacticalGame = new AtomicReference<>();
+    private final AtomicReference<GameRecord> shortestGame = new AtomicReference<>();
+    private final AtomicReference<GameRecord> longestGame  = new AtomicReference<>();
+    private final AtomicReference<GameRecord> bestGame     = new AtomicReference<>();
 
     // ── Control ─────────────────────────────────────────────────────────────
     private final AtomicBoolean  cancelled   = new AtomicBoolean(false);
@@ -63,9 +63,9 @@ public class TournamentRunner {
     public ConcurrentHashMap<Integer, Difficulty>                      getLiveWinners()     { return liveWinners; }
     public ConcurrentHashMap<Integer, GameState>                       getFinalGameStates() { return finalGameStates; }
     public ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> getFinalWallOwners() { return finalWallOwners; }
-    public GameRecord getShortestGame()     { return shortestGame.get(); }
-    public GameRecord getLongestGame()      { return longestGame.get(); }
-    public GameRecord getMostTacticalGame() { return mostTacticalGame.get(); }
+    public GameRecord getShortestGame() { return shortestGame.get(); }
+    public GameRecord getLongestGame()  { return longestGame.get(); }
+    public GameRecord getBestGame()     { return bestGame.get(); }
     public boolean isPaused()  { return paused; }
 
     public int totalGames(List<Difficulty> strategies) {
@@ -95,7 +95,7 @@ public class TournamentRunner {
         finalWallOwners.clear();
         shortestGame.set(null);
         longestGame.set(null);
-        mostTacticalGame.set(null);
+        bestGame.set(null);
         results.clear();
         matchupWins.clear();
         for (Difficulty a : strategies) {
@@ -215,14 +215,17 @@ public class TournamentRunner {
                 // Update notable game records atomically
                 int walls = state.getWalls().size();
                 final int mc = moveCount;
+                Player loserPlayer = winner == d1 ? Player.TWO : Player.ONE;
+                int loserDist = pathChecker.shortestPathWithJumps(state, loserPlayer);
                 GameRecord rec = new GameRecord(d1, d2, winner, moveCount, walls,
-                                                state, new ConcurrentHashMap<>(wallOwners));
+                                                loserDist, state, new ConcurrentHashMap<>(wallOwners));
                 shortestGame.updateAndGet(cur ->
                     (cur == null || mc < cur.moveCount()) ? rec : cur);
                 longestGame.updateAndGet(cur ->
                     (cur == null || mc > cur.moveCount()) ? rec : cur);
-                mostTacticalGame.updateAndGet(cur ->
-                    (cur == null || walls > cur.wallCount()) ? rec : cur);
+                // Best game = loser was closest to winning (smallest remaining BFS distance)
+                bestGame.updateAndGet(cur ->
+                    (cur == null || loserDist < cur.loserFinalDist()) ? rec : cur);
             }
             liveStates.remove(gameId);
             liveMatchups.remove(gameId);

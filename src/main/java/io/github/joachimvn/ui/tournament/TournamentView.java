@@ -113,6 +113,8 @@ public final class TournamentView {
     private boolean paused   = false;
     private long    tournamentStartMs;
     private int     doneCount, totalCount;
+    private long    etaDisplayMs  = 0;   // displayed countdown value (ticks down each second)
+    private int     etaTicksSince = 0;   // seconds since last recalibration
 
     public TournamentView(Runnable onClose) {
         root = new StackPane();
@@ -245,6 +247,8 @@ public final class TournamentView {
         tournamentStartMs = System.currentTimeMillis();
         doneCount = 0;
         totalCount = runner.totalGames(strategies);
+        etaDisplayMs  = 0;
+        etaTicksSince = 0;
         if (etaTimeline != null) etaTimeline.stop();
         etaTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> tickEta()));
         etaTimeline.setCycleCount(Timeline.INDEFINITE);
@@ -318,9 +322,16 @@ public final class TournamentView {
 
     private void tickEta() {
         if (doneCount == 0) return;
-        long elapsed   = System.currentTimeMillis() - tournamentStartMs;
-        long remaining = elapsed * (totalCount - doneCount) / doneCount;
-        etaLabel.setText("  ~" + formatDuration(remaining));
+        // Count down by 1s each tick; every 5 ticks recalibrate from actual progress
+        etaTicksSince++;
+        if (etaTicksSince >= 5 || etaDisplayMs == 0) {
+            long elapsed = System.currentTimeMillis() - tournamentStartMs;
+            etaDisplayMs = elapsed * (totalCount - doneCount) / doneCount;
+            etaTicksSince = 0;
+        } else {
+            etaDisplayMs = Math.max(0, etaDisplayMs - 1000);
+        }
+        etaLabel.setText("  ~" + formatDuration(etaDisplayMs));
     }
 
     private static String formatDuration(long ms) {
@@ -337,17 +348,17 @@ public final class TournamentView {
         Map<Difficulty, int[]> res = runner.getResults();
 
         // ── Notable Games row ─────────────────────────────────────────────────
-        GameRecord shortest    = runner.getShortestGame();
-        GameRecord longest     = runner.getLongestGame();
-        GameRecord mostWalls   = runner.getMostTacticalGame();
+        GameRecord best     = runner.getBestGame();
+        GameRecord shortest = runner.getShortestGame();
+        GameRecord longest  = runner.getLongestGame();
 
-        if (shortest != null || longest != null || mostWalls != null) {
+        if (best != null || shortest != null || longest != null) {
             HBox notableRow = new HBox(12);
             notableRow.setAlignment(Pos.TOP_LEFT);
             for (VBox card : List.of(
-                    shortest  != null ? notableGameCard(shortest,  "SHORTEST GAME", shortest.moveCount()  + " moves", "#3E68A8") : null,
-                    longest   != null ? notableGameCard(longest,   "LONGEST GAME",  longest.moveCount()   + " moves", "#9E4A40") : null,
-                    mostWalls != null ? notableGameCard(mostWalls, "MOST TACTICAL", mostWalls.wallCount() + " walls",  "#B8960C") : null
+                    best      != null ? notableGameCard(best,      "BEST GAME",     best.loserFinalDist() + "-step finish",  "#B8960C") : null,
+                    shortest  != null ? notableGameCard(shortest,  "SHORTEST GAME", shortest.moveCount()  + " moves",        "#3E68A8") : null,
+                    longest   != null ? notableGameCard(longest,   "LONGEST GAME",  longest.moveCount()   + " moves",        "#9E4A40") : null
             )) {
                 if (card == null) continue;
                 HBox.setHgrow(card, Priority.ALWAYS);
@@ -503,7 +514,7 @@ public final class TournamentView {
                 + "; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4;");
 
         card.widthProperty().addListener((obs, oldW, newW) -> {
-            double size = Math.max(80, Math.min(380, newW.doubleValue() - 24));
+            double size = Math.max(80, newW.doubleValue() - 24);
             canvas.setWidth(size);
             canvas.setHeight(size);
             drawBoard(canvas, rec.finalState(), rec.wallOwners());
@@ -785,7 +796,6 @@ public final class TournamentView {
 
         TableColumn<Difficulty, Number> rankCol = new TableColumn<>("#");
         rankCol.setCellValueFactory(cd -> new SimpleIntegerProperty(tableItems.indexOf(cd.getValue()) + 1));
-        rankCol.getStyleClass().add("tournament-col-center");
         rankCol.setPrefWidth(36); rankCol.setMinWidth(32); rankCol.setMaxWidth(44); rankCol.setSortable(false);
 
         TableColumn<Difficulty, String> nameCol = new TableColumn<>("Strategy");
@@ -794,12 +804,10 @@ public final class TournamentView {
 
         TableColumn<Difficulty, Number> wCol = new TableColumn<>("W");
         wCol.setCellValueFactory(cd -> { int[] wr = runner.getResults().get(cd.getValue()); return new SimpleIntegerProperty(wr == null ? 0 : wr[0]); });
-        wCol.getStyleClass().add("tournament-col-center");
         wCol.setPrefWidth(44); wCol.setMinWidth(38); wCol.setMaxWidth(56); wCol.setSortable(false);
 
         TableColumn<Difficulty, Number> lCol = new TableColumn<>("L");
         lCol.setCellValueFactory(cd -> { int[] wr = runner.getResults().get(cd.getValue()); return new SimpleIntegerProperty(wr == null ? 0 : wr[1]); });
-        lCol.getStyleClass().add("tournament-col-center");
         lCol.setPrefWidth(44); lCol.setMinWidth(38); lCol.setMaxWidth(56); lCol.setSortable(false);
 
         TableColumn<Difficulty, String> pctCol = new TableColumn<>("Win%");
@@ -808,7 +816,6 @@ public final class TournamentView {
             if (wr == null || wr[0]+wr[1] == 0) return new SimpleStringProperty("—");
             return new SimpleStringProperty(String.format("%d%%", (int)Math.round(100.0*wr[0]/(wr[0]+wr[1]))));
         });
-        pctCol.getStyleClass().add("tournament-col-center");
         pctCol.setPrefWidth(52); pctCol.setMinWidth(46); pctCol.setMaxWidth(66); pctCol.setSortable(false);
 
         tv.getColumns().addAll(rankCol, nameCol, wCol, lCol, pctCol);
@@ -830,14 +837,14 @@ public final class TournamentView {
         StringBuilder sb = new StringBuilder();
         sb.append("CHORIDOR TOURNAMENT RESULTS\n")
           .append(strategies.size()).append(" strategies · ").append(total).append(" games\n\n");
-        sb.append(String.format("%-4s  %-18s  %5s  %5s  %5s%n", "#", "Strategy", "+WINS", "-LOSS", "Win%"));
+        sb.append(String.format("%-4s  %-18s  %-6s  %-6s  %-5s%n", "#", "Strategy", "+WINS", "-LOSS", "Win%"));
         sb.append("─".repeat(46)).append("\n");
         for (int i = 0; i < tableItems.size(); i++) {
             Difficulty d = tableItems.get(i);
             int[] wr = res.get(d);
             int w = wr == null ? 0 : wr[0], l = wr == null ? 0 : wr[1];
             String pct = (w+l == 0) ? "—" : String.format("%.0f%%", 100.0*w/(w+l));
-            sb.append(String.format("%-4d  %-18s  %5d  %5d  %5s%n", i+1, d.sample().displayName(), w, l, pct));
+            sb.append(String.format("%-4d  %-18s  %-6d  %-6d  %-5s%n", i+1, d.sample().displayName(), w, l, pct));
         }
         sb.append("\n\nHEAD-TO-HEAD BREAKDOWN\n").append("─".repeat(40)).append("\n");
         for (Difficulty d : tableItems) {
