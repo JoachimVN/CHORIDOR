@@ -6,12 +6,15 @@ import io.github.joachimvn.ui.BoardView;
 import io.github.joachimvn.ui.GameController;
 
 import javafx.animation.*;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
@@ -36,17 +39,17 @@ public final class LandingView {
     // ── Carousel positions ────────────────────────────────────────────────────
     private record Pos3D(double tx, double ty, double rot, double sc, double op) {}
 
-    private static final Pos3D P_LEFT   = new Pos3D(-350, 24, -7.0, 0.82, 0.48);
+    private static final Pos3D P_LEFT   = new Pos3D(-350, 24, -7.0, 0.82, 0.70);
     private static final Pos3D P_CENTER = new Pos3D(0,     0,  0.0, 1.00, 1.00);
-    private static final Pos3D P_RIGHT  = new Pos3D( 350, 24,  7.0, 0.82, 0.48);
-    private static final Pos3D P_L_HOV  = new Pos3D(-350, 12, -7.0, 0.91, 0.74);
-    private static final Pos3D P_R_HOV  = new Pos3D( 350, 12,  7.0, 0.91, 0.74);
+    private static final Pos3D P_RIGHT  = new Pos3D( 350, 24,  7.0, 0.82, 0.70);
+    private static final Pos3D P_L_HOV  = new Pos3D(-350, 12, -7.0, 0.91, 0.85);
+    private static final Pos3D P_R_HOV  = new Pos3D( 350, 12,  7.0, 0.91, 0.85);
     private static final double EXPAND_DRIFT = 22;
     private static final Pos3D[] SLOTS = { P_LEFT, P_CENTER, P_RIGHT };
 
     // ── Durations ─────────────────────────────────────────────────────────────
     private static final Duration DUR_ROTATE  = Duration.millis(420);
-    private static final Duration DUR_EXPAND  = Duration.millis(300);
+    private static final Duration DUR_EXPAND  = Duration.millis(420);
     private static final Duration DUR_FADE_IO = Duration.millis(110);
     private static final Duration DUR_GROW    = Duration.millis(360);
     private static final Duration DUR_HOVER   = Duration.millis(160);
@@ -65,7 +68,7 @@ public final class LandingView {
     private final StackPane arena = new StackPane();
     private List<VBox> allCards;
     /** order[slot] = card index occupying that slot (0=left, 1=centre, 2=right). */
-    private final int[] order = {0, 1, 2};
+    private final int[] order = {1, 0, 2};
     private boolean rotating = false;
     private VBox    openBody = null;
     private final Map<VBox, Timeline> rotTl  = new HashMap<>();
@@ -84,7 +87,7 @@ public final class LandingView {
         logo.setFitWidth(310);
         logo.setSmooth(true);
 
-        VBox[] play = card(FontAwesomeSolid.CHESS_BOARD, "PLAY",     "Local or vs AI",    ACC_PLAY, "landing-card-play");
+        VBox[] play = card(FontAwesomeSolid.PLAY,        "PLAY",     "Local or vs AI",    ACC_PLAY, "landing-card-play");
         VBox[] sim  = card(FontAwesomeSolid.ROBOT,       "SIMULATE", "Watch AIs compete", ACC_SIM,  "landing-card-sim");
         VBox[] set  = card(FontAwesomeSolid.COG,         "SETTINGS", "Preferences",       ACC_SET,  "landing-card-set");
 
@@ -109,6 +112,17 @@ public final class LandingView {
         bringCenterFront();
         wireCarousel();
 
+        // Arrow keys navigate the carousel when the landing is visible
+        root.sceneProperty().addListener((obs, ov, sc) -> {
+            if (sc != null) {
+                sc.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+                    if (!root.isVisible() || rotating) return;
+                    if      (e.getCode() == KeyCode.LEFT)  { onCardClick(order[0]); e.consume(); }
+                    else if (e.getCode() == KeyCode.RIGHT) { onCardClick(order[2]); e.consume(); }
+                });
+            }
+        });
+
         // Auto-expand the initial centre card once it has been laid out
         VBox initialCenter = allCards.get(order[1]);
         initialCenter.heightProperty().addListener(new ChangeListener<Number>() {
@@ -132,11 +146,13 @@ public final class LandingView {
 
         VBox page = new VBox(48, logo, arena);
         page.setAlignment(Pos.TOP_CENTER);
-        page.setPadding(new Insets(0, 40, 64, 40));
+        page.setPadding(new Insets(64, 40, 64, 40));
         page.setMaxWidth(1280);
         page.setMaxHeight(Region.USE_PREF_SIZE);
 
         StackPane centred = new StackPane(page);
+        // TOP_CENTER: the page is anchored at the top so card expansion only
+        // moves the bottom edge — CENTER would shift the whole page upward.
         centred.setAlignment(Pos.CENTER);
 
         ScrollPane scroll = new ScrollPane(centred);
@@ -197,16 +213,17 @@ public final class LandingView {
         System.arraycopy(nw, 0, order, 0, 3);
 
         rotating = true;
+
+        // Bring incoming card to front before animation starts — no z-order snap at landing
+        bringCenterFront();
+
         for (int p = 0; p < 3; p++) animTo(allCards.get(order[p]), SLOTS[p]);
 
         // Expand incoming card immediately — it grows while sliding to centre
         VBox cc = allCards.get(order[1]);
         expandBody(cc, (VBox) cc.getChildren().get(1));
 
-        new Timeline(new KeyFrame(DUR_ROTATE, e -> {
-            bringCenterFront();
-            rotating = false;
-        })).play();
+        new Timeline(new KeyFrame(DUR_ROTATE, e -> rotating = false)).play();
     }
 
     private void animTo(VBox c, Pos3D pos) {
@@ -295,9 +312,11 @@ public final class LandingView {
             new KeyValue(cardClip.heightProperty(), fHeaderH + fh,   EASE)));
         open.setOnFinished(e -> {
             body.setClip(null);
-            card.setClip(null);
             body.setPrefHeight(Region.USE_COMPUTED_SIZE);
             bodyTl.remove(body);
+            // Defer card clip removal by one pulse so USE_COMPUTED_SIZE layout
+            // settles before the clip is gone — prevents a last-frame height snap.
+            Platform.runLater(() -> card.setClip(null));
         });
         bodyTl.put(body, open);
         open.play();
@@ -330,7 +349,6 @@ public final class LandingView {
         close.setOnFinished(e -> {
             body.setClip(null);
             card.setClip(null);
-            body.setPrefHeight(Region.USE_COMPUTED_SIZE);
             body.setManaged(false);
             body.setVisible(false);
             bodyTl.remove(body);
@@ -394,15 +412,12 @@ public final class LandingView {
 
     private static VBox[] card(FontAwesomeSolid icon, String title,
                                 String sub, String accent, String styleClass) {
-        FontIcon fg = new FontIcon(icon);
-        fg.setIconSize(26); fg.setIconColor(Color.web(accent));
-
         Label tl = new Label(title); tl.getStyleClass().add("landing-card-title");
         Label sl = new Label(sub);   sl.getStyleClass().add("landing-card-sub");
         VBox txt = new VBox(7, tl, sl);
         HBox.setHgrow(txt, Priority.ALWAYS);
 
-        HBox fore = new HBox(20, fg, txt);
+        HBox fore = new HBox(txt);
         fore.setAlignment(Pos.CENTER_LEFT);
 
         FontIcon wm = new FontIcon(icon);
@@ -477,30 +492,26 @@ public final class LandingView {
     private void populateSimulate(VBox body, GameController ctrl, BoardView board,
                                    Consumer<Boolean> flipSelected, Runnable onTournament) {
         ToggleGroup tabs = new ToggleGroup();
-        ToggleButton tourTab = tabBtn("Tournament", tabs);
         ToggleButton oneTab  = tabBtn("1 vs 1",     tabs);
-
-        Button launchTour = actionBtn("Launch Tournament", ACC_SIM);
-        VBox tourPanel = new VBox(launchTour);
-        tourPanel.setPadding(new Insets(18, 0, 0, 0));
+        ToggleButton tourTab = tabBtn("Tournament", tabs);
 
         ComboBox<Difficulty> s1 = combo(), s2 = combo();
         if (s2.getItems().size() > 1) s2.getSelectionModel().select(1);
         Button startMatch = actionBtn("Start Match", ACC_SIM);
         VBox onePanel = new VBox(12, cfgLabel("RED AI"), s1, cfgLabel("BLUE AI"), s2, startMatch);
         onePanel.setPadding(new Insets(18, 0, 0, 0));
-        onePanel.setManaged(false); onePanel.setVisible(false); onePanel.setOpacity(0);
 
-        tourTab.setSelected(true);
+        Button launchTour = actionBtn("Launch Tournament", ACC_SIM);
+        VBox tourPanel = new VBox(launchTour);
+        tourPanel.setPadding(new Insets(18, 0, 0, 0));
+        tourPanel.setManaged(false); tourPanel.setVisible(false); tourPanel.setOpacity(0);
+
+        oneTab.setSelected(true);
         tabs.selectedToggleProperty().addListener((o, ov, v) -> {
-            if (v == tourTab) switchTab(body, onePanel, tourPanel);
-            else              switchTab(body, tourPanel, onePanel);
+            if (v == oneTab) switchTab(body, tourPanel, onePanel);
+            else             switchTab(body, onePanel, tourPanel);
         });
 
-        launchTour.setOnAction(e -> {
-            root.setVisible(false);
-            if (onTournament != null) onTournament.run();
-        });
         startMatch.setOnAction(e -> {
             Difficulty d1 = s1.getValue(), d2 = s2.getValue();
             ctrl.startGame(d1.createStrategy(Player.ONE), d2.createStrategy(Player.TWO),
@@ -508,8 +519,12 @@ public final class LandingView {
             board.setFlipped(false); flipSelected.accept(false);
             exitToGame(() -> {});
         });
+        launchTour.setOnAction(e -> {
+            root.setVisible(false);
+            if (onTournament != null) onTournament.run();
+        });
 
-        body.getChildren().addAll(tabRow(tourTab, oneTab), tourPanel, onePanel);
+        body.getChildren().addAll(tabRow(oneTab, tourTab), onePanel, tourPanel);
     }
 
     // ── Body content: Settings ────────────────────────────────────────────────
