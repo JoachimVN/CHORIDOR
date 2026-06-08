@@ -315,6 +315,11 @@
     -fx-background-color: #1A1D2A;
 }
 
+.titled-pane {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
 .titled-pane > .title .label {
     -fx-text-fill: #8890A8;
     -fx-font-size: 13px;

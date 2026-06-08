@@ -288,8 +288,8 @@ public final class TournamentView {
                 int[] wr = runner.getResults().get(winner);
                 String pct = (wr == null || wr[0] + wr[1] == 0) ? ""
                     : String.format(" (%d%%)", (int) Math.round(100.0 * wr[0] / (wr[0] + wr[1])));
-                recentResults.add(0, "  " + winner.sample().displayName()
-                    + "  beat  " + loser.sample().displayName() + pct);
+                recentResults.add(0, winner.sample().displayName()
+                    + " beat " + loser.sample().displayName() + pct);
                 if (recentResults.size() > MAX_RESULTS)
                     recentResults.remove(recentResults.size() - 1);
             },
@@ -363,7 +363,7 @@ public final class TournamentView {
         VBox statsBox = new VBox(6);
 
         String[] rankColors = {"#B8960C", "#8896A0", "#8B6040"};
-        String[] rankNames  = {"  1st", "  2nd", "  3rd"};
+        String[] rankNames  = {"1st", "2nd", "3rd"};
         HBox podiumRow = new HBox(20);
         for (int i = 0; i < Math.min(3, tableItems.size()); i++) {
             Difficulty d = tableItems.get(i);
@@ -378,9 +378,15 @@ public final class TournamentView {
             rank.setStyle("-fx-text-fill: " + rankColors[i] + "; -fx-font-size: 11px; -fx-font-weight: bold;");
             Label name = new Label(d.sample().displayName());
             name.setStyle("-fx-text-fill: " + rankColors[i] + "; -fx-font-size: 15px; -fx-font-weight: bold;");
-            Label record = new Label(w + "W  " + l + "L  " + pct);
-            record.setStyle("-fx-text-fill: #606880; -fx-font-size: 12px;");
-            card.getChildren().addAll(rank, name, record);
+            Label wLbl = new Label(w + "W");
+            wLbl.setStyle("-fx-text-fill: #5ABF78; -fx-font-size: 12px; -fx-font-weight: bold;");
+            Label lLbl = new Label(l + "L");
+            lLbl.setStyle("-fx-text-fill: #C8706A; -fx-font-size: 12px; -fx-font-weight: bold;");
+            Label pctLbl = new Label(pct);
+            pctLbl.setStyle("-fx-text-fill: #606880; -fx-font-size: 12px;");
+            HBox recordRow = new HBox(6, wLbl, lLbl, pctLbl);
+            recordRow.setAlignment(Pos.CENTER_LEFT);
+            card.getChildren().addAll(rank, name, recordRow);
             podiumRow.getChildren().add(card);
         }
         statsBox.getChildren().add(podiumRow);
@@ -464,28 +470,45 @@ public final class TournamentView {
         }
     }
 
-    /** A card showing a notable game's board position + stats. */
+    /** A card showing a notable game's board position + stats. Canvas scales to fill card width. */
     private VBox notableGameCard(GameRecord rec, String title, String stat, String accentColor) {
         Label titleLbl = new Label(title);
-        titleLbl.setStyle("-fx-text-fill: " + accentColor + "; -fx-font-size: 11px; -fx-font-weight: bold;");
+        titleLbl.setStyle("-fx-text-fill: " + accentColor + "; -fx-font-size: 10px; -fx-font-weight: bold; -fx-letter-spacing: 1;");
 
         String d1Name = rec.d1().sample().displayName();
         String d2Name = rec.d2().sample().displayName();
-        Label matchupLbl = new Label(abbrev(d1Name) + "  vs  " + abbrev(d2Name));
-        matchupLbl.setStyle("-fx-text-fill: #8890A8; -fx-font-size: 12px;");
+        Label d1Lbl  = new Label(abbrev(d1Name));
+        d1Lbl.setStyle("-fx-text-fill: #9E4A40; -fx-font-size: 13px; -fx-font-weight: bold;");
+        Label vsLbl  = new Label("vs");
+        vsLbl.setStyle("-fx-text-fill: #3A3F58; -fx-font-size: 11px;");
+        Label d2Lbl  = new Label(abbrev(d2Name));
+        d2Lbl.setStyle("-fx-text-fill: #3E68A8; -fx-font-size: 13px; -fx-font-weight: bold;");
+        HBox matchupRow = new HBox(6, d1Lbl, vsLbl, d2Lbl);
+        matchupRow.setAlignment(Pos.CENTER_LEFT);
 
-        String winnerName = rec.winner() != null ? rec.winner().sample().displayName() : "—";
+        String winnerName  = rec.winner() != null ? rec.winner().sample().displayName() : "—";
         String winnerColor = rec.winner() == rec.d1() ? "#9E4A40" : "#3E68A8";
-        Label winnerLbl = new Label("Winner: " + winnerName + "  ·  " + stat);
-        winnerLbl.setStyle("-fx-text-fill: " + winnerColor + "; -fx-font-size: 12px;");
+        Label statLbl   = new Label(stat);
+        statLbl.setStyle("-fx-text-fill: #3A3F58; -fx-font-size: 11px;");
+        Label winnerLbl = new Label(abbrev(winnerName));
+        winnerLbl.setStyle("-fx-text-fill: " + winnerColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
+        HBox winnerRow = new HBox(6, winnerLbl, statLbl);
+        winnerRow.setAlignment(Pos.CENTER_LEFT);
 
         Canvas canvas = new Canvas(SUMMARY_BOARD_PX, SUMMARY_BOARD_PX);
-        drawBoard(canvas, rec.finalState(), rec.wallOwners());
 
-        VBox card = new VBox(6, titleLbl, matchupLbl, winnerLbl, canvas);
+        VBox card = new VBox(5, titleLbl, matchupRow, winnerRow, canvas);
         card.setPadding(new Insets(12));
         card.setStyle("-fx-background-color: #13151F; -fx-border-color: " + accentColor
                 + "; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4;");
+
+        card.widthProperty().addListener((obs, oldW, newW) -> {
+            double size = Math.max(80, Math.min(380, newW.doubleValue() - 24));
+            canvas.setWidth(size);
+            canvas.setHeight(size);
+            drawBoard(canvas, rec.finalState(), rec.wallOwners());
+        });
+
         return card;
     }
 
@@ -513,16 +536,18 @@ public final class TournamentView {
         return row;
     }
 
-    /** A chip-styled info row for the key-stats section. */
+    /** An info row with a colored left accent line for the key-stats section. */
     private HBox statChip(String label, String value, String bg, String fg) {
-        Label key = new Label(label);
-        key.setStyle("-fx-text-fill: " + fg + "; -fx-font-size: 11px; -fx-font-weight: bold;"
-                + " -fx-background-color: " + bg + "; -fx-padding: 3 10 3 10; -fx-background-radius: 3;");
-        key.setMinWidth(90);
+        Label key = new Label(label.toUpperCase());
+        key.setStyle("-fx-text-fill: " + fg + "; -fx-font-size: 10px; -fx-font-weight: bold; -fx-min-width: 86px;");
         Label val = new Label(value);
-        val.setStyle("-fx-text-fill: #8890A8; -fx-font-size: 12px;");
-        HBox row = new HBox(12, key, val);
+        val.setStyle("-fx-text-fill: #7880A0; -fx-font-size: 12px;");
+        HBox row = new HBox(14, key, val);
         row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(5, 12, 5, 14));
+        row.setStyle("-fx-background-color: " + bg + "44;"
+                + " -fx-border-color: " + fg + " transparent transparent transparent;"
+                + " -fx-border-width: 0 0 0 3;");
         return row;
     }
 
@@ -805,14 +830,14 @@ public final class TournamentView {
         StringBuilder sb = new StringBuilder();
         sb.append("CHORIDOR TOURNAMENT RESULTS\n")
           .append(strategies.size()).append(" strategies · ").append(total).append(" games\n\n");
-        sb.append(String.format("%-4s  %-16s  %3s  %3s  %5s%n", "#", "Strategy", "W", "L", "Win%"));
-        sb.append("─".repeat(40)).append("\n");
+        sb.append(String.format("%-4s  %-18s  %5s  %5s  %5s%n", "#", "Strategy", "+WINS", "-LOSS", "Win%"));
+        sb.append("─".repeat(46)).append("\n");
         for (int i = 0; i < tableItems.size(); i++) {
             Difficulty d = tableItems.get(i);
             int[] wr = res.get(d);
             int w = wr == null ? 0 : wr[0], l = wr == null ? 0 : wr[1];
             String pct = (w+l == 0) ? "—" : String.format("%.0f%%", 100.0*w/(w+l));
-            sb.append(String.format("%-4d  %-16s  %3d  %3d  %5s%n", i+1, d.sample().displayName(), w, l, pct));
+            sb.append(String.format("%-4d  %-18s  %5d  %5d  %5s%n", i+1, d.sample().displayName(), w, l, pct));
         }
         sb.append("\n\nHEAD-TO-HEAD BREAKDOWN\n").append("─".repeat(40)).append("\n");
         for (Difficulty d : tableItems) {
