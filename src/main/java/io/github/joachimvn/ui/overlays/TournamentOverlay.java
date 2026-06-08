@@ -109,7 +109,7 @@ public final class TournamentOverlay {
             progressBar.setProgress((double) done / t);
             progressLabel.setText(done + " / " + t);
             resort();
-        }, () -> {
+        }, (winner, loser) -> { /* no-op: TournamentOverlay has no results feed */ }, () -> {
             running = false;
             titleLabel.setText("TOURNAMENT RESULTS");
             actionBtn.setText("Close");

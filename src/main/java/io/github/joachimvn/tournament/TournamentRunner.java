@@ -14,41 +14,66 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
 /**
- * Runs a round-robin tournament between a set of AI strategies.
+ * Headless tournament engine with live-state exposure and pause support.
  *
- * <p>Each pair of strategies plays two games (swapping P1 and P2) so no strategy has a
- * permanent first-mover advantage. Games run in parallel on a thread pool; all result
- * mutations and progress callbacks are dispatched onto the JavaFX Application Thread via
- * {@code Platform.runLater} so callers can safely update UI in the listener.
- *
- * <p>The results map ({@link #getResults()}) is owned by the JavaFX thread and must only
- * be read from there.
+ * <p>Two threading domains:
+ * <ul>
+ *   <li><b>Worker threads</b> — run games, write to {@link #liveStates} and
+ *       {@link #liveMatchups} via ConcurrentHashMap (lock-free for the FX thread).</li>
+ *   <li><b>JavaFX thread</b> — owns {@link #results} and {@link #matchupWins}; all
+ *       mutations go through {@code Platform.runLater}.</li>
+ * </ul>
  */
 public class TournamentRunner {
 
-
     private static final int MAX_MOVES = 300;
 
-    /** [wins, losses] per strategy — FX-thread-only. */
+    // ── FX-thread-only ──────────────────────────────────────────────────────
     private final Map<Difficulty, int[]> results = new LinkedHashMap<>();
-    /** wins that strategy A scored against strategy B specifically — FX-thread-only. */
     private final Map<Difficulty, Map<Difficulty, Integer>> matchupWins = new LinkedHashMap<>();
-    private ExecutorService pool;
-    private final AtomicBoolean cancelled = new AtomicBoolean(false);
 
-    public Map<Difficulty, int[]> getResults() { return results; }
-    public Map<Difficulty, Map<Difficulty, Integer>> getMatchupWins() { return matchupWins; }
+    // ── Shared: written by workers, read by FX AnimationTimer ───────────────
+    private final ConcurrentHashMap<Integer, GameState>                       liveStates     = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, Difficulty[]>                    liveMatchups   = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> liveWallOwners = new ConcurrentHashMap<>();
+
+    // ── Control ─────────────────────────────────────────────────────────────
+    private final AtomicBoolean  cancelled   = new AtomicBoolean(false);
+    private volatile boolean     paused      = false;
+    private final AtomicInteger  nextGameId  = new AtomicInteger(0);
+    private ExecutorService      pool;
+
+    // ── Accessors ────────────────────────────────────────────────────────────
+    public Map<Difficulty, int[]>                    getResults()      { return results; }
+    public Map<Difficulty, Map<Difficulty, Integer>> getMatchupWins()  { return matchupWins; }
+    public ConcurrentHashMap<Integer, GameState>                       getLiveStates()     { return liveStates; }
+    public ConcurrentHashMap<Integer, Difficulty[]>                    getLiveMatchups()   { return liveMatchups; }
+    public ConcurrentHashMap<Integer, ConcurrentHashMap<Wall, Player>> getLiveWallOwners() { return liveWallOwners; }
+    public boolean isPaused()  { return paused; }
 
     public int totalGames(List<Difficulty> strategies) {
         int n = strategies.size();
         return n * (n - 1);
     }
 
-    /** @param onProgress called after each game (done, total) on the FX thread
-     *  @param onComplete called when all games finish on the FX thread (not called if cancelled) */
+    public void pause()  { paused = true; }
+    public void resume() { paused = false; }
+
+    /**
+     * @param onProgress   called on the FX thread after each game (done, total)
+     * @param onGameResult called on the FX thread with (winner, loser) after each game
+     * @param onComplete   called on the FX thread when all games finish (not called if cancelled)
+     */
     public void start(List<Difficulty> strategies,
-                      BiConsumer<Integer, Integer> onProgress, Runnable onComplete) {
+                      BiConsumer<Integer, Integer>     onProgress,
+                      BiConsumer<Difficulty, Difficulty> onGameResult,
+                      Runnable                          onComplete) {
         cancelled.set(false);
+        paused = false;
+        liveStates.clear();
+        liveMatchups.clear();
+        liveWallOwners.clear();
+        liveWallOwners.clear();
         results.clear();
         matchupWins.clear();
         for (Difficulty a : strategies) {
@@ -72,7 +97,8 @@ public class TournamentRunner {
         for (Difficulty[] matchup : matchups) {
             pool.submit(() -> {
                 if (cancelled.get()) return;
-                Difficulty winner = playGame(matchup[0], matchup[1]);
+                int gameId = nextGameId.getAndIncrement();
+                Difficulty winner = playGame(gameId, matchup[0], matchup[1]);
                 int done = completed.incrementAndGet();
                 Platform.runLater(() -> {
                     if (cancelled.get()) return;
@@ -81,6 +107,7 @@ public class TournamentRunner {
                         results.get(winner)[0]++;
                         results.get(loser)[1]++;
                         matchupWins.get(winner).merge(loser, 1, Integer::sum);
+                        onGameResult.accept(winner, loser);
                     }
                     onProgress.accept(done, total);
                     if (done == total) onComplete.run();
@@ -92,7 +119,11 @@ public class TournamentRunner {
 
     public void cancel() {
         cancelled.set(true);
+        paused = false;
         if (pool != null) pool.shutdownNow();
+        liveStates.clear();
+        liveMatchups.clear();
+        liveWallOwners.clear();
     }
 
     private static List<Difficulty[]> buildMatchups(List<Difficulty> strategies) {
@@ -102,33 +133,53 @@ public class TournamentRunner {
                 if (a != b) matchups.add(new Difficulty[]{a, b});
             }
         }
-        Collections.shuffle(matchups); // random order → fairer live standings
+        Collections.shuffle(matchups);
         return matchups;
     }
 
-    static Difficulty playGame(Difficulty d1, Difficulty d2) {
-        GameEngine engine = new GameEngine();
+    private Difficulty playGame(int gameId, Difficulty d1, Difficulty d2) {
+        GameEngine  engine      = new GameEngine();
         PathChecker pathChecker = new PathChecker();
         var s1 = d1.createStrategy(Player.ONE);
         var s2 = d2.createStrategy(Player.TWO);
         GameState state = new GameState();
+        ConcurrentHashMap<Wall, Player> wallOwners = new ConcurrentHashMap<>();
+        liveStates.put(gameId, state);
+        liveMatchups.put(gameId, new Difficulty[]{d1, d2});
+        liveWallOwners.put(gameId, wallOwners);
 
-        for (int moves = 0; moves < MAX_MOVES; moves++) {
-            if (engine.isGameOver(state)) break;
-            Player current = state.getCurrentPlayer();
-            var strategy = current == Player.ONE ? s1 : s2;
-            try {
-                state = engine.applyMove(state, strategy.decide(state));
-            } catch (Exception e) {
-                return current == Player.ONE ? d2 : d1; // forfeit on error
+        try {
+            for (int moves = 0; moves < MAX_MOVES; moves++) {
+                // Pause loop
+                while (paused && !cancelled.get()) {
+                    try { Thread.sleep(50); } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+                if (cancelled.get()) return null;
+                if (engine.isGameOver(state)) break;
+
+                Player current = state.getCurrentPlayer();
+                var strategy = current == Player.ONE ? s1 : s2;
+                try {
+                    var move = strategy.decide(state);
+                    if (move instanceof WallMove wm) wallOwners.put(wm.wall(), current);
+                    state = engine.applyMove(state, move);
+                    liveStates.put(gameId, state);
+                } catch (Exception e) {
+                    return current == Player.ONE ? d2 : d1;
+                }
             }
+
+            Optional<Player> winner = engine.getWinner(state);
+            if (winner.isPresent()) return winner.get() == Player.ONE ? d1 : d2;
+            return pathChecker.shortestPathWithJumps(state, Player.ONE)
+                 <= pathChecker.shortestPathWithJumps(state, Player.TWO) ? d1 : d2;
+        } finally {
+            liveStates.remove(gameId);
+            liveMatchups.remove(gameId);
+            liveWallOwners.remove(gameId);
         }
-
-        Optional<Player> winner = engine.getWinner(state);
-        if (winner.isPresent()) return winner.get() == Player.ONE ? d1 : d2;
-
-        // Move-limit tie-break: closer player wins
-        return pathChecker.shortestPathWithJumps(state, Player.ONE)
-             <= pathChecker.shortestPathWithJumps(state, Player.TWO) ? d1 : d2;
     }
 }

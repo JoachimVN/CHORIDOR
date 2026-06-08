@@ -8,7 +8,7 @@ import io.github.joachimvn.ui.bars.TopBar;
 import io.github.joachimvn.ui.common.UiScale;
 import io.github.joachimvn.ui.overlays.GameOverOverlay;
 import io.github.joachimvn.ui.overlays.SetupOverlay;
-import io.github.joachimvn.ui.overlays.TournamentOverlay;
+import io.github.joachimvn.ui.tournament.TournamentView;
 
 import javafx.application.Application;
 import javafx.beans.binding.DoubleBinding;
@@ -57,7 +57,7 @@ public class App extends Application {
         Runnable[] startTournament = {null};
         SetupOverlay setup = new SetupOverlay(ctrl, board, bottomBar::setFlipSelected,
             () -> { if (startTournament[0] != null) startTournament[0].run(); });
-        TournamentOverlay tournament = new TournamentOverlay(() -> setup.getRoot().setVisible(true));
+        TournamentView tournament = new TournamentView(() -> setup.getRoot().setVisible(true));
         startTournament[0] = tournament::start;
 
         GameOverOverlay gameOver = new GameOverOverlay(ctrl, setup.getRoot());
@@ -96,14 +96,14 @@ public class App extends Application {
                                             tournament.getRoot());
 
         Scene scene = new Scene(sceneRoot);
-        scene.getStylesheets().add(
-            getClass().getResource("/css/app.css").toExternalForm()
-        );
+        for (String sheet : new String[]{"base", "chrome", "setup", "game-over", "tournament"}) {
+            scene.getStylesheets().add(getClass().getResource("/css/" + sheet + ".css").toExternalForm());
+        }
         scene.addEventFilter(KeyEvent.KEY_PRESSED,
             e -> handleKey(e, stage, ctrl, gameOver));
 
         stage.getIcons().add(new Image(getClass().getResourceAsStream(
-            "/images/logos/Choridor_Logo_Square_White.png")));
+            "/images/logos/CHORIDOR_Logo_Square.png")));
         stage.setTitle("CHORIDOR");
         stage.setScene(scene);
         stage.setResizable(true);

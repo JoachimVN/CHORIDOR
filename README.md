@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="src/main/resources/images/logos/Choridor_Logo.png" alt="Choridor Title Logo"/>
+    <img src="src/main/resources/images/logos/CHORIDOR_Logo.png" alt="CHORIDOR Title Logo"/>
 </p>
 
 <p align="center">
@@ -18,20 +18,20 @@
     <a href="https://github.com/JoachimVN/CHORIDOR/commits/main">Commits</a>
 </p>
 
-Choridor is a desktop implementation of Quoridor, which is a two-player strategy board game played on a 9×9 grid.
+CHORIDOR is a desktop implementation of Quoridor, which is a two-player strategy board game played on a 9×9 grid.
 Each player races to reach the opposite side of the board while placing walls to block their opponent's path.
 Walls must never completely seal off a player's route, keeping every game solvable until the final move.
 
 ## Screenshots
 
 <p align="center">
-    <img src="docs/screenshots/Board_Example.png" alt="Choridor Board"/>
+    <img src="docs/images/screenshots/Board_Example.png" alt="CHORIDOR Board"/>
     <br>
     <em>In-game board</em>
 </p>
 
 <p align="center">
-    <img src="docs/screenshots/Setup_Example.png" alt="Setup screen with AI vs AI"/>
+    <img src="docs/images/screenshots/Setup_Example.png" alt="Setup screen with AI vs AI"/>
     <br>
     <em>Setup screen</em>
 </p>
@@ -109,10 +109,10 @@ Pushing a `v*` tag triggers the release workflow, which builds and uploads all d
 
 | Asset | Platform |
 | --- | --- |
-| `Choridor-<version>-windows.exe` | Windows installer (bundles JRE) |
-| `Choridor-<version>-linux.zip` | Linux app-image |
-| `Choridor-<version>-macos.dmg` | macOS disk image (Apple Silicon) |
-| `Choridor-<version>-portable.jar` | Portable fat JAR (all platforms) |
+| `CHORIDOR-<version>-windows.exe` | Windows installer (bundles JRE) |
+| `CHORIDOR-<version>-linux.zip` | Linux app-image |
+| `CHORIDOR-<version>-macos.dmg` | macOS disk image (Apple Silicon) |
+| `CHORIDOR-<version>-portable.jar` | Portable fat JAR (all platforms) |
 
 ### Portable JAR (cross-platform)
 
@@ -130,7 +130,7 @@ Requires [WiX Toolset v3](https://wixtoolset.org/) installed and on PATH.
 mvn package -Pexe
 ```
 
-Produces a Windows installer at `target/dist/Choridor-<version>.exe`. The installer bundles a JRE — recipients need nothing pre-installed.
+Produces a Windows installer at `target/dist/CHORIDOR-<version>.exe`. The installer bundles a JRE — recipients need nothing pre-installed.
 
 ### Linux app-image
 
@@ -138,7 +138,7 @@ Produces a Windows installer at `target/dist/Choridor-<version>.exe`. The instal
 mvn package -Plinux
 ```
 
-Produces a zipped app-image at `target/dist/Choridor-<version>-linux.zip`. Extract and run `Choridor/bin/Choridor`.
+Produces a zipped app-image at `target/dist/CHORIDOR-<version>-linux.zip`. Extract and run `CHORIDOR/bin/CHORIDOR`.
 
 ### macOS DMG (Apple Silicon)
 
@@ -146,7 +146,7 @@ Produces a zipped app-image at `target/dist/Choridor-<version>-linux.zip`. Extra
 mvn package -Pmac
 ```
 
-Produces a disk image at `target/dist/Choridor-<version>-macos.dmg`. Intel Mac users should replace the `mac-aarch64` classifier with `mac` in the `mac` profile in `pom.xml`.
+Produces a disk image at `target/dist/CHORIDOR-<version>-macos.dmg`. Intel Mac users should replace the `mac-aarch64` classifier with `mac` in the `mac` profile in `pom.xml`.
 
 ## Project Structure
 
