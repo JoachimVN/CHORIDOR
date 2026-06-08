@@ -18,6 +18,12 @@ final class TournamentSummary {
 
     private static final double SUMMARY_BOARD_PX = 260;
 
+    // Shared accent colours used in both notable-game cards and stat chips
+    private static final String COLOR_GOLD = "#B8960C";
+    private static final String COLOR_BLUE = "#3E68A8";
+    private static final String COLOR_RED  = "#9E4A40";
+    private static final String FX_FILL    = "-fx-text-fill: ";
+
     private TournamentSummary() {}
 
     /**
@@ -31,102 +37,148 @@ final class TournamentSummary {
                          List<Difficulty> tableItems, List<Difficulty> strategies,
                          long durationMs) {
         summaryBox.getChildren().clear();
-        Map<Difficulty, int[]> res = runner.getResults();
 
-        // ── Notable Games row ─────────────────────────────────────────────────
-        GameRecord best     = runner.getBestGame();
-        GameRecord shortest = runner.getShortestGame();
-        GameRecord longest  = runner.getLongestGame();
-
-        if (best != null || shortest != null || longest != null) {
-            HBox notableRow = new HBox(12);
-            notableRow.setAlignment(Pos.TOP_LEFT);
-            if (best     != null) addNotableCard(notableRow, best,     "BEST GAME",
-                    best.moveCount() + " moves · " + best.wallCount() + " walls · " + best.loserFinalDist() + "-step finish", "#B8960C");
-            if (shortest != null) addNotableCard(notableRow, shortest, "SHORTEST GAME",
-                    shortest.moveCount() + " moves",  "#3E68A8");
-            if (longest  != null) addNotableCard(notableRow, longest,  "LONGEST GAME",
-                    longest.moveCount()  + " moves",  "#9E4A40");
-
-            notableRow.widthProperty().addListener((obs, oldW, newW) -> {
-                int n = notableRow.getChildren().size();
-                if (n == 0 || newW.doubleValue() < 1) return;
-                double boardSize = (newW.doubleValue() - 12.0 * (n - 1)) / n - 24;
-                if (boardSize < 1) return;
-                double totalH = boardSize + 92;
-                notableRow.setMinHeight(totalH);
-                notableRow.setPrefHeight(totalH);
-            });
-
+        HBox notableRow = buildNotableRow(runner);
+        if (notableRow != null) {
             summaryBox.getChildren().add(notableRow);
         }
 
         summaryBox.getChildren().add(separator());
+        summaryBox.getChildren().add(buildStatsBox(runner, tableItems, strategies, durationMs));
+        summaryBox.getChildren().add(separator());
 
-        // ── Podium + key stats ────────────────────────────────────────────────
-        VBox statsBox = new VBox(6);
+        Label h2hTitle = new Label("HEAD-TO-HEAD BREAKDOWN");
+        h2hTitle.getStyleClass().add("tournament-section-title");
+        summaryBox.getChildren().add(h2hTitle);
 
-        String[] rankColors = {"#B8960C", "#8896A0", "#8B6040"};
+        Map<Difficulty, int[]> res = runner.getResults();
+        Map<Difficulty, Map<Difficulty, Integer>> mw = runner.getMatchupWins();
+        for (Difficulty d : tableItems) {
+            summaryBox.getChildren().add(buildH2hPane(d, mw, tableItems, res));
+        }
+    }
+
+    // ── Section builders ──────────────────────────────────────────────────────
+
+    /** Returns the notable-games row, or {@code null} if no games were recorded. */
+    private static HBox buildNotableRow(TournamentRunner runner) {
+        GameRecord best     = runner.getBestGame();
+        GameRecord shortest = runner.getShortestGame();
+        GameRecord longest  = runner.getLongestGame();
+        if (best == null && shortest == null && longest == null) return null;
+
+        HBox row = new HBox(12);
+        row.setAlignment(Pos.TOP_LEFT);
+        if (best     != null) addNotableCard(row, best,     "BEST GAME",
+                best.moveCount() + " moves · " + best.wallCount() + " walls · " + best.loserFinalDist() + "-step finish", COLOR_GOLD);
+        if (shortest != null) addNotableCard(row, shortest, "SHORTEST GAME",
+                shortest.moveCount() + " moves", COLOR_BLUE);
+        if (longest  != null) addNotableCard(row, longest,  "LONGEST GAME",
+                longest.moveCount()  + " moves", COLOR_RED);
+
+        row.widthProperty().addListener((obs, oldW, newW) -> {
+            int n = row.getChildren().size();
+            if (n == 0 || newW.doubleValue() < 1) return;
+            double boardSize = (newW.doubleValue() - 12.0 * (n - 1)) / n - 24;
+            if (boardSize < 1) return;
+            row.setMinHeight(boardSize + 92);
+            row.setPrefHeight(boardSize + 92);
+        });
+        return row;
+    }
+
+    private static VBox buildStatsBox(TournamentRunner runner, List<Difficulty> tableItems,
+                                       List<Difficulty> strategies, long durationMs) {
+        Map<Difficulty, int[]> res = runner.getResults();
+        Map<Difficulty, Map<Difficulty, Integer>> mw = runner.getMatchupWins();
+        VBox box = new VBox(6);
+        box.getChildren().add(buildPodiumRow(tableItems, res));
+
+        HBox finisher = buildFinisherChip(runner, tableItems);
+        if (finisher != null) box.getChildren().add(finisher);
+
+        HBox cycleStat = buildCycleStatChip(mw, tableItems);
+        if (cycleStat != null) box.getChildren().add(cycleStat);
+
+        box.getChildren().add(statChip("Duration",
+                formatDuration(durationMs) + "  ·  " + strategies.size()
+                + " strategies  ·  " + runner.totalGames(strategies) + " games",
+                "#1A1A2A", "#8890A8"));
+        return box;
+    }
+
+    private static HBox buildPodiumRow(List<Difficulty> tableItems, Map<Difficulty, int[]> res) {
+        String[] rankColors = {COLOR_GOLD, "#8896A0", "#8B6040"};
         String[] rankNames  = {"1st", "2nd", "3rd"};
         HBox podiumRow = new HBox(20);
         for (int i = 0; i < Math.min(3, tableItems.size()); i++) {
             Difficulty d = tableItems.get(i);
             int[] wr = res.getOrDefault(d, new int[]{0, 0});
-            int w = wr[0], l = wr[1];
+            int w = wr[0];
+            int l = wr[1];
             String pct = (w + l == 0) ? "—" : (int) Math.round(100.0 * w / (w + l)) + "%";
             VBox card = new VBox(3);
             card.setPadding(new Insets(8, 14, 8, 14));
             card.setStyle("-fx-background-color: #13151F; -fx-border-color: #1E2130; "
                     + "-fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4;");
             Label rank = new Label(rankNames[i]);
-            rank.setStyle("-fx-text-fill: " + rankColors[i] + "; -fx-font-size: 11px; -fx-font-weight: bold;");
+            rank.setStyle(FX_FILL + rankColors[i] + "; -fx-font-size: 11px; -fx-font-weight: bold;");
             Label name = new Label(d.sample().displayName());
-            name.setStyle("-fx-text-fill: " + rankColors[i] + "; -fx-font-size: 15px; -fx-font-weight: bold;");
+            name.setStyle(FX_FILL + rankColors[i] + "; -fx-font-size: 15px; -fx-font-weight: bold;");
             Label wLbl = new Label(w + "W");
-            wLbl.setStyle("-fx-text-fill: #2e8f4b; -fx-font-size: 12px; -fx-font-weight: bold;");
+            wLbl.setStyle(FX_FILL + "#2e8f4b; -fx-font-size: 12px; -fx-font-weight: bold;");
             Label lLbl = new Label(l + "L");
-            lLbl.setStyle("-fx-text-fill: #8f2e2e; -fx-font-size: 12px; -fx-font-weight: bold;");
+            lLbl.setStyle(FX_FILL + "#8f2e2e; -fx-font-size: 12px; -fx-font-weight: bold;");
             Label pctLbl = new Label(pct);
-            pctLbl.setStyle("-fx-text-fill: #606880; -fx-font-size: 12px;");
+            pctLbl.setStyle(FX_FILL + "#606880; -fx-font-size: 12px;");
             HBox recordRow = new HBox(6, wLbl, lLbl, pctLbl);
             recordRow.setAlignment(Pos.CENTER_LEFT);
             card.getChildren().addAll(rank, name, recordRow);
             podiumRow.getChildren().add(card);
         }
-        statsBox.getChildren().add(podiumRow);
+        return podiumRow;
+    }
 
-        // ── Fastest / Slowest finisher ────────────────────────────────────────
+    /** Fastest or slowest average finisher; picks whichever deviates more from the mean. */
+    private static HBox buildFinisherChip(TournamentRunner runner, List<Difficulty> tableItems) {
         var moveTotals = runner.getStrategyMoveTotals();
-        Difficulty fastest = null, slowest = null;
-        double fastestAvg = Double.MAX_VALUE, slowestAvg = 0;
-        double totalMoveSum = 0; int totalMoveCount = 0;
+        Difficulty fastest = null;
+        Difficulty slowest = null;
+        double fastestAvg = Double.MAX_VALUE;
+        double slowestAvg = 0;
+        double totalMoveSum = 0;
+        int totalMoveCount = 0;
         for (Difficulty d : tableItems) {
             long[] mt = moveTotals.get(d);
             if (mt == null || mt[1] == 0) continue;
             double avg = (double) mt[0] / mt[1];
             if (avg < fastestAvg) { fastestAvg = avg; fastest = d; }
             if (avg > slowestAvg) { slowestAvg = avg; slowest = d; }
-            totalMoveSum += mt[0]; totalMoveCount += mt[1];
+            totalMoveSum += mt[0];
+            totalMoveCount += mt[1];
         }
-        if (fastest != null && slowest != null && totalMoveCount > 0) {
-            double mean = totalMoveSum / totalMoveCount;
-            boolean showFastest = (mean - fastestAvg) >= (slowestAvg - mean);
-            if (showFastest)
-                statsBox.getChildren().add(statChip("Fastest finisher",
-                        fastest.sample().displayName() + " average " + (int) Math.round(fastestAvg) + " moves per game",
-                        "#1A2A1A", "#5ABF78"));
-            else
-                statsBox.getChildren().add(statChip("Slowest finisher",
-                        slowest.sample().displayName() + " average " + (int) Math.round(slowestAvg) + " moves per game",
-                        "#2A1A1A", "#C8706A"));
-        }
+        if (fastest == null || slowest == null || totalMoveCount == 0) return null;
 
-        // ── Cycle: biggest upset → nemesis of #1 → most dominant ─────────────
-        Map<Difficulty, Map<Difficulty, Integer>> mw = runner.getMatchupWins();
+        double mean = totalMoveSum / totalMoveCount;
+        if ((mean - fastestAvg) >= (slowestAvg - mean)) {
+            return statChip("Fastest finisher",
+                    fastest.sample().displayName() + "  avg " + (int) Math.round(fastestAvg) + " moves per game",
+                    "#1A2A1A", "#5ABF78");
+        }
+        return statChip("Slowest finisher",
+                slowest.sample().displayName() + "  avg " + (int) Math.round(slowestAvg) + " moves per game",
+                "#2A1A1A", "#C8706A");
+    }
+
+    /** Biggest upset → nemesis of #1 → most dominant — picks whichever is most interesting. */
+    private static HBox buildCycleStatChip(Map<Difficulty, Map<Difficulty, Integer>> mw,
+                                            List<Difficulty> tableItems) {
         int n = tableItems.size();
 
-        // Biggest upset: lower-ranked strategy 2-0 swept a higher-ranked one
-        int biggestGap = 0; Difficulty upsetter = null, victim = null;
+        // Biggest upset: lower-ranked swept a higher-ranked opponent
+        int biggestGap = 0;
+        Difficulty upsetter = null;
+        Difficulty victim = null;
         for (int lo = 1; lo < n; lo++) {
             Difficulty loD = tableItems.get(lo);
             Map<Difficulty, Integer> loWins = mw.get(loD);
@@ -134,14 +186,17 @@ final class TournamentSummary {
             for (int hi = 0; hi < lo; hi++) {
                 Difficulty hiD = tableItems.get(hi);
                 if (loWins.getOrDefault(hiD, 0) >= 2 && lo - hi > biggestGap) {
-                    biggestGap = lo - hi; upsetter = loD; victim = hiD;
+                    biggestGap = lo - hi;
+                    upsetter = loD;
+                    victim = hiD;
                 }
             }
         }
 
-        // Nemesis: who took the most wins off the #1 strategy
+        // Nemesis: who beat #1 the most
         Difficulty top = tableItems.get(0);
-        Difficulty nemesis = null; int nemesisWins = 0;
+        Difficulty nemesis = null;
+        int nemesisWins = 0;
         for (Difficulty d : tableItems) {
             if (d == top) continue;
             int w = mw.getOrDefault(d, Map.of()).getOrDefault(top, 0);
@@ -149,7 +204,8 @@ final class TournamentSummary {
         }
 
         // Sweep count: who 2-0'd the most opponents
-        Difficulty sweeper = null; int maxSweeps = 0;
+        Difficulty sweeper = null;
+        int maxSweeps = 0;
         for (Difficulty d : tableItems) {
             Map<Difficulty, Integer> dWins = mw.get(d);
             if (dWins == null) continue;
@@ -157,90 +213,78 @@ final class TournamentSummary {
             if (sweeps > maxSweeps) { maxSweeps = sweeps; sweeper = d; }
         }
 
-        int upsettRankThreshold = Math.max(2, n / 3);
-        if (upsetter != null && biggestGap >= upsettRankThreshold) {
-            statsBox.getChildren().add(statChip("Biggest upset",
-                    upsetter.sample().displayName() + " (#" + (tableItems.indexOf(upsetter)+1) + ")"
-                    + " swept " + victim.sample().displayName() + " (#" + (tableItems.indexOf(victim)+1) + ")",
-                    "#2A1A2A", "#9B59B6"));
-        } else if (nemesis != null && nemesisWins >= 2) {
-            statsBox.getChildren().add(statChip("Nemesis of #1",
+        if (upsetter != null && biggestGap >= Math.max(2, n / 3)) {
+            return statChip("Biggest upset",
+                    upsetter.sample().displayName() + " (#" + (tableItems.indexOf(upsetter) + 1) + ")"
+                    + " swept " + victim.sample().displayName() + " (#" + (tableItems.indexOf(victim) + 1) + ")",
+                    "#2A1A2A", "#9B59B6");
+        }
+        if (nemesis != null && nemesisWins >= 2) {
+            return statChip("Nemesis of #1",
                     nemesis.sample().displayName() + " went " + nemesisWins + "-" + (2 - nemesisWins)
                     + " vs " + top.sample().displayName(),
-                    "#2A1A1A", "#E67E22"));
-        } else if (sweeper != null && maxSweeps >= 2) {
-            statsBox.getChildren().add(statChip("Most dominant",
+                    "#2A1A1A", "#E67E22");
+        }
+        if (sweeper != null && maxSweeps >= 2) {
+            return statChip("Most dominant",
                     sweeper.sample().displayName() + " swept " + maxSweeps + " of " + (n - 1) + " opponents",
-                    "#1A1A2A", "#3E68A8"));
+                    "#1A1A2A", COLOR_BLUE);
         }
-
-        statsBox.getChildren().add(statChip("Duration",
-                formatDuration(durationMs) + "  ·  " + strategies.size()
-                + " strategies  ·  " + runner.totalGames(strategies) + " games",
-                "#1A1A2A", "#8890A8"));
-
-        summaryBox.getChildren().add(statsBox);
-        summaryBox.getChildren().add(separator());
-
-        // ── Head-to-head accordion ────────────────────────────────────────────
-        Label h2hTitle = new Label("HEAD-TO-HEAD BREAKDOWN");
-        h2hTitle.getStyleClass().add("tournament-section-title");
-        summaryBox.getChildren().add(h2hTitle);
-
-        for (Difficulty d : tableItems) {
-            int[] wr = res.getOrDefault(d, new int[]{0, 0});
-            int w = wr[0], l = wr[1];
-            String pct = (w + l == 0) ? "—" : (int) Math.round(100.0 * w / (w + l)) + "%";
-
-            VBox content = new VBox(4);
-            content.setPadding(new Insets(6, 10, 6, 10));
-            content.setStyle("-fx-background-color: #0C0E14;");
-
-            Map<Difficulty, Integer> wins = mw.get(d);
-            if (wins != null) {
-                List<Difficulty> opponents = new ArrayList<>(tableItems);
-                opponents.remove(d);
-                for (Difficulty opp : opponents) {
-                    int oppWins = wins.getOrDefault(opp, 0);
-                    content.getChildren().add(h2hRow(opp, oppWins));
-                }
-            }
-
-            TitledPane pane = new TitledPane();
-            pane.setExpanded(false);
-            pane.setAnimated(true);
-            pane.setContent(content);
-            pane.setStyle("-fx-background-color: #13151F; -fx-border-color: #1E2130;");
-            Label headerLabel = new Label(d.sample().displayName()
-                    + "     " + w + "W  " + l + "L  ·  " + pct);
-            headerLabel.setStyle("-fx-text-fill: #8890A8; -fx-font-size: 13px; -fx-font-weight: bold;");
-            pane.setGraphic(headerLabel);
-            pane.setText("");
-            summaryBox.getChildren().add(pane);
-        }
+        return null;
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    private static TitledPane buildH2hPane(Difficulty d, Map<Difficulty, Map<Difficulty, Integer>> mw,
+                                            List<Difficulty> tableItems, Map<Difficulty, int[]> res) {
+        int[] wr = res.getOrDefault(d, new int[]{0, 0});
+        int w = wr[0];
+        int l = wr[1];
+        String pct = (w + l == 0) ? "—" : (int) Math.round(100.0 * w / (w + l)) + "%";
+
+        VBox content = new VBox(4);
+        content.setPadding(new Insets(6, 10, 6, 10));
+        content.setStyle("-fx-background-color: #0C0E14;");
+        Map<Difficulty, Integer> wins = mw.get(d);
+        if (wins != null) {
+            List<Difficulty> opponents = new ArrayList<>(tableItems);
+            opponents.remove(d);
+            for (Difficulty opp : opponents) {
+                content.getChildren().add(h2hRow(opp, wins.getOrDefault(opp, 0)));
+            }
+        }
+
+        TitledPane pane = new TitledPane();
+        pane.setExpanded(false);
+        pane.setAnimated(true);
+        pane.setContent(content);
+        pane.setStyle("-fx-background-color: #13151F; -fx-border-color: #1E2130;");
+        Label headerLabel = new Label(d.sample().displayName() + "     " + w + "W  " + l + "L  ·  " + pct);
+        headerLabel.setStyle(FX_FILL + "#8890A8; -fx-font-size: 13px; -fx-font-weight: bold;");
+        pane.setGraphic(headerLabel);
+        pane.setText("");
+        return pane;
+    }
+
+    // ── Row / chip helpers ────────────────────────────────────────────────────
 
     private static void addNotableCard(HBox row, GameRecord rec, String title,
                                         String stat, String accentColor) {
         Label titleLbl = new Label(title);
-        titleLbl.setStyle("-fx-text-fill: " + accentColor + "; -fx-font-size: 10px; -fx-font-weight: bold;");
+        titleLbl.setStyle(FX_FILL + accentColor + "; -fx-font-size: 10px; -fx-font-weight: bold;");
 
         Label d1Lbl = new Label(rec.d1().sample().displayName());
-        d1Lbl.setStyle("-fx-text-fill: #9E4A40; -fx-font-size: 13px; -fx-font-weight: bold;");
+        d1Lbl.setStyle(FX_FILL + COLOR_RED + "; -fx-font-size: 13px; -fx-font-weight: bold;");
         Label vsLbl = new Label("vs");
-        vsLbl.setStyle("-fx-text-fill: #3A3F58; -fx-font-size: 11px;");
+        vsLbl.setStyle(FX_FILL + "#3A3F58; -fx-font-size: 11px;");
         Label d2Lbl = new Label(rec.d2().sample().displayName());
-        d2Lbl.setStyle("-fx-text-fill: #3E68A8; -fx-font-size: 13px; -fx-font-weight: bold;");
+        d2Lbl.setStyle(FX_FILL + COLOR_BLUE + "; -fx-font-size: 13px; -fx-font-weight: bold;");
         HBox matchupRow = new HBox(6, d1Lbl, vsLbl, d2Lbl);
         matchupRow.setAlignment(Pos.CENTER_LEFT);
 
-        String winnerColor = rec.winner() == rec.d1() ? "#9E4A40" : "#3E68A8";
+        String winnerColor = rec.winner() == rec.d1() ? COLOR_RED : COLOR_BLUE;
         Label winnerLbl = new Label(rec.winner() != null ? rec.winner().sample().displayName() : "—");
-        winnerLbl.setStyle("-fx-text-fill: " + winnerColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
+        winnerLbl.setStyle(FX_FILL + winnerColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
         Label statLbl = new Label(stat);
-        statLbl.setStyle("-fx-text-fill: #3A3F58; -fx-font-size: 11px;");
+        statLbl.setStyle(FX_FILL + "#3A3F58; -fx-font-size: 11px;");
         HBox winnerRow = new HBox(6, winnerLbl, statLbl);
         winnerRow.setAlignment(Pos.CENTER_LEFT);
 
@@ -256,16 +300,20 @@ final class TournamentSummary {
 
     private static HBox h2hRow(Difficulty opp, int wins) {
         Label oppLabel = new Label(opp.sample().displayName());
-        oppLabel.setStyle("-fx-text-fill: #606880; -fx-font-size: 12px;");
+        oppLabel.setStyle(FX_FILL + "#606880; -fx-font-size: 12px;");
         oppLabel.setMinWidth(120);
 
-        String chipBg, chipFg, chipText;
-        if (wins == 2)      { chipBg = "#1A3A1A"; chipFg = "#4CAF50"; chipText = "✓✓  2–0"; }
-        else if (wins == 1) { chipBg = "#2A2A1A"; chipFg = "#B8960C"; chipText = "✓✗  1–1"; }
-        else                { chipBg = "#3A1A1A"; chipFg = "#C8706A"; chipText = "✗✗  0–2"; }
+        String chipBg;
+        String chipFg;
+        String chipText;
+        switch (wins) {
+            case 2  -> { chipBg = "#1A3A1A"; chipFg = "#4CAF50"; chipText = "✓✓  2–0"; }
+            case 1  -> { chipBg = "#2A2A1A"; chipFg = COLOR_GOLD; chipText = "✓✗  1–1"; }
+            default -> { chipBg = "#3A1A1A"; chipFg = "#C8706A"; chipText = "✗✗  0–2"; }
+        }
 
         Label chip = new Label(chipText);
-        chip.setStyle("-fx-background-color: " + chipBg + "; -fx-text-fill: " + chipFg
+        chip.setStyle("-fx-background-color: " + chipBg + "; " + FX_FILL + chipFg
                 + "; -fx-font-size: 11px; -fx-font-weight: bold;"
                 + " -fx-padding: 2 8 2 8; -fx-background-radius: 3;");
 
@@ -278,9 +326,9 @@ final class TournamentSummary {
 
     private static HBox statChip(String label, String value, String bg, String fg) {
         Label key = new Label(label.toUpperCase());
-        key.setStyle("-fx-text-fill: " + fg + "; -fx-font-size: 10px; -fx-font-weight: bold; -fx-min-width: 86px;");
+        key.setStyle(FX_FILL + fg + "; -fx-font-size: 10px; -fx-font-weight: bold; -fx-min-width: 86px;");
         Label val = new Label(value);
-        val.setStyle("-fx-text-fill: #7880A0; -fx-font-size: 12px;");
+        val.setStyle(FX_FILL + "#7880A0; -fx-font-size: 12px;");
         HBox row = new HBox(14, key, val);
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(5, 12, 5, 14));

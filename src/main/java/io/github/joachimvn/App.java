@@ -131,17 +131,12 @@ public class App extends Application {
     }
 
     private static void handleReviewKey(KeyEvent e, GameController ctrl) {
-        KeyCode code = e.getCode();
-        if (code == KeyCode.LEFT) {
-            if (e.isShiftDown()) ctrl.reviewFirst(); else ctrl.reviewPrev();
-        } else if (code == KeyCode.RIGHT) {
-            if (e.isShiftDown()) ctrl.reviewLast(); else ctrl.reviewNext();
-        } else if (code == KeyCode.HOME) {
-            ctrl.reviewFirst();
-        } else if (code == KeyCode.END) {
-            ctrl.reviewLast();
-        } else {
-            return;
+        switch (e.getCode()) {
+            case LEFT  -> { if (e.isShiftDown()) ctrl.reviewFirst(); else ctrl.reviewPrev(); }
+            case RIGHT -> { if (e.isShiftDown()) ctrl.reviewLast();  else ctrl.reviewNext(); }
+            case HOME  -> ctrl.reviewFirst();
+            case END   -> ctrl.reviewLast();
+            default    -> { return; }
         }
         e.consume();
     }
