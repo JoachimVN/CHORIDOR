@@ -96,33 +96,84 @@ final class TournamentSummary {
         }
         statsBox.getChildren().add(podiumRow);
 
-        List<String> perfect = tableItems.stream()
-                .filter(d -> { int[] wr = res.get(d); return wr != null && wr[1] == 0 && wr[0] > 0; })
-                .map(d -> d.sample().displayName()).toList();
-        if (!perfect.isEmpty())
-            statsBox.getChildren().add(statChip("Unbeaten", String.join(", ", perfect), "#1A3A1A", "#4CAF50"));
+        // ── Fastest / Slowest finisher ────────────────────────────────────────
+        var moveTotals = runner.getStrategyMoveTotals();
+        Difficulty fastest = null, slowest = null;
+        double fastestAvg = Double.MAX_VALUE, slowestAvg = 0;
+        double totalMoveSum = 0; int totalMoveCount = 0;
+        for (Difficulty d : tableItems) {
+            long[] mt = moveTotals.get(d);
+            if (mt == null || mt[1] == 0) continue;
+            double avg = (double) mt[0] / mt[1];
+            if (avg < fastestAvg) { fastestAvg = avg; fastest = d; }
+            if (avg > slowestAvg) { slowestAvg = avg; slowest = d; }
+            totalMoveSum += mt[0]; totalMoveCount += mt[1];
+        }
+        if (fastest != null && slowest != null && totalMoveCount > 0) {
+            double mean = totalMoveSum / totalMoveCount;
+            boolean showFastest = (mean - fastestAvg) >= (slowestAvg - mean);
+            if (showFastest)
+                statsBox.getChildren().add(statChip("Fastest finisher",
+                        fastest.sample().displayName() + "  avg " + (int) Math.round(fastestAvg) + " moves per game",
+                        "#1A2A1A", "#5ABF78"));
+            else
+                statsBox.getChildren().add(statChip("Slowest finisher",
+                        slowest.sample().displayName() + "  avg " + (int) Math.round(slowestAvg) + " moves per game",
+                        "#2A1A1A", "#C8706A"));
+        }
 
-        List<String> zero = tableItems.stream()
-                .filter(d -> { int[] wr = res.get(d); return wr != null && wr[0] == 0 && wr[1] > 0; })
-                .map(d -> d.sample().displayName()).toList();
-        if (!zero.isEmpty())
-            statsBox.getChildren().add(statChip("Winless", String.join(", ", zero), "#3A1A1A", "#C8706A"));
+        // ── Cycle: biggest upset → nemesis of #1 → most dominant ─────────────
+        Map<Difficulty, Map<Difficulty, Integer>> mw = runner.getMatchupWins();
+        int n = tableItems.size();
 
-        double minGap = Double.MAX_VALUE; String closestPair = null;
-        for (int i = 0; i + 1 < tableItems.size(); i++) {
-            int[] wi = res.get(tableItems.get(i));
-            int[] wj = res.get(tableItems.get(i + 1));
-            if (wi == null || wj == null || wi[0]+wi[1] == 0 || wj[0]+wj[1] == 0) continue;
-            double gap = (double) wi[0] / (wi[0]+wi[1]) - (double) wj[0] / (wj[0]+wj[1]);
-            if (gap < minGap) {
-                minGap = gap;
-                closestPair = tableItems.get(i).sample().displayName() + " vs "
-                        + tableItems.get(i + 1).sample().displayName();
+        // Biggest upset: lower-ranked strategy 2-0 swept a higher-ranked one
+        int biggestGap = 0; Difficulty upsetter = null, victim = null;
+        for (int lo = 1; lo < n; lo++) {
+            Difficulty loD = tableItems.get(lo);
+            Map<Difficulty, Integer> loWins = mw.get(loD);
+            if (loWins == null) continue;
+            for (int hi = 0; hi < lo; hi++) {
+                Difficulty hiD = tableItems.get(hi);
+                if (loWins.getOrDefault(hiD, 0) >= 2 && lo - hi > biggestGap) {
+                    biggestGap = lo - hi; upsetter = loD; victim = hiD;
+                }
             }
         }
-        if (closestPair != null && minGap < 0.06)
-            statsBox.getChildren().add(statChip("Closest race",
-                    closestPair + "  (" + (int) Math.round((1 - minGap) * 100) + "% each)", "#1A2A3A", "#3E68A8"));
+
+        // Nemesis: who took the most wins off the #1 strategy
+        Difficulty top = tableItems.get(0);
+        Difficulty nemesis = null; int nemesisWins = 0;
+        for (Difficulty d : tableItems) {
+            if (d == top) continue;
+            int w = mw.getOrDefault(d, Map.of()).getOrDefault(top, 0);
+            if (w > nemesisWins) { nemesisWins = w; nemesis = d; }
+        }
+
+        // Sweep count: who 2-0'd the most opponents
+        Difficulty sweeper = null; int maxSweeps = 0;
+        for (Difficulty d : tableItems) {
+            Map<Difficulty, Integer> dWins = mw.get(d);
+            if (dWins == null) continue;
+            int sweeps = (int) dWins.values().stream().filter(v -> v >= 2).count();
+            if (sweeps > maxSweeps) { maxSweeps = sweeps; sweeper = d; }
+        }
+
+        int upsettRankThreshold = Math.max(2, n / 3);
+        if (upsetter != null && biggestGap >= upsettRankThreshold) {
+            statsBox.getChildren().add(statChip("Biggest upset",
+                    upsetter.sample().displayName() + " (#" + (tableItems.indexOf(upsetter)+1) + ")"
+                    + " swept " + victim.sample().displayName() + " (#" + (tableItems.indexOf(victim)+1) + ")",
+                    "#2A1A2A", "#9B59B6"));
+        } else if (nemesis != null && nemesisWins >= 2) {
+            statsBox.getChildren().add(statChip("Nemesis of #1",
+                    nemesis.sample().displayName() + " went " + nemesisWins + "-" + (2 - nemesisWins)
+                    + " vs " + top.sample().displayName(),
+                    "#2A1A1A", "#E67E22"));
+        } else if (sweeper != null && maxSweeps >= 2) {
+            statsBox.getChildren().add(statChip("Most dominant",
+                    sweeper.sample().displayName() + " swept " + maxSweeps + " of " + (n - 1) + " opponents",
+                    "#1A1A2A", "#3E68A8"));
+        }
 
         statsBox.getChildren().add(statChip("Duration",
                 formatDuration(durationMs) + "  ·  " + strategies.size()
@@ -137,7 +188,6 @@ final class TournamentSummary {
         h2hTitle.getStyleClass().add("tournament-section-title");
         summaryBox.getChildren().add(h2hTitle);
 
-        Map<Difficulty, Map<Difficulty, Integer>> mw = runner.getMatchupWins();
         for (Difficulty d : tableItems) {
             int[] wr = res.getOrDefault(d, new int[]{0, 0});
             int w = wr[0], l = wr[1];

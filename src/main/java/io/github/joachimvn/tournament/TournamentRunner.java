@@ -48,6 +48,9 @@ public class TournamentRunner {
     private final AtomicReference<GameRecord> longestGame  = new AtomicReference<>();
     private final AtomicReference<GameRecord> bestGame     = new AtomicReference<>();
 
+    /** Cumulative move totals per strategy: long[0]=total moves, long[1]=game count. */
+    private final ConcurrentHashMap<Difficulty, long[]> strategyMoveTotals = new ConcurrentHashMap<>();
+
     // ── Control ─────────────────────────────────────────────────────────────
     private final AtomicBoolean  cancelled   = new AtomicBoolean(false);
     private volatile boolean     paused      = false;
@@ -66,6 +69,7 @@ public class TournamentRunner {
     public GameRecord getShortestGame() { return shortestGame.get(); }
     public GameRecord getLongestGame()  { return longestGame.get(); }
     public GameRecord getBestGame()     { return bestGame.get(); }
+    public ConcurrentHashMap<Difficulty, long[]> getStrategyMoveTotals() { return strategyMoveTotals; }
     public boolean isPaused()  { return paused; }
 
     public int totalGames(List<Difficulty> strategies) {
@@ -96,6 +100,7 @@ public class TournamentRunner {
         shortestGame.set(null);
         longestGame.set(null);
         bestGame.set(null);
+        strategyMoveTotals.clear();
         results.clear();
         matchupWins.clear();
         for (Difficulty a : strategies) {
@@ -215,6 +220,10 @@ public class TournamentRunner {
                 // Update notable game records atomically
                 int walls = state.getWalls().size();
                 final int mc = moveCount;
+
+                // Accumulate move totals for both strategies (atomic update per key)
+                strategyMoveTotals.compute(d1, (k, v) -> { long[] a = v == null ? new long[2] : v; a[0] += mc; a[1]++; return a; });
+                strategyMoveTotals.compute(d2, (k, v) -> { long[] a = v == null ? new long[2] : v; a[0] += mc; a[1]++; return a; });
                 Player loserPlayer = winner == d1 ? Player.TWO : Player.ONE;
                 int loserDist = pathChecker.shortestPathWithJumps(state, loserPlayer);
                 GameRecord rec = new GameRecord(d1, d2, winner, moveCount, walls,
