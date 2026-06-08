@@ -1,7 +1,7 @@
 /* ── Root & scroll ────────────────────────────────────────────────────────── */
 
 .landing-root {
-    -fx-background-color: #0C0E14;
+    -fx-background-color: #080A10;
 }
 
 .landing-scroll {
@@ -14,8 +14,7 @@
     -fx-background-color: transparent;
 }
 
-.landing-scroll > .scroll-bar:vertical,
-.landing-scroll > .scroll-bar:horizontal {
+.landing-scroll > .scroll-bar:vertical {
     -fx-background-color: transparent;
     -fx-pref-width: 4;
 }
@@ -25,50 +24,73 @@
     -fx-background-radius: 2;
 }
 
+.landing-scroll > .scroll-bar:vertical > .track,
+.landing-scroll > .scroll-bar:vertical > .increment-button,
+.landing-scroll > .scroll-bar:vertical > .decrement-button {
+    -fx-background-color: transparent;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+}
+
 .landing-scroll > .corner {
     -fx-background-color: transparent;
 }
 
-/* ── Card ─────────────────────────────────────────────────────────────────── */
+/* ── Cards ────────────────────────────────────────────────────────────────── */
 
 .landing-card {
-    -fx-background-color: #111420;
-    -fx-border-color: #1C1F30;
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 20, 0, 0, 6);
 }
+
+.landing-card-play {
+    -fx-background-color: linear-gradient(to bottom, #120C0C, #0D0E1A 55%);
+    -fx-border-color: #5A2820 #191C2C #191C2C #191C2C;
+}
+
+.landing-card-sim {
+    -fx-background-color: linear-gradient(to bottom, #0A0E1A, #0D0E1A 55%);
+    -fx-border-color: #1E3A62 #191C2C #191C2C #191C2C;
+}
+
+.landing-card-set {
+    -fx-background-color: linear-gradient(to bottom, #0D0D1A, #0D0E1A 55%);
+    -fx-border-color: #2C2E58 #191C2C #191C2C #191C2C;
+}
+
+/* Expanded state: border set via inline style from Java */
 
 .landing-card-header {
     -fx-cursor: hand;
+    -fx-min-height: 140;
     -fx-background-radius: 10;
 }
 
 .landing-card-header:hover {
-    -fx-background-color: #161928;
-    -fx-background-radius: 10;
+    -fx-background-color: rgba(255, 255, 255, 0.016);
+    -fx-background-radius: 10 10 0 0;
 }
 
-/* ── Card text ────────────────────────────────────────────────────────────── */
+/* ── Card typography ──────────────────────────────────────────────────────── */
 
 .landing-card-title {
-    -fx-text-fill: #C8CCE0;
-    -fx-font-size: 15px;
+    -fx-text-fill: #BDC2DC;
+    -fx-font-size: 17px;
     -fx-font-weight: bold;
-    -fx-letter-spacing: 1.5;
+    -fx-letter-spacing: 2.5;
 }
 
 .landing-card-sub {
-    -fx-text-fill: #3A3F58;
+    -fx-text-fill: #28293C;
     -fx-font-size: 12px;
 }
 
 /* ── Tab row ──────────────────────────────────────────────────────────────── */
 
 .landing-tab-row {
-    -fx-background-color: #0A0C14;
-    -fx-border-color: #1C1F30;
+    -fx-background-color: #060710;
+    -fx-border-color: #14172A;
     -fx-border-width: 1;
     -fx-border-radius: 6;
     -fx-background-radius: 6;
@@ -76,12 +98,12 @@
 
 .landing-tab-btn {
     -fx-background-color: transparent;
-    -fx-text-fill: #3E4460;
+    -fx-text-fill: #2C2F48;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-padding: 10 16 10 16;
+    -fx-padding: 11 16 11 16;
     -fx-cursor: hand;
-    -fx-background-radius: 6;
+    -fx-background-radius: 5;
     -fx-border-color: transparent;
     -fx-border-width: 0;
     -fx-focus-color: transparent;
@@ -89,54 +111,52 @@
 }
 
 .landing-tab-btn:hover {
-    -fx-text-fill: #606880;
-    -fx-background-color: #111420;
+    -fx-text-fill: #484C78;
+    -fx-background-color: rgba(255, 255, 255, 0.016);
 }
 
 .landing-tab-btn:selected {
-    -fx-background-color: #191C2A;
-    -fx-text-fill: #A0A8C8;
-    -fx-background-radius: 5;
+    -fx-background-color: #14172A;
+    -fx-text-fill: #8088B8;
 }
 
-/* ── Config label ─────────────────────────────────────────────────────────── */
+/* ── Labels ───────────────────────────────────────────────────────────────── */
 
 .landing-config-label {
-    -fx-text-fill: #3A4060;
+    -fx-text-fill: #262840;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
-    -fx-letter-spacing: 1;
+    -fx-letter-spacing: 1.5;
 }
 
 /* ── Action button ────────────────────────────────────────────────────────── */
 
 .landing-action-btn {
-    -fx-text-fill: rgba(255, 255, 255, 0.85);
-    -fx-font-size: 14px;
+    -fx-text-fill: rgba(255, 255, 255, 0.9);
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
-    -fx-padding: 13 0 13 0;
+    -fx-padding: 14 0 14 0;
     -fx-background-radius: 6;
     -fx-border-radius: 6;
     -fx-border-width: 1;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 8, 0, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 10, 0, 0, 3);
 }
 
 .landing-action-btn:hover {
     -fx-text-fill: #ffffff;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 12, 0, 0, 3);
-    -fx-opacity: 0.92;
+    -fx-opacity: 0.84;
 }
 
 .landing-action-btn:pressed {
     -fx-opacity: 1.0;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 4, 0, 0, 1);
+    -fx-effect: none;
 }
 
 /* ── Coming soon ──────────────────────────────────────────────────────────── */
 
 .landing-coming-soon {
-    -fx-text-fill: #3A3F58;
+    -fx-text-fill: #20223A;
     -fx-font-size: 22px;
     -fx-font-weight: bold;
 }
