@@ -472,3 +472,135 @@
 .game-over-button:pressed .game-over-icon {
     -fx-icon-color: #FFFFFF;
 }
+
+/* ── Tournament overlay ────────────────────────────────────────────────── */
+
+.tournament-mode-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #3A3F58;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 0 4 0;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-background-radius: 4;
+}
+
+.tournament-mode-btn:hover {
+    -fx-text-fill: #606880;
+}
+
+.tournament-card {
+    -fx-padding: 36 52 36 52;
+}
+
+.tournament-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8890A8;
+}
+
+.tournament-progress-bar {
+    -fx-pref-height: 8;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-accent: #3E68A8;
+}
+
+.tournament-progress-bar .track {
+    -fx-background-color: #1E2130;
+    -fx-background-radius: 4;
+}
+
+.tournament-progress-bar .bar {
+    -fx-background-color: #3E68A8;
+    -fx-background-radius: 4;
+    -fx-background-insets: 0;
+}
+
+.tournament-progress-label {
+    -fx-text-fill: #606880;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-min-width: 80;
+}
+
+/* TableView */
+.tournament-table {
+    -fx-background-color: transparent;
+    -fx-border-color: #1E2130;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tournament-table .column-header-background {
+    -fx-background-color: #13151F;
+}
+
+.tournament-table .column-header {
+    -fx-background-color: transparent;
+    -fx-size: 36px;
+}
+
+.tournament-table .column-header .label {
+    -fx-text-fill: #3A3F58;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-alignment: center-left;
+}
+
+.tournament-table .tournament-col-center .label {
+    -fx-alignment: center;
+}
+
+.tournament-table .filler {
+    -fx-background-color: #13151F;
+}
+
+.tournament-table .column-resize-line {
+    -fx-background-color: #2E3250;
+}
+
+.tournament-table .table-row-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #191C2A transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-cell-size: 36px;
+}
+
+.tournament-table .table-row-cell:odd {
+    -fx-background-color: #151820;
+}
+
+.tournament-table .table-row-cell:hover {
+    -fx-background-color: #1E2130;
+}
+
+.tournament-table .table-row-cell:selected,
+.tournament-table .table-row-cell:focused:selected {
+    -fx-background-color: #141E30;
+}
+
+.tournament-table .table-cell {
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 14px;
+    -fx-alignment: center-left;
+    -fx-border-color: transparent;
+    -fx-padding: 0 10 0 10;
+}
+
+.tournament-table .tournament-col-center .table-cell {
+    -fx-alignment: center;
+}
+
+/* Top 3 rank highlights */
+.rank-top    { -fx-background-color: #1A1C10 !important; }
+.rank-second { -fx-background-color: #14181C !important; }
+.rank-third  { -fx-background-color: #171410 !important; }
+
+.rank-top    .table-cell { -fx-text-fill: #B8960C; }
+.rank-second .table-cell { -fx-text-fill: #8896A0; }
+.rank-third  .table-cell { -fx-text-fill: #8B6040; }

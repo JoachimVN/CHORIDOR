@@ -8,6 +8,7 @@ import io.github.joachimvn.ui.bars.TopBar;
 import io.github.joachimvn.ui.common.UiScale;
 import io.github.joachimvn.ui.overlays.GameOverOverlay;
 import io.github.joachimvn.ui.overlays.SetupOverlay;
+import io.github.joachimvn.ui.overlays.TournamentOverlay;
 
 import javafx.application.Application;
 import javafx.beans.binding.DoubleBinding;
@@ -51,7 +52,14 @@ public class App extends Application {
         TopBar    topBar    = new TopBar(scaleB);
         BottomBar bottomBar = new BottomBar(ctrl, board, scaleB);
         ReviewBar reviewBar = new ReviewBar(ctrl, scaleB);
-        SetupOverlay  setup    = new SetupOverlay(ctrl, board, bottomBar::setFlipSelected);
+        // Tournament overlay is created first so setup can reference it; the start
+        // callback is wired after setup is ready via a one-element array (lambda capture).
+        Runnable[] startTournament = {null};
+        SetupOverlay setup = new SetupOverlay(ctrl, board, bottomBar::setFlipSelected,
+            () -> { if (startTournament[0] != null) startTournament[0].run(); });
+        TournamentOverlay tournament = new TournamentOverlay(() -> setup.getRoot().setVisible(true));
+        startTournament[0] = tournament::start;
+
         GameOverOverlay gameOver = new GameOverOverlay(ctrl, setup.getRoot());
 
         // "Change Mode" on the bottom bar dismisses any game-over modal and reopens setup.
@@ -84,7 +92,8 @@ public class App extends Application {
         topBar.update(ctrl);
         bottomBar.updateStatus();
 
-        StackPane sceneRoot = new StackPane(gamePane, gameOver.getRoot(), setup.getRoot());
+        StackPane sceneRoot = new StackPane(gamePane, gameOver.getRoot(), setup.getRoot(),
+                                            tournament.getRoot());
 
         Scene scene = new Scene(sceneRoot);
         scene.getStylesheets().add(
