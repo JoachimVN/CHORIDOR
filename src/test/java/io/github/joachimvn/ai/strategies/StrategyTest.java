@@ -51,12 +51,12 @@ class StrategyTest {
         GameState state = new GameState();
         // Short budget keeps Minimax snappy; the pruned strategies use their own 1s cap.
         assertLegal(state, new MinimaxStrategy(Player.ONE, 150).decide(state));
-        assertLegal(state, new TacticalStrategy(Player.ONE).decide(state));
-        assertLegal(state, new RusherStrategy(Player.ONE).decide(state));
-        assertLegal(state, new BalancedStrategy(Player.ONE).decide(state));
-        assertLegal(state, new AdaptiveStrategy(Player.ONE).decide(state));
         assertLegal(state, new EconomistStrategy(Player.ONE).decide(state));
         assertLegal(state, new SharpStrategy(Player.ONE).decide(state));
+        assertLegal(state, new TrapperStrategy(Player.ONE).decide(state));
+        assertLegal(state, new PathCountStrategy(Player.ONE).decide(state));
+        assertLegal(state, new BaiterStrategy(Player.ONE).decide(state));
+        assertLegal(state, new WikipediaStrategy(Player.ONE).decide(state));
     }
 
     @Test
@@ -71,12 +71,12 @@ class StrategyTest {
 
         List<Strategy> strategies = List.of(
             new MinimaxStrategy(Player.ONE, 200),
-            new TacticalStrategy(Player.ONE),
-            new RusherStrategy(Player.ONE),
-            new BalancedStrategy(Player.ONE),
-            new AdaptiveStrategy(Player.ONE),
             new EconomistStrategy(Player.ONE),
-            new SharpStrategy(Player.ONE));
+            new SharpStrategy(Player.ONE),
+            new TrapperStrategy(Player.ONE),
+            new PathCountStrategy(Player.ONE),
+            new BaiterStrategy(Player.ONE),
+            new WikipediaStrategy(Player.ONE));
 
         for (Strategy s : strategies) {
             Move move = s.decide(state);

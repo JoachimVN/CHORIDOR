@@ -1,7 +1,7 @@
 package io.github.joachimvn.ui.overlays;
 
 import io.github.joachimvn.ui.GameController;
-import io.github.joachimvn.ui.board.BoardView;
+import io.github.joachimvn.ui.BoardView;
 import io.github.joachimvn.ui.common.LogoFactory;
 import io.github.joachimvn.ui.common.UiConstants;
 import io.github.joachimvn.ai.Difficulty;
@@ -30,10 +30,11 @@ public final class SetupOverlay {
     private final StackPane root;
 
     /**
-     * @param flipSelected called with the desired flip state when a game starts, so the bottom
-     *                     bar's flip toggle can mirror it.
+     * @param flipSelected  called with the desired flip state when a game starts
+     * @param onTournament  called when the user clicks the Tournament button
      */
-    public SetupOverlay(GameController ctrl, BoardView board, Consumer<Boolean> flipSelected) {
+    public SetupOverlay(GameController ctrl, BoardView board, Consumer<Boolean> flipSelected,
+                        Runnable onTournament) {
         root = new StackPane();
         root.getStyleClass().add("setup-overlay");
 
@@ -140,7 +141,16 @@ public final class SetupOverlay {
             root.setVisible(false);
         });
 
-        VBox card = new VBox(28, titleRow, modeRow, sep, aiSection, startBtn);
+        Button tournamentBtn = new Button("Tournament");
+        tournamentBtn.getStyleClass().add("tournament-mode-btn");
+        tournamentBtn.setMaxWidth(Double.MAX_VALUE);
+        tournamentBtn.setOnAction(e -> {
+            ctrl.playSelect();
+            root.setVisible(false);
+            if (onTournament != null) onTournament.run();
+        });
+
+        VBox card = new VBox(28, titleRow, modeRow, sep, aiSection, startBtn, tournamentBtn);
         card.getStyleClass().add("setup-card");
         card.setAlignment(Pos.CENTER);
         card.setMaxWidth(700);

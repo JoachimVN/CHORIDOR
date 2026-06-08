@@ -1,13 +1,14 @@
 package io.github.joachimvn;
 
 import io.github.joachimvn.ui.GameController;
-import io.github.joachimvn.ui.board.BoardView;
+import io.github.joachimvn.ui.BoardView;
 import io.github.joachimvn.ui.bars.BottomBar;
 import io.github.joachimvn.ui.bars.ReviewBar;
 import io.github.joachimvn.ui.bars.TopBar;
 import io.github.joachimvn.ui.common.UiScale;
 import io.github.joachimvn.ui.overlays.GameOverOverlay;
 import io.github.joachimvn.ui.overlays.SetupOverlay;
+import io.github.joachimvn.ui.tournament.TournamentView;
 
 import javafx.application.Application;
 import javafx.beans.binding.DoubleBinding;
@@ -51,7 +52,14 @@ public class App extends Application {
         TopBar    topBar    = new TopBar(scaleB);
         BottomBar bottomBar = new BottomBar(ctrl, board, scaleB);
         ReviewBar reviewBar = new ReviewBar(ctrl, scaleB);
-        SetupOverlay  setup    = new SetupOverlay(ctrl, board, bottomBar::setFlipSelected);
+        // Tournament overlay is created first so setup can reference it; the start
+        // callback is wired after setup is ready via a one-element array (lambda capture).
+        Runnable[] startTournament = {null};
+        SetupOverlay setup = new SetupOverlay(ctrl, board, bottomBar::setFlipSelected,
+            () -> { if (startTournament[0] != null) startTournament[0].run(); });
+        TournamentView tournament = new TournamentView(() -> setup.getRoot().setVisible(true), ctrl);
+        startTournament[0] = tournament::start;
+
         GameOverOverlay gameOver = new GameOverOverlay(ctrl, setup.getRoot());
 
         // "Change Mode" on the bottom bar dismisses any game-over modal and reopens setup.
@@ -84,22 +92,24 @@ public class App extends Application {
         topBar.update(ctrl);
         bottomBar.updateStatus();
 
-        StackPane sceneRoot = new StackPane(gamePane, gameOver.getRoot(), setup.getRoot());
+        StackPane sceneRoot = new StackPane(gamePane, gameOver.getRoot(), setup.getRoot(),
+                                            tournament.getRoot());
 
         Scene scene = new Scene(sceneRoot);
-        scene.getStylesheets().add(
-            getClass().getResource("/css/app.css").toExternalForm()
-        );
+        for (String sheet : new String[]{"base", "chrome", "setup", "game-over", "tournament"}) {
+            scene.getStylesheets().add(getClass().getResource("/css/" + sheet + ".css").toExternalForm());
+        }
         scene.addEventFilter(KeyEvent.KEY_PRESSED,
             e -> handleKey(e, stage, ctrl, gameOver));
 
         stage.getIcons().add(new Image(getClass().getResourceAsStream(
-            "/images/logos/Choridor_Logo_Square_White.png")));
+            "/images/logos/CHORIDOR_Logo_Square.png")));
         stage.setTitle("CHORIDOR");
         stage.setScene(scene);
         stage.setResizable(true);
         stage.setMinWidth(300);
         stage.setMinHeight(360);
+        stage.setMaximized(true);
         stage.show();
     }
 
@@ -121,17 +131,12 @@ public class App extends Application {
     }
 
     private static void handleReviewKey(KeyEvent e, GameController ctrl) {
-        KeyCode code = e.getCode();
-        if (code == KeyCode.LEFT) {
-            if (e.isShiftDown()) ctrl.reviewFirst(); else ctrl.reviewPrev();
-        } else if (code == KeyCode.RIGHT) {
-            if (e.isShiftDown()) ctrl.reviewLast(); else ctrl.reviewNext();
-        } else if (code == KeyCode.HOME) {
-            ctrl.reviewFirst();
-        } else if (code == KeyCode.END) {
-            ctrl.reviewLast();
-        } else {
-            return;
+        switch (e.getCode()) {
+            case LEFT  -> { if (e.isShiftDown()) ctrl.reviewFirst(); else ctrl.reviewPrev(); }
+            case RIGHT -> { if (e.isShiftDown()) ctrl.reviewLast();  else ctrl.reviewNext(); }
+            case HOME  -> ctrl.reviewFirst();
+            case END   -> ctrl.reviewLast();
+            default    -> { return; }
         }
         e.consume();
     }

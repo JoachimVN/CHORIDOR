@@ -6,7 +6,7 @@
 
   <groupId>io.github.joachimvn</groupId>
   <artifactId>choridor</artifactId>
-  <version>1.5.1</version>
+  <version>1.6.0</version>
 
   <name>CHORIDOR</name>
   <url>https://github.com/JoachimVN/CHORIDOR</url>
@@ -227,11 +227,11 @@
                           tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
                     <exec executable="jpackage" failonerror="true">
                       <arg value="--type"/><arg value="exe"/>
-                      <arg value="--name"/><arg value="Choridor"/>
+                      <arg value="--name"/><arg value="CHORIDOR"/>
                       <arg value="--app-version"/><arg value="${jpackage.version}"/>
                       <arg value="--vendor"/><arg value="JoachimVN"/>
-                      <arg value="--description"/><arg value="Choridor"/>
-                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/Choridor_Logo_Square_White.ico"/>
+                      <arg value="--description"/><arg value="CHORIDOR"/>
+                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/CHORIDOR_Logo_Square.ico"/>
                       <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
                       <arg value="--main-jar"/><arg value="app-fat.jar"/>
                       <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
@@ -242,13 +242,13 @@
                       <arg value="--win-dir-chooser"/>
                       <arg value="--win-shortcut"/>
                       <arg value="--win-menu"/>
-                      <arg value="--win-menu-group"/><arg value="Choridor"/>
+                      <arg value="--win-menu-group"/><arg value="CHORIDOR"/>
                     </exec>
                     <condition property="exe.rename.needed">
                       <not><equals arg1="${jpackage.version}" arg2="${project.version}"/></not>
                     </condition>
-                    <move file="${project.build.directory}/dist/Choridor-${jpackage.version}.exe"
-                          tofile="${project.build.directory}/dist/Choridor-${project.version}.exe"
+                    <move file="${project.build.directory}/dist/CHORIDOR-${jpackage.version}.exe"
+                          tofile="${project.build.directory}/dist/CHORIDOR-${project.version}.exe"
                           failonerror="true" xmlns:if="ant:if" if:set="exe.rename.needed"/>
                   </target>
                 </configuration>
@@ -320,11 +320,11 @@
                           tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
                     <exec executable="jpackage" failonerror="true">
                       <arg value="--type"/><arg value="app-image"/>
-                      <arg value="--name"/><arg value="Choridor"/>
+                      <arg value="--name"/><arg value="CHORIDOR"/>
                       <arg value="--app-version"/><arg value="${jpackage.version}"/>
                       <arg value="--vendor"/><arg value="JoachimVN"/>
-                      <arg value="--description"/><arg value="Choridor"/>
-                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/Choridor_Logo_Square_White.png"/>
+                      <arg value="--description"/><arg value="CHORIDOR"/>
+                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/CHORIDOR_Logo_Square.png"/>
                       <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
                       <arg value="--main-jar"/><arg value="app-fat.jar"/>
                       <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
@@ -333,8 +333,8 @@
                       <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
                       <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
                     </exec>
-                    <zip destfile="${project.build.directory}/dist/Choridor-${project.version}-linux.zip">
-                      <zipfileset dir="${project.build.directory}/dist/Choridor" prefix="Choridor"/>
+                    <zip destfile="${project.build.directory}/dist/CHORIDOR-${project.version}-linux.zip">
+                      <zipfileset dir="${project.build.directory}/dist/CHORIDOR" prefix="CHORIDOR"/>
                     </zip>
                   </target>
                 </configuration>
@@ -406,11 +406,11 @@
                           tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
                     <exec executable="jpackage" failonerror="true">
                       <arg value="--type"/><arg value="dmg"/>
-                      <arg value="--name"/><arg value="Choridor"/>
+                      <arg value="--name"/><arg value="CHORIDOR"/>
                       <arg value="--app-version"/><arg value="${jpackage.version}"/>
                       <arg value="--vendor"/><arg value="JoachimVN"/>
-                      <arg value="--description"/><arg value="Choridor"/>
-                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/Choridor_Logo_Square_White.icns"/>
+                      <arg value="--description"/><arg value="CHORIDOR"/>
+                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/CHORIDOR_Logo_Square.icns"/>
                       <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
                       <arg value="--main-jar"/><arg value="app-fat.jar"/>
                       <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
@@ -422,8 +422,8 @@
                     <condition property="dmg.rename.needed">
                       <not><equals arg1="${jpackage.version}" arg2="${project.version}"/></not>
                     </condition>
-                    <move file="${project.build.directory}/dist/Choridor-${jpackage.version}.dmg"
-                          tofile="${project.build.directory}/dist/Choridor-${project.version}.dmg"
+                    <move file="${project.build.directory}/dist/CHORIDOR-${jpackage.version}.dmg"
+                          tofile="${project.build.directory}/dist/CHORIDOR-${project.version}.dmg"
                           failonerror="true" xmlns:if="ant:if" if:set="dmg.rename.needed"/>
                   </target>
                 </configuration>

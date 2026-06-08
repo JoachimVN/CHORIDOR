@@ -55,7 +55,7 @@ jobs:
 
       - name: Set Maven version
         shell: pwsh
-        run: mvn --batch-mode versions:set "-DnewVersion=${{ env.APP_VERSION }}" "-DgenerateBackupPoms=false"
+        run: mvn --batch-mode versions:set "-DnewVersion=${{ steps.version.outputs.app_version }}" "-DgenerateBackupPoms=false"
 
       - name: Build portable JAR
         shell: pwsh
@@ -63,7 +63,7 @@ jobs:
 
       - name: Rename JAR
         shell: pwsh
-        run: Rename-Item -Path "target/choridor-$env:APP_VERSION-jar-with-dependencies.jar" -NewName "Choridor-$env:APP_VERSION-portable.jar"
+        run: Rename-Item -Path "target/CHORIDOR-$env:APP_VERSION-jar-with-dependencies.jar" -NewName "CHORIDOR-$env:APP_VERSION-portable.jar"
 
       - name: Add WiX to PATH
         shell: pwsh
@@ -78,17 +78,17 @@ jobs:
 
       - name: Rename Windows EXE
         shell: pwsh
-        run: Rename-Item -Path "target/dist/Choridor-$env:APP_VERSION.exe" -NewName "Choridor-$env:APP_VERSION-windows.exe"
+        run: Rename-Item -Path "target/dist/CHORIDOR-$env:APP_VERSION.exe" -NewName "CHORIDOR-$env:APP_VERSION-windows.exe"
 
       - name: Publish release with Windows assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.TAG_NAME }}
+          tag_name: ${{ steps.version.outputs.tag_name }}
           generate_release_notes: true
-          prerelease: ${{ env.PRE_RELEASE == 'true' }}
+          prerelease: ${{ steps.version.outputs.pre_release == 'true' }}
           files: |
-            target/Choridor-${{ env.APP_VERSION }}-portable.jar
-            target/dist/Choridor-${{ env.APP_VERSION }}-windows.exe
+            target/CHORIDOR-${{ steps.version.outputs.app_version }}-portable.jar
+            target/dist/CHORIDOR-${{ steps.version.outputs.app_version }}-windows.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -118,7 +118,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.build-windows.outputs.tag_name }}
-          files: target/dist/Choridor-${{ needs.build-windows.outputs.app_version }}-linux.zip
+          files: target/dist/CHORIDOR-${{ needs.build-windows.outputs.app_version }}-linux.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -145,12 +145,12 @@ jobs:
         run: mvn --batch-mode package -Pmac -DskipTests
 
       - name: Rename macOS DMG
-        run: mv "target/dist/Choridor-${{ needs.build-windows.outputs.app_version }}.dmg" "target/dist/Choridor-${{ needs.build-windows.outputs.app_version }}-macos.dmg"
+        run: mv "target/dist/CHORIDOR-${{ needs.build-windows.outputs.app_version }}.dmg" "target/dist/CHORIDOR-${{ needs.build-windows.outputs.app_version }}-macos.dmg"
 
       - name: Upload macOS asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.build-windows.outputs.tag_name }}
-          files: target/dist/Choridor-${{ needs.build-windows.outputs.app_version }}-macos.dmg
+          files: target/dist/CHORIDOR-${{ needs.build-windows.outputs.app_version }}-macos.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

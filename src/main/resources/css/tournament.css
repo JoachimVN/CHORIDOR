@@ -1,0 +1,353 @@
+/* ── Tournament full-screen view ────────────────────────────────────────── */
+
+.tournament-view {
+    -fx-background-color: #0F1117;
+}
+
+.tournament-layout {
+    -fx-background-color: #0F1117;
+}
+
+.tournament-top-bar {
+    -fx-background-color: #13151F;
+    -fx-border-color: #1E2130;
+    -fx-border-width: 0 0 1 0;
+}
+
+.tournament-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #8890A8;
+}
+
+.tournament-progress-bar {
+    -fx-pref-height: 8;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-accent: #3E68A8;
+}
+
+.tournament-progress-bar .track {
+    -fx-background-color: #1E2130;
+    -fx-background-radius: 4;
+}
+
+.tournament-progress-bar .bar {
+    -fx-background-color: #3E68A8;
+    -fx-background-radius: 4;
+    -fx-background-insets: 0;
+}
+
+.tournament-progress-label {
+    -fx-text-fill: #606880;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-min-width: 90;
+}
+
+.tournament-section-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3A3F58;
+}
+
+.tournament-panel {
+    -fx-background-color: #0C0E14;
+    -fx-border-color: #1E2130;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.tournament-board-grid {
+    -fx-background-color: transparent;
+}
+
+.tournament-empty-label {
+    -fx-text-fill: #2A2E48;
+    -fx-font-size: 14px;
+}
+
+/* ── Mini board cards ───────────────────────────────────────────────────── */
+
+.mini-board-card {
+    -fx-background-color: #13151F;
+    -fx-border-color: #1E2130;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.mini-board-card:hover {
+    -fx-border-color: #2E3250;
+}
+
+.mini-p1 {
+    -fx-text-fill: #9E4A40;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.mini-p2 {
+    -fx-text-fill: #3E68A8;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.mini-vs {
+    -fx-text-fill: #3A3F58;
+    -fx-font-size: 11px;
+}
+
+/* ── Standings table ────────────────────────────────────────────────────── */
+
+.tournament-table {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tournament-table .column-header-background {
+    -fx-background-color: #13151F;
+}
+
+.tournament-table .column-header {
+    -fx-background-color: transparent;
+    -fx-size: 32px;
+}
+
+.tournament-table .column-header .label {
+    -fx-text-fill: #3A3F58;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-alignment: center-left;
+}
+
+.tournament-table .tournament-col-center .label {
+    -fx-alignment: center;
+}
+
+.tournament-table .filler {
+    -fx-background-color: #13151F;
+}
+
+.tournament-table .column-resize-line {
+    -fx-background-color: #1E2130;
+}
+
+.tournament-table .table-row-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #191C2A transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-cell-size: 30px;
+}
+
+.tournament-table .table-row-cell:odd {
+    -fx-background-color: #0D0F18;
+}
+
+.tournament-table .table-row-cell:hover {
+    -fx-background-color: #1E2130;
+}
+
+.tournament-table .table-row-cell:selected,
+.tournament-table .table-row-cell:focused:selected {
+    -fx-background-color: #141E30;
+}
+
+.tournament-table .table-cell {
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 13px;
+    -fx-alignment: center-left;
+    -fx-border-color: transparent;
+    -fx-padding: 0 6 0 6;
+}
+
+.tournament-table .tournament-col-center .table-cell {
+    -fx-alignment: center;
+}
+
+/* Top 3 rank highlights */
+.rank-top    { -fx-background-color: #1A1C10 !important; }
+.rank-second { -fx-background-color: #14181C !important; }
+.rank-third  { -fx-background-color: #171410 !important; }
+
+.rank-top    .table-cell { -fx-text-fill: #B8960C; }
+.rank-second .table-cell { -fx-text-fill: #8896A0; }
+.rank-third  .table-cell { -fx-text-fill: #8B6040; }
+
+/* ── Recent results list ────────────────────────────────────────────────── */
+
+.tournament-results-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tournament-results-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #606880;
+    -fx-font-size: 12px;
+    -fx-padding: 3 6 3 6;
+    -fx-border-color: transparent transparent #191C2A transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.tournament-results-list .list-cell:odd {
+    -fx-background-color: #0D0F18;
+}
+
+.tournament-results-list .list-cell:selected,
+.tournament-results-list .list-cell:focused:selected {
+    -fx-background-color: #141E30;
+    -fx-text-fill: #8AAADA;
+}
+
+/* ── Copy button (dark blue) ────────────────────────────────────────────── */
+
+.tournament-copy-btn {
+    -fx-background-color: #12243A;
+    -fx-text-fill: #5A8ACA;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 16 5 16;
+    -fx-background-radius: 4;
+    -fx-border-color: #1E3A6A;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.tournament-copy-btn:hover {
+    -fx-background-color: #18304A;
+    -fx-text-fill: #8ABCFF;
+    -fx-border-color: #2E508A;
+}
+
+.tournament-copy-btn:pressed {
+    -fx-background-color: #3E68A8;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #5A84C4;
+}
+
+/* ── Stop / close button (compact, red tint) ────────────────────────────── */
+
+.tournament-stop-btn {
+    -fx-background-color: #2A1A1A;
+    -fx-text-fill: #C8706A;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 16 5 16;
+    -fx-background-radius: 4;
+    -fx-border-color: #5A2A2A;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.tournament-stop-btn:hover {
+    -fx-background-color: #3A2020;
+    -fx-text-fill: #FF9090;
+    -fx-border-color: #8A3A3A;
+}
+
+.tournament-stop-btn:pressed {
+    -fx-background-color: #8A3A3A;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #AA4444;
+}
+
+/* ── Boards scroll pane ─────────────────────────────────────────────────── */
+
+.tournament-board-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+}
+
+.tournament-board-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.tournament-board-scroll > .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 8;
+}
+
+.tournament-board-scroll > .scroll-bar:vertical .track {
+    -fx-background-color: #1E2130;
+    -fx-background-radius: 4;
+}
+
+.tournament-board-scroll > .scroll-bar:vertical .thumb {
+    -fx-background-color: #3A3F58;
+    -fx-background-radius: 4;
+}
+
+.tournament-board-scroll > .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #5A5F78;
+}
+
+/* ── H2H breakdown TitledPanes (dark theme) ─────────────────────────────── */
+
+.titled-pane {
+    -fx-background-color: transparent;
+}
+
+.titled-pane > .title {
+    -fx-background-color: #13151F;
+    -fx-border-color: transparent transparent #1E2130 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 6 12 6 12;
+    -fx-cursor: hand;
+}
+
+.titled-pane > .title:hover {
+    -fx-background-color: #1A1D2A;
+}
+
+.titled-pane:focused > .title {
+    -fx-background-color: #13151F;
+}
+
+.titled-pane:focused:hover > .title {
+    -fx-background-color: #1A1D2A;
+}
+
+.titled-pane {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.titled-pane > .title .label {
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.titled-pane > .title > .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 6 0 0;
+}
+
+.titled-pane > .title > .arrow-button > .arrow {
+    -fx-background-color: #3A3F58;
+    -fx-padding: 3.5px;
+}
+
+.titled-pane > .title > .arrow-button:hover > .arrow {
+    -fx-background-color: #5A5F78;
+}
+
+.titled-pane > .content {
+    -fx-background-color: #0C0E14;
+    -fx-border-color: #1E2130;
+    -fx-border-width: 0 1 1 1;
+    -fx-padding: 0;
+}
+
+/* Legacy: old TournamentOverlay card variant */
+.tournament-card {
+    -fx-padding: 36 52 36 52;
+}

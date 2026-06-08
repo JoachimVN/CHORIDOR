@@ -1,6 +1,5 @@
-package io.github.joachimvn.ui.board;
+package io.github.joachimvn.ui;
 
-import io.github.joachimvn.ui.GameController;
 import io.github.joachimvn.core.model.GameState;
 import io.github.joachimvn.core.model.PawnMove;
 import io.github.joachimvn.core.model.Player;
