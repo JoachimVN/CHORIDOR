@@ -289,6 +289,59 @@
     -fx-background-color: #5A5F78;
 }
 
+/* ── H2H breakdown TitledPanes (dark theme) ─────────────────────────────── */
+
+.titled-pane {
+    -fx-background-color: transparent;
+}
+
+.titled-pane > .title {
+    -fx-background-color: #13151F;
+    -fx-border-color: transparent transparent #1E2130 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 6 12 6 12;
+    -fx-cursor: hand;
+}
+
+.titled-pane > .title:hover {
+    -fx-background-color: #1A1D2A;
+}
+
+.titled-pane:focused > .title {
+    -fx-background-color: #13151F;
+}
+
+.titled-pane:focused:hover > .title {
+    -fx-background-color: #1A1D2A;
+}
+
+.titled-pane > .title .label {
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.titled-pane > .title > .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 6 0 0;
+}
+
+.titled-pane > .title > .arrow-button > .arrow {
+    -fx-background-color: #3A3F58;
+    -fx-padding: 3.5px;
+}
+
+.titled-pane > .title > .arrow-button:hover > .arrow {
+    -fx-background-color: #5A5F78;
+}
+
+.titled-pane > .content {
+    -fx-background-color: #0C0E14;
+    -fx-border-color: #1E2130;
+    -fx-border-width: 0 1 1 1;
+    -fx-padding: 0;
+}
+
 /* Legacy: old TournamentOverlay card variant */
 .tournament-card {
     -fx-padding: 36 52 36 52;

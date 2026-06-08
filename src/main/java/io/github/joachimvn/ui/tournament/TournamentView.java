@@ -344,9 +344,16 @@ public final class TournamentView {
         if (shortest != null || longest != null || mostWalls != null) {
             HBox notableRow = new HBox(12);
             notableRow.setAlignment(Pos.TOP_LEFT);
-            if (shortest  != null) notableRow.getChildren().add(notableGameCard(shortest,  "SHORTEST GAME",   shortest.moveCount()  + " moves", "#3E68A8"));
-            if (longest   != null) notableRow.getChildren().add(notableGameCard(longest,   "LONGEST GAME",    longest.moveCount()   + " moves", "#9E4A40"));
-            if (mostWalls != null) notableRow.getChildren().add(notableGameCard(mostWalls, "MOST TACTICAL",   mostWalls.wallCount() + " walls",  "#B8960C"));
+            for (VBox card : List.of(
+                    shortest  != null ? notableGameCard(shortest,  "SHORTEST GAME", shortest.moveCount()  + " moves", "#3E68A8") : null,
+                    longest   != null ? notableGameCard(longest,   "LONGEST GAME",  longest.moveCount()   + " moves", "#9E4A40") : null,
+                    mostWalls != null ? notableGameCard(mostWalls, "MOST TACTICAL", mostWalls.wallCount() + " walls",  "#B8960C") : null
+            )) {
+                if (card == null) continue;
+                HBox.setHgrow(card, Priority.ALWAYS);
+                card.setMaxWidth(Double.MAX_VALUE);
+                notableRow.getChildren().add(card);
+            }
             summaryBox.getChildren().add(notableRow);
         }
 
