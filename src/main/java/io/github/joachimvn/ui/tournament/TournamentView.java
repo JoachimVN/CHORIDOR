@@ -542,15 +542,24 @@ public final class TournamentView {
                 getStyleClass().removeAll("rank-top", "rank-second", "rank-third");
                 setStyle("");
                 if (empty || item == null) return;
-                int idx = tableItems.indexOf(item);
-                if      (idx == 0) getStyleClass().add("rank-top");
-                else if (idx == 1) getStyleClass().add("rank-second");
-                else if (idx == 2) getStyleClass().add("rank-third");
-                if (selectedStrategies.contains(item))
-                    setStyle("-fx-border-color: transparent transparent #191C2A #D4AC0D;"
-                           + "-fx-border-width: 0 0 1 3;");
+                applyRankStyle(this, tableItems.indexOf(item));
+                if (selectedStrategies.contains(item)) applySelectedRowStyle(this);
             }
         };
+    }
+
+    private static void applyRankStyle(TableRow<?> row, int idx) {
+        switch (idx) {
+            case 0 -> row.getStyleClass().add("rank-top");
+            case 1 -> row.getStyleClass().add("rank-second");
+            case 2 -> row.getStyleClass().add("rank-third");
+            default -> { /* no rank styling beyond top 3 */ }
+        }
+    }
+
+    private static void applySelectedRowStyle(TableRow<?> row) {
+        row.setStyle("-fx-border-color: transparent transparent #191C2A #D4AC0D;"
+                   + "-fx-border-width: 0 0 1 3;");
     }
 
     private TableColumn<Difficulty, Number> buildRankColumn() {
