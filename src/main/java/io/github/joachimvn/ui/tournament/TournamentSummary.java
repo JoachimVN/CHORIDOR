@@ -147,7 +147,7 @@ final class TournamentSummary {
         double fastestAvg = Double.MAX_VALUE;
         double slowestAvg = 0;
         double totalMoveSum = 0;
-        int totalMoveCount = 0;
+        long totalMoveCount = 0;
         for (Difficulty d : tableItems) {
             long[] mt = moveTotals.get(d);
             if (mt == null || mt[1] == 0) continue;
