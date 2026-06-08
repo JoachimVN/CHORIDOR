@@ -6,10 +6,11 @@ import io.github.joachimvn.ui.BoardView;
 import io.github.joachimvn.ui.GameController;
 
 import javafx.animation.*;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -28,8 +29,7 @@ import java.util.function.Consumer;
 
 /**
  * Full-screen landing page. Three cards in a radial carousel — clicking a side card rotates it
- * to centre; clicking the centre card expands its body. Exiting to a game plays a scale-fade
- * transition that reveals the live board underneath.
+ * to centre, where it auto-expands. Exiting to a game fades the overlay, revealing the live board.
  */
 public final class LandingView {
 
@@ -41,7 +41,6 @@ public final class LandingView {
     private static final Pos3D P_RIGHT  = new Pos3D( 350, 24,  7.0, 0.82, 0.48);
     private static final Pos3D P_L_HOV  = new Pos3D(-350, 12, -7.0, 0.91, 0.74);
     private static final Pos3D P_R_HOV  = new Pos3D( 350, 12,  7.0, 0.91, 0.74);
-    /** Side cards drift back this many px when centre card is expanded. */
     private static final double EXPAND_DRIFT = 22;
     private static final Pos3D[] SLOTS = { P_LEFT, P_CENTER, P_RIGHT };
 
@@ -51,8 +50,6 @@ public final class LandingView {
     private static final Duration DUR_FADE_IO = Duration.millis(110);
     private static final Duration DUR_GROW    = Duration.millis(360);
     private static final Duration DUR_HOVER   = Duration.millis(160);
-    private static final Duration DUR_EXIT    = Duration.millis(400);
-    private static final Duration DUR_STAGGER = Duration.millis(170);
     private static final Interpolator EASE    = Interpolator.EASE_BOTH;
 
     // ── Accents ───────────────────────────────────────────────────────────────
@@ -60,8 +57,8 @@ public final class LandingView {
     private static final String ACC_SIM  = "#3E68A8";
     private static final String ACC_SET  = "#5A6090";
 
-    private static final double CARD_W   = 460;
-    private static final int    ROWS     = 4;
+    private static final double CARD_W = 460;
+    private static final int    ROWS   = 4;
 
     // ── Mutable state ─────────────────────────────────────────────────────────
     private final StackPane root;
@@ -69,9 +66,10 @@ public final class LandingView {
     private List<VBox> allCards;
     /** order[slot] = card index occupying that slot (0=left, 1=centre, 2=right). */
     private final int[] order = {0, 1, 2};
-    private boolean  rotating = false;
-    private VBox     openBody = null;
-    private final Map<VBox, Timeline> rotTl = new HashMap<>();
+    private boolean rotating = false;
+    private VBox    openBody = null;
+    private final Map<VBox, Timeline> rotTl  = new HashMap<>();
+    private final Map<VBox, Timeline> bodyTl = new HashMap<>();
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
@@ -86,9 +84,9 @@ public final class LandingView {
         logo.setFitWidth(310);
         logo.setSmooth(true);
 
-        VBox[] play = card(FontAwesomeSolid.CHESS,  "PLAY",     "Local or vs AI",    ACC_PLAY, "landing-card-play");
-        VBox[] sim  = card(FontAwesomeSolid.ROBOT,  "SIMULATE", "Watch AIs compete", ACC_SIM,  "landing-card-sim");
-        VBox[] set  = card(FontAwesomeSolid.COG,    "SETTINGS", "Preferences",       ACC_SET,  "landing-card-set");
+        VBox[] play = card(FontAwesomeSolid.CHESS_BOARD, "PLAY",     "Local or vs AI",    ACC_PLAY, "landing-card-play");
+        VBox[] sim  = card(FontAwesomeSolid.ROBOT,       "SIMULATE", "Watch AIs compete", ACC_SIM,  "landing-card-sim");
+        VBox[] set  = card(FontAwesomeSolid.COG,         "SETTINGS", "Preferences",       ACC_SET,  "landing-card-set");
 
         VBox playCard = play[0], playBody = play[1];
         VBox simCard  = sim[0],  simBody  = sim[1];
@@ -99,18 +97,38 @@ public final class LandingView {
         populateSimulate(simBody, ctrl, board, flipSelected, onTournament);
         populateSettings(setBody);
 
-        // TOP_CENTER: side cards are pinned to the arena top via their translateY,
-        // so they don't shift when the centre card expands and grows the arena height.
         arena.setAlignment(Pos.TOP_CENTER);
         for (int i = 0; i < 3; i++) {
             VBox c = allCards.get(i);
             c.setPrefWidth(CARD_W);
             c.setMaxWidth(CARD_W);
+            c.setMaxHeight(Region.USE_PREF_SIZE);
             place(c, SLOTS[slotOf(i)]);
             arena.getChildren().add(c);
         }
         bringCenterFront();
         wireCarousel();
+
+        // Auto-expand the initial centre card once it has been laid out
+        VBox initialCenter = allCards.get(order[1]);
+        initialCenter.heightProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> obs, Number ov, Number nv) {
+                if (nv.doubleValue() > 0) {
+                    initialCenter.heightProperty().removeListener(this);
+                    if (openBody == null)
+                        expandBody(initialCenter, (VBox) initialCenter.getChildren().get(1));
+                }
+            }
+        });
+
+        // Re-expand centre card whenever the overlay becomes visible (after game exit)
+        root.visibleProperty().addListener((obs, ov, nv) -> {
+            if (nv && openBody == null) {
+                VBox cc = allCards.get(order[1]);
+                expandBody(cc, (VBox) cc.getChildren().get(1));
+            }
+        });
 
         VBox page = new VBox(48, logo, arena);
         page.setAlignment(Pos.TOP_CENTER);
@@ -134,11 +152,6 @@ public final class LandingView {
 
     // ── Game exit transition ──────────────────────────────────────────────────
 
-    /**
-     * The landing root has a semi-transparent background, so the live BoardView
-     * has been visible behind it the whole time. Running gameStart then fading
-     * the overlay reveals the same board that was always there.
-     */
     private void exitToGame(Runnable gameStart) {
         gameStart.run();
         root.setMouseTransparent(true);
@@ -149,6 +162,7 @@ public final class LandingView {
             root.setVisible(false);
             root.setOpacity(1);
             root.setMouseTransparent(false);
+            openBody = null;
         });
         ft.play();
     }
@@ -168,25 +182,31 @@ public final class LandingView {
     }
 
     private void onCardClick(int cardIdx) {
-        if (slotOf(cardIdx) == 1) {
-            toggleBody(cardIdx);
-        } else {
-            // Collapse and rotate at the same time — don't wait for collapse to finish
-            if (openBody != null) collapseBody(allCards.get(order[1]), openBody);
-            rotate(cardIdx);
-        }
+        if (slotOf(cardIdx) != 1) rotate(cardIdx);
+        // Centre card: already expanded — action buttons inside handle game start
     }
 
     private void rotate(int targetIdx) {
-        int tSlot  = slotOf(targetIdx);
-        int shift  = (tSlot == 0) ? 1 : -1;
-        int[] nw   = new int[3];
+        // Collapse departing centre immediately (concurrent with rotation)
+        if (openBody != null) collapseBody(allCards.get(order[1]), openBody);
+
+        int tSlot = slotOf(targetIdx);
+        int shift = (tSlot == 0) ? 1 : -1;
+        int[] nw = new int[3];
         for (int i = 0; i < 3; i++) nw[((i + shift) % 3 + 3) % 3] = order[i];
         System.arraycopy(nw, 0, order, 0, 3);
 
         rotating = true;
         for (int p = 0; p < 3; p++) animTo(allCards.get(order[p]), SLOTS[p]);
-        new Timeline(new KeyFrame(DUR_ROTATE, e -> { bringCenterFront(); rotating = false; })).play();
+
+        // Expand incoming card immediately — it grows while sliding to centre
+        VBox cc = allCards.get(order[1]);
+        expandBody(cc, (VBox) cc.getChildren().get(1));
+
+        new Timeline(new KeyFrame(DUR_ROTATE, e -> {
+            bringCenterFront();
+            rotating = false;
+        })).play();
     }
 
     private void animTo(VBox c, Pos3D pos) {
@@ -234,57 +254,55 @@ public final class LandingView {
 
     // ── Body expansion ────────────────────────────────────────────────────────
 
-    private void toggleBody(int cardIdx) {
-        VBox c = allCards.get(cardIdx);
-        VBox b = (VBox) c.getChildren().get(1);
-        if (openBody == b) collapseBody(c, b);
-        else               expandBody(c, b);
-    }
-
     private void expandBody(VBox card, VBox body) {
-        if (openBody != null && openBody != body) collapseBody(allCards.get(order[1]), openBody);
+        if (openBody != null && openBody != body) {
+            for (VBox c : allCards) {
+                if (c.getChildren().get(1) == openBody) { collapseBody(c, openBody); break; }
+            }
+        }
         openBody = body;
 
-        body.setManaged(true);
+        // Measure natural height before the layout system sees the body
         body.setVisible(true);
-        body.setOpacity(1);
-        for (Node child : body.getChildren()) { child.setOpacity(0); child.setTranslateY(-6); }
-
-        // Force a CSS + layout pass so prefHeight is accurate
-        card.applyCss();
-        card.layout();
+        body.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        body.applyCss();
         double h = body.prefHeight(CARD_W - 48);
-        if (h < 20) h = 220;
+        if (h < 10) h = 220;
 
-        body.setMaxHeight(0); // drives card VBox height; animated in sync with clip
-        Rectangle clip = new Rectangle(CARD_W, 0);
-        body.setClip(clip);
+        // Add body to layout at zero height so the card doesn't jump
+        body.setManaged(true);
+        body.setPrefHeight(0);
 
-        final double finalH = h;
+        // Clip body content so text/controls don't bleed above the growing edge
+        Rectangle bodyClip = new Rectangle(CARD_W + 8, 0);
+        body.setClip(bodyClip);
+
+        // Clip the entire card so the CSS background gradient grows with the animation
+        StackPane header = (StackPane) card.getChildren().get(0);
+        double headerH = Math.max(header.getHeight(), 150.0);
+        Rectangle cardClip = new Rectangle(CARD_W + 8, headerH);
+        card.setClip(cardClip);
+
+        final double fh = h;
+        final double fHeaderH = headerH;
+
+        Timeline prev = bodyTl.get(body);
+        if (prev != null) prev.stop();
+
         Timeline open = new Timeline(new KeyFrame(DUR_EXPAND,
-            new KeyValue(clip.heightProperty(),    finalH, EASE),
-            new KeyValue(body.maxHeightProperty(), finalH, EASE)));
-        open.setOnFinished(ev -> {
+            new KeyValue(body.prefHeightProperty(), fh,              EASE),
+            new KeyValue(bodyClip.heightProperty(), fh,              EASE),
+            new KeyValue(cardClip.heightProperty(), fHeaderH + fh,   EASE)));
+        open.setOnFinished(e -> {
             body.setClip(null);
-            body.setMaxHeight(Double.MAX_VALUE);
-            // Stagger each child settling into place
-            List<Node> kids = body.getChildren();
-            for (int i = 0; i < kids.size(); i++) {
-                Node kid = kids.get(i);
-                long delay = i * 55L;
-                new Timeline(
-                    new KeyFrame(Duration.millis(delay)),
-                    new KeyFrame(Duration.millis(delay + DUR_STAGGER.toMillis()),
-                        new KeyValue(kid.opacityProperty(),    1.0, EASE),
-                        new KeyValue(kid.translateYProperty(), 0.0, EASE))
-                ).play();
-            }
+            card.setClip(null);
+            body.setPrefHeight(Region.USE_COMPUTED_SIZE);
+            bodyTl.remove(body);
         });
+        bodyTl.put(body, open);
         open.play();
 
-        // Side cards drift back to create depth
-        driftSides(card, true);
-        setChevron(card, true);
+        if (!rotating) driftSides(card, true);
         card.setStyle("-fx-border-color: " + accent(card) + ";");
     }
 
@@ -292,27 +310,39 @@ public final class LandingView {
         if (openBody == body) openBody = null;
 
         double fromH = body.getHeight() > 0 ? body.getHeight() : body.prefHeight(CARD_W - 48);
-        Rectangle clip = new Rectangle(CARD_W, fromH);
-        body.setClip(clip);
+        body.setPrefHeight(fromH);
+
+        Rectangle bodyClip = new Rectangle(CARD_W + 8, fromH);
+        body.setClip(bodyClip);
+
+        StackPane header = (StackPane) card.getChildren().get(0);
+        double headerH = Math.max(header.getHeight(), 150.0);
+        Rectangle cardClip = new Rectangle(CARD_W + 8, headerH + fromH);
+        card.setClip(cardClip);
+
+        Timeline prev = bodyTl.get(body);
+        if (prev != null) prev.stop();
 
         Timeline close = new Timeline(new KeyFrame(DUR_EXPAND,
-            new KeyValue(clip.heightProperty(),    0.0, EASE),
-            new KeyValue(body.maxHeightProperty(), 0.0, EASE)));
+            new KeyValue(body.prefHeightProperty(), 0.0,      EASE),
+            new KeyValue(bodyClip.heightProperty(), 0.0,      EASE),
+            new KeyValue(cardClip.heightProperty(), headerH,  EASE)));
         close.setOnFinished(e -> {
             body.setClip(null);
+            card.setClip(null);
+            body.setPrefHeight(Region.USE_COMPUTED_SIZE);
             body.setManaged(false);
             body.setVisible(false);
-            body.setOpacity(1);
-            for (Node child : body.getChildren()) { child.setTranslateY(0); child.setOpacity(1); }
+            bodyTl.remove(body);
         });
+        bodyTl.put(body, close);
         close.play();
 
-        driftSides(card, false);
-        setChevron(card, false);
+        if (!rotating) driftSides(card, false);
         card.setStyle("");
     }
 
-    /** Animates side cards toward (drift=true) or back from a depth offset. */
+    /** Animates side cards toward (deeper=true) or back from a depth offset. */
     private void driftSides(VBox centreCard, boolean deeper) {
         for (int i = 0; i < allCards.size(); i++) {
             VBox other = allCards.get(i);
@@ -323,14 +353,6 @@ public final class LandingView {
             new Timeline(new KeyFrame(DUR_EXPAND,
                 new KeyValue(other.translateYProperty(), targetY, EASE))).play();
         }
-    }
-
-    private void setChevron(VBox card, boolean up) {
-        StackPane h  = (StackPane) card.getChildren().get(0);
-        HBox fg      = (HBox) h.getChildren().get(1);
-        FontIcon chv = (FontIcon) fg.getChildren().get(2);
-        chv.setIconCode(up ? FontAwesomeSolid.CHEVRON_UP : FontAwesomeSolid.CHEVRON_DOWN);
-        chv.setIconColor(Color.web(accent(card), up ? 1.0 : 0.25));
     }
 
     private String accent(VBox card) {
@@ -380,10 +402,7 @@ public final class LandingView {
         VBox txt = new VBox(7, tl, sl);
         HBox.setHgrow(txt, Priority.ALWAYS);
 
-        FontIcon chv = new FontIcon(FontAwesomeSolid.CHEVRON_DOWN);
-        chv.setIconSize(11); chv.setIconColor(Color.web(accent, 0.25));
-
-        HBox fore = new HBox(20, fg, txt, chv);
+        HBox fore = new HBox(20, fg, txt);
         fore.setAlignment(Pos.CENTER_LEFT);
 
         FontIcon wm = new FontIcon(icon);
@@ -399,7 +418,6 @@ public final class LandingView {
         VBox body = new VBox(12);
         body.setPadding(new Insets(0, 28, 32, 28));
         body.setManaged(false); body.setVisible(false);
-        body.setMinHeight(0);  body.setMaxHeight(0);
 
         VBox cardBox = new VBox(header, body);
         cardBox.getStyleClass().addAll("landing-card", styleClass);

@@ -80,6 +80,7 @@ A personal project built to explore:
 - Git
 - GitHub
 - Photopea
+- Figma
 - Soundation
 - Audacity
 
