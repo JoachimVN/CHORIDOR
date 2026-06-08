@@ -62,6 +62,8 @@ abstract class AbstractSearchStrategy implements Strategy {
         return score(myDist, oppDist) + WALL_RESERVE_WEIGHT * wallAdvantage(state);
     }
 
+    protected final Player aiPlayer() { return aiPlayer; }
+
     /** Wall-reserve edge for aiPlayer: positive when aiPlayer holds more walls than the opponent. */
     protected final int wallAdvantage(GameState state) {
         return state.getWallCount(aiPlayer) - state.getWallCount(aiPlayer.opponent());
