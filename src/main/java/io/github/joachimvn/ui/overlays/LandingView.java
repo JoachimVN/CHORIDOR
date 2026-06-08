@@ -38,11 +38,11 @@ public final class LandingView {
     // ── Carousel positions ────────────────────────────────────────────────────
     private record Pos3D(double tx, double ty, double rot, double sc, double op) {}
 
-    private static final Pos3D P_LEFT   = new Pos3D(-430, 28, -7.5, 0.78, 0.40);
+    private static final Pos3D P_LEFT   = new Pos3D(-350, 24, -7.0, 0.82, 0.48);
     private static final Pos3D P_CENTER = new Pos3D(0,     0,  0.0, 1.00, 1.00);
-    private static final Pos3D P_RIGHT  = new Pos3D( 430, 28,  7.5, 0.78, 0.40);
-    private static final Pos3D P_L_HOV  = new Pos3D(-430, 16, -7.5, 0.87, 0.70);
-    private static final Pos3D P_R_HOV  = new Pos3D( 430, 16,  7.5, 0.87, 0.70);
+    private static final Pos3D P_RIGHT  = new Pos3D( 350, 24,  7.0, 0.82, 0.48);
+    private static final Pos3D P_L_HOV  = new Pos3D(-350, 12, -7.0, 0.91, 0.74);
+    private static final Pos3D P_R_HOV  = new Pos3D( 350, 12,  7.0, 0.91, 0.74);
     /** Side cards drift back this many px when centre card is expanded. */
     private static final double EXPAND_DRIFT = 22;
     private static final Pos3D[] SLOTS = { P_LEFT, P_CENTER, P_RIGHT };
@@ -153,56 +153,40 @@ public final class LandingView {
         double sc = bp / total, cs = cell * sc, gs = gap * sc, ss = step * sc;
         double ox = (cw - bp) / 2.0, oy = (ch - bp) / 2.0;
 
-        g.setFill(Color.web("#B0C0FF", 0.018));
+        // Cell outlines only — filled rects at even 0.018 opacity accumulate too visibly
+        g.setStroke(Color.web("#6080C0", 0.038));
+        g.setLineWidth(0.6);
         for (int r = 0; r < n; r++)
             for (int c = 0; c < n; c++)
-                g.fillRoundRect(ox + c * ss, oy + r * ss, cs, cs, 3 * sc, 3 * sc);
+                g.strokeRoundRect(ox + c*ss + 0.3, oy + r*ss + 0.3, cs - 0.6, cs - 0.6, 3*sc, 3*sc);
 
-        double strip = cs * 3.0 / 54;
-        g.setFill(Color.web("#9E4A40", 0.028));
-        for (int c = 0; c < n; c++) g.fillRect(ox + c * ss, oy + (n-1)*ss + cs - strip, cs, strip);
-        g.setFill(Color.web("#3E68A8", 0.028));
-        for (int c = 0; c < n; c++) g.fillRect(ox + c * ss, oy, cs, strip);
-
-        g.setFill(Color.web("#9E4A40", 0.038));
-        g.fillRoundRect(ox + 2*ss, oy + 4*ss + cs, cs*2 + gs, gs, 2*sc, 2*sc);
-        g.fillRoundRect(ox + 5*ss, oy + 6*ss + cs, cs*2 + gs, gs, 2*sc, 2*sc);
-        g.setFill(Color.web("#3E68A8", 0.038));
-        g.fillRoundRect(ox + 5*ss + cs, oy + 2*ss, gs, cs*2 + gs, 2*sc, 2*sc);
-        g.fillRoundRect(ox + 3*ss + cs, oy + 4*ss, gs, cs*2 + gs, 2*sc, 2*sc);
-
-        double pad = cs * 0.16;
-        g.setFill(Color.web("#9E4A40", 0.060));
+        // Starting pawn positions — subtle fills
+        double pad = cs * 0.22;
+        g.setFill(Color.web("#9E4A40", 0.055));
         g.fillOval(ox + 4*ss + pad, oy + 8*ss + pad, cs - 2*pad, cs - 2*pad);
-        g.setFill(Color.web("#3E68A8", 0.060));
+        g.setFill(Color.web("#3E68A8", 0.055));
         g.fillOval(ox + 4*ss + pad, oy + pad, cs - 2*pad, cs - 2*pad);
     }
 
     // ── Game exit transition ──────────────────────────────────────────────────
 
     /**
-     * Runs {@code gameStart}, then plays a scale+fade-out on the landing root
-     * to reveal the live board that is already rendered beneath it in the scene.
+     * Runs {@code gameStart} so the board underneath is live, then fades the
+     * landing root out with EASE_IN so it lingers briefly then disappears cleanly.
+     * No scale — scaling makes the transition feel artificial.
      */
     private void exitToGame(Runnable gameStart) {
         gameStart.run();
         root.setMouseTransparent(true);
-
-        // Zoom past the landing view — the real board is revealed underneath
-        ScaleTransition st = new ScaleTransition(DUR_EXIT, root);
-        st.setToX(1.06); st.setToY(1.06);
-        FadeTransition  ft = new FadeTransition(DUR_EXIT, root);
+        FadeTransition ft = new FadeTransition(Duration.millis(520), root);
         ft.setToValue(0);
-
-        ParallelTransition pt = new ParallelTransition(st, ft);
-        pt.setInterpolator(EASE);
-        pt.setOnFinished(e -> {
+        ft.setInterpolator(Interpolator.EASE_IN);
+        ft.setOnFinished(e -> {
             root.setVisible(false);
             root.setOpacity(1);
-            root.setScaleX(1); root.setScaleY(1);
             root.setMouseTransparent(false);
         });
-        pt.play();
+        ft.play();
     }
 
     // ── Carousel ──────────────────────────────────────────────────────────────
