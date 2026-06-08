@@ -120,9 +120,11 @@ public final class TournamentView {
 
     private TableView<Difficulty> standingsTable;
     private AnimationTimer animTimer;
-    private boolean running = false;
-    private boolean paused  = false;
+    private Timeline       etaTimeline;
+    private boolean running  = false;
+    private boolean paused   = false;
     private long    tournamentStartMs;
+    private int     doneCount, totalCount;
 
     public TournamentView(Runnable onClose) {
         root = new StackPane();
@@ -203,7 +205,10 @@ public final class TournamentView {
         boardsScroll.getStyleClass().add("tournament-board-scroll");
         VBox.setVgrow(boardsScroll, Priority.ALWAYS);
 
-        VBox boardsSection = new VBox(8, boardsTitle, boardsScroll);
+        // summaryBox lives below the boards — empty until tournament ends
+        summaryBox.setPadding(new Insets(8, 0, 4, 0));
+
+        VBox boardsSection = new VBox(8, boardsTitle, boardsScroll, summaryBox);
         boardsSection.getStyleClass().add("tournament-panel");
         boardsSection.setPadding(new Insets(14));
         HBox.setHgrow(boardsSection, Priority.ALWAYS);
@@ -222,12 +227,8 @@ public final class TournamentView {
         VBox.setVgrow(resultsList, Priority.ALWAYS);
         VBox.setVgrow(standingsTable, Priority.ALWAYS);
 
-        // summaryBox is empty until tournament completes (takes no space)
-        summaryBox.setPadding(new Insets(4, 0, 4, 0));
-
         VBox rightPanel = new VBox(10,
                 standingsTitle, standingsTable,
-                summaryBox,
                 resultsTitle, resultsList);
         rightPanel.getStyleClass().add("tournament-panel");
         rightPanel.setPadding(new Insets(14));
@@ -251,6 +252,12 @@ public final class TournamentView {
         running = true;
         paused  = false;
         tournamentStartMs = System.currentTimeMillis();
+        doneCount = 0;
+        totalCount = runner.totalGames(strategies);
+        if (etaTimeline != null) etaTimeline.stop();
+        etaTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> tickEta()));
+        etaTimeline.setCycleCount(Timeline.INDEFINITE);
+        etaTimeline.play();
         selectedStrategies.clear();
         pinnedGameIds.clear();
         finishingGames.clear();
@@ -279,9 +286,9 @@ public final class TournamentView {
 
         runner.start(strategies,
             (done, t) -> {
+                doneCount = done;
                 progressBar.setProgress((double) done / t);
                 progressLabel.setText(done + " / " + t);
-                updateEta(done, t);
                 resort();
             },
             (winner, loser) -> {
@@ -301,6 +308,7 @@ public final class TournamentView {
                 actionBtn.setText("Close");
                 pauseBtn.setDisable(true);
                 progressBar.setProgress(1.0);
+                if (etaTimeline != null) { etaTimeline.stop(); etaTimeline = null; }
                 progressLabel.setText(runner.totalGames(strategies) + " games");
                 etaLabel.setText("  " + formatDuration(durationMs));
                 restartBtn.setVisible(true);
@@ -312,10 +320,11 @@ public final class TournamentView {
 
     // ── ETA ───────────────────────────────────────────────────────────────
 
-    private void updateEta(int done, int total) {
-        if (done == 0) return;
-        long elapsed = System.currentTimeMillis() - tournamentStartMs;
-        long remaining = elapsed * (total - done) / done;
+    /** Called every second by etaTimeline to recompute and display remaining time. */
+    private void tickEta() {
+        if (doneCount == 0) return;
+        long elapsed   = System.currentTimeMillis() - tournamentStartMs;
+        long remaining = elapsed * (totalCount - doneCount) / doneCount;
         etaLabel.setText("  ~" + formatDuration(remaining));
     }
 
@@ -331,33 +340,75 @@ public final class TournamentView {
         summaryBox.getChildren().clear();
 
         Separator sep = new Separator();
-        sep.setStyle("-fx-background-color: #1E2130;");
-        summaryBox.getChildren().add(sep);
-
-        Label title = new Label("SUMMARY");
+        Label title = new Label("RESULTS SUMMARY");
         title.getStyleClass().add("tournament-section-title");
-        summaryBox.getChildren().add(title);
+        summaryBox.getChildren().addAll(sep, title);
 
-        Label dur = new Label("Completed in " + formatDuration(durationMs)
-                + "  ·  " + strategies.size() + " strategies");
-        dur.setStyle("-fx-text-fill: #606880; -fx-font-size: 12px;");
-        summaryBox.getChildren().add(dur);
-
-        String[] rankColors = {"#B8960C", "#8896A0", "#8B6040"};
-        String[] rankNames  = {"1st", "2nd", "3rd"};
         Map<Difficulty, int[]> res = runner.getResults();
-        for (int i = 0; i < Math.min(3, tableItems.size()); i++) {
-            Difficulty d = tableItems.get(i);
-            int[] wr = res.get(d);
-            int w = wr == null ? 0 : wr[0];
-            int l = wr == null ? 0 : wr[1];
-            String pct = (w + l == 0) ? "—" : (int) Math.round(100.0 * w / (w + l)) + "%";
-            Label lbl = new Label(rankNames[i] + "  " + d.sample().displayName()
-                    + "  —  " + w + "W " + l + "L  " + pct);
-            lbl.setStyle("-fx-text-fill: " + rankColors[i]
-                    + "; -fx-font-size: 12px; -fx-font-weight: bold;");
-            summaryBox.getChildren().add(lbl);
+
+        // Duration + game count
+        addStat(formatDuration(durationMs) + "  ·  "
+                + strategies.size() + " strategies  ·  "
+                + runner.totalGames(strategies) + " games", "#606880");
+
+        // Perfect records (100% win rate)
+        List<String> perfect = tableItems.stream()
+                .filter(d -> { int[] w = res.get(d); return w != null && w[1] == 0 && w[0] > 0; })
+                .map(d -> d.sample().displayName()).toList();
+        if (!perfect.isEmpty())
+            addStat("Unbeaten: " + String.join(", ", perfect), "#B8960C");
+
+        // Whitewashed (0% win rate)
+        List<String> zero = tableItems.stream()
+                .filter(d -> { int[] w = res.get(d); return w != null && w[0] == 0 && w[1] > 0; })
+                .map(d -> d.sample().displayName()).toList();
+        if (!zero.isEmpty())
+            addStat("Winless: " + String.join(", ", zero), "#C8706A");
+
+        // Closest race — adjacent strategies with smallest win-rate gap
+        double minGap = Double.MAX_VALUE;
+        String closestPair = null;
+        for (int i = 0; i + 1 < tableItems.size(); i++) {
+            int[] wi = res.get(tableItems.get(i));
+            int[] wj = res.get(tableItems.get(i + 1));
+            if (wi == null || wj == null || wi[0]+wi[1] == 0 || wj[0]+wj[1] == 0) continue;
+            double gap = (double) wi[0]/(wi[0]+wi[1]) - (double) wj[0]/(wj[0]+wj[1]);
+            if (gap < minGap) {
+                minGap = gap;
+                closestPair = tableItems.get(i).sample().displayName()
+                        + " vs " + tableItems.get(i + 1).sample().displayName()
+                        + " (" + (int) Math.round((1 - gap) * 100) + "% each)";
+            }
         }
+        if (closestPair != null && minGap < 0.06)
+            addStat("Closest: " + closestPair, "#3E68A8");
+
+        // Biggest gap between consecutive strategies (a "tier break")
+        double maxGap = 0; String tierBreak = null;
+        for (int i = 0; i + 1 < tableItems.size(); i++) {
+            int[] wi = res.get(tableItems.get(i));
+            int[] wj = res.get(tableItems.get(i + 1));
+            if (wi == null || wj == null || wi[0]+wi[1] == 0 || wj[0]+wj[1] == 0) continue;
+            double gap = (double) wi[0]/(wi[0]+wi[1]) - (double) wj[0]/(wj[0]+wj[1]);
+            if (gap > maxGap) {
+                maxGap = gap;
+                tierBreak = tableItems.get(i).sample().displayName()
+                        + " (" + (int) Math.round(100*(double)wi[0]/(wi[0]+wi[1])) + "%)"
+                        + "  →  "
+                        + tableItems.get(i + 1).sample().displayName()
+                        + " (" + (int) Math.round(100*(double)wj[0]/(wj[0]+wj[1])) + "%)";
+            }
+        }
+        if (tierBreak != null && maxGap > 0.10)
+            addStat("Biggest drop: " + tierBreak, "#8890A8");
+    }
+
+    private void addStat(String text, String color) {
+        Label l = new Label(text);
+        l.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 12px;");
+        l.setWrapText(true);
+        l.setMaxWidth(Double.MAX_VALUE);
+        summaryBox.getChildren().add(l);
     }
 
     // ── Pause / resume ────────────────────────────────────────────────────
