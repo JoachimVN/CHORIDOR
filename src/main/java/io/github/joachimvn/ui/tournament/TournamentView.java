@@ -341,8 +341,9 @@ public final class TournamentView {
             } else {
                 // Not pinned: show winner overlay, then fade out
                 Difficulty winner = liveWinners.get(id);
-                String wName = winner != null ? winner.sample().displayName() : null;
-                mb.drawWinnerOverlay(wName);
+                String wName  = winner != null ? winner.sample().displayName() : null;
+                Color  wColor = (winner == mb.d1) ? P1_COLOR : P2_COLOR;
+                mb.drawWinnerOverlay(wName, wColor);
                 finishingGames.put(id, new FinishingGame(mb, wName, now));
             }
             return true; // removed from activeBoards
@@ -603,15 +604,15 @@ public final class TournamentView {
             paintPawn(g, pp2.col(), pp2.row(), P2_COLOR, step, cell, pad);
         }
 
-        /** Draws a semi-transparent overlay naming the winner. Called once when the game ends. */
-        void drawWinnerOverlay(String winnerName) {
+        /** Draws a semi-transparent overlay naming the winner in their player colour. */
+        void drawWinnerOverlay(String winnerName, Color winnerColor) {
             GraphicsContext g = canvas.getGraphicsContext2D();
             g.setFill(Color.color(0, 0, 0, 0.72));
             g.fillRect(0, 0, BOARD_PX, BOARD_PX);
             if (winnerName == null) return;
             g.setTextAlign(TextAlignment.CENTER);
             g.setTextBaseline(VPos.CENTER);
-            g.setFill(Color.web("#D4AC0D"));
+            g.setFill(winnerColor.brighter());
             g.setFont(Font.font("System", FontWeight.BOLD, BOARD_PX / 15));
             g.fillText(winnerName, BOARD_PX / 2, BOARD_PX / 2 - BOARD_PX / 12);
             g.setFill(Color.web("#8890A8"));
