@@ -43,9 +43,6 @@ public class ZugzwangStrategy implements Strategy {
 
     @Override
     public Move decide(GameState state) {
-        int myDist  = pathChecker.shortestPathWithJumps(state, aiPlayer);
-        int oppDist = pathChecker.shortestPathWithJumps(state, aiPlayer.opponent());
-
         List<PawnMove> pawns = validator.getLegalPawnMoves(state);
         if (pawns.isEmpty()) throw new NoSuchElementException("No legal moves");
 

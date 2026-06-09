@@ -51,66 +51,55 @@ public class PathCountStrategy extends AbstractSearchStrategy {
      */
     private int pathDagWidth(GameState state, Player player) {
         int boardSize = GameState.BOARD_SIZE;
-        Position start = state.getPawnPosition(player);
-        int goalRow    = player.goalRow();
+        int goalRow   = player.goalRow();
+        int[][] fwd   = bfsFrom(state, state.getPawnPosition(player));
 
-        // Forward BFS: shortest distance from start to each cell
-        int[][] fwd = new int[boardSize][boardSize];
-        for (int[] r : fwd) Arrays.fill(r, Integer.MAX_VALUE);
-        fwd[start.row()][start.col()] = 0;
-        Queue<Position> q = new ArrayDeque<>();
-        q.add(start);
-        while (!q.isEmpty()) {
-            Position cur = q.poll();
-            for (int[] d : DIRS) {
-                Position nxt = cur.offset(d[0], d[1]);
-                if (!nxt.isOnBoard() || state.isEdgeBlocked(cur, nxt)) continue;
-                if (fwd[nxt.row()][nxt.col()] == Integer.MAX_VALUE) {
-                    fwd[nxt.row()][nxt.col()] = fwd[cur.row()][cur.col()] + 1;
-                    q.add(nxt);
-                }
-            }
-        }
-
-        // Shortest distance to goal row
         int best = Integer.MAX_VALUE;
-        for (int c = 0; c < boardSize; c++) {
+        for (int c = 0; c < boardSize; c++)
             if (fwd[goalRow][c] < best) best = fwd[goalRow][c];
-        }
         if (best == Integer.MAX_VALUE) return 0;
 
-        // Backward BFS: shortest distance from goal row back to each cell
-        // (walls are symmetric, so isEdgeBlocked is the same in both directions)
-        int[][] bwd = new int[boardSize][boardSize];
-        for (int[] r : bwd) Arrays.fill(r, Integer.MAX_VALUE);
-        for (int c = 0; c < boardSize; c++) {
-            if (fwd[goalRow][c] == best) {
-                bwd[goalRow][c] = 0;
-                q.add(new Position(goalRow, c));
-            }
-        }
+        Queue<Position> seeds = new ArrayDeque<>();
+        for (int c = 0; c < boardSize; c++)
+            if (fwd[goalRow][c] == best) seeds.add(new Position(goalRow, c));
+
+        int[][] bwd = bfsFrom(state, seeds);
+        return countDagCells(fwd, bwd, best);
+    }
+
+    private int[][] bfsFrom(GameState state, Position start) {
+        Queue<Position> seeds = new ArrayDeque<>();
+        seeds.add(start);
+        return bfsFrom(state, seeds);
+    }
+
+    private int[][] bfsFrom(GameState state, Queue<Position> seeds) {
+        int boardSize = GameState.BOARD_SIZE;
+        int[][] dist = new int[boardSize][boardSize];
+        for (int[] r : dist) Arrays.fill(r, Integer.MAX_VALUE);
+        for (Position s : seeds) dist[s.row()][s.col()] = 0;
+        Queue<Position> q = new ArrayDeque<>(seeds);
         while (!q.isEmpty()) {
             Position cur = q.poll();
             for (int[] d : DIRS) {
                 Position nxt = cur.offset(d[0], d[1]);
                 if (!nxt.isOnBoard() || state.isEdgeBlocked(cur, nxt)) continue;
-                if (bwd[nxt.row()][nxt.col()] == Integer.MAX_VALUE) {
-                    bwd[nxt.row()][nxt.col()] = bwd[cur.row()][cur.col()] + 1;
+                if (dist[nxt.row()][nxt.col()] == Integer.MAX_VALUE) {
+                    dist[nxt.row()][nxt.col()] = dist[cur.row()][cur.col()] + 1;
                     q.add(nxt);
                 }
             }
         }
+        return dist;
+    }
 
-        // Count cells on any shortest path: fwd[r][c] + bwd[r][c] == best
+    private static int countDagCells(int[][] fwd, int[][] bwd, int best) {
         int count = 0;
-        for (int r = 0; r < boardSize; r++) {
-            for (int c = 0; c < boardSize; c++) {
+        for (int r = 0; r < fwd.length; r++)
+            for (int c = 0; c < fwd[r].length; c++)
                 if (fwd[r][c] != Integer.MAX_VALUE && bwd[r][c] != Integer.MAX_VALUE
-                        && fwd[r][c] + bwd[r][c] == best) {
+                        && fwd[r][c] + bwd[r][c] == best)
                     count++;
-                }
-            }
-        }
         return count;
     }
 

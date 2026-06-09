@@ -317,15 +317,16 @@ final class TournamentSummary {
         oppLabel.setMinWidth(120);
 
         int losses = gamesPerPair - wins;
-        String record = wins + "–" + losses;
-        String chipBg, chipFg;
+        String scoreText = wins + "–" + losses;
+        String chipBg;
+        String chipFg;
         if (wins == gamesPerPair)        { chipBg = "#1A3A1A"; chipFg = "#4CAF50"; }  // sweep
         else if (wins > gamesPerPair / 2.0) { chipBg = "#1A2A1A"; chipFg = "#8BC48A"; }  // majority
         else if (wins == losses)         { chipBg = "#2A2A1A"; chipFg = COLOR_GOLD; }  // tied
         else if (wins > 0)               { chipBg = "#2A1E1A"; chipFg = "#C89070"; }  // minority
         else                             { chipBg = "#3A1A1A"; chipFg = "#C8706A"; }  // swept
 
-        Label chip = new Label(record);
+        Label chip = new Label(scoreText);
         chip.setStyle("-fx-background-color: " + chipBg + "; " + FX_FILL + chipFg
                 + "; -fx-font-size: 11px; -fx-font-weight: bold;"
                 + " -fx-padding: 2 8 2 8; -fx-background-radius: 3;");

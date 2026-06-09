@@ -108,7 +108,10 @@ public final class TournamentView {
     private Label ccValueLabel;
     private StackPane setupPane;
 
-    private static final int  MAX_CONCURRENT   = Runtime.getRuntime().availableProcessors();
+    private static final int    MAX_CONCURRENT       = Runtime.getRuntime().availableProcessors();
+    private static final String CSS_PROGRESS_LABEL   = "tournament-progress-label";
+    private static final String CSS_BOARD_SCROLL     = "tournament-board-scroll";
+    private static final String CSS_SPINNER_BTN      = "tournament-spinner-btn";
 
     public TournamentView(Runnable onClose, GameController ctrl) {
         this.ctrl    = ctrl;
@@ -122,8 +125,8 @@ public final class TournamentView {
 
         // ── Top bar ──────────────────────────────────────────────────────────
         titleLabel.getStyleClass().add("tournament-title");
-        progressLabel.getStyleClass().add("tournament-progress-label");
-        etaLabel.getStyleClass().add("tournament-progress-label");
+        progressLabel.getStyleClass().add(CSS_PROGRESS_LABEL);
+        etaLabel.getStyleClass().add(CSS_PROGRESS_LABEL);
         progressBar.getStyleClass().add("tournament-progress-bar");
 
         pauseIcon.setIconSize(12);
@@ -200,14 +203,14 @@ public final class TournamentView {
         boardsScroll.setFitToWidth(true);
         boardsScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         boardsScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        boardsScroll.getStyleClass().add("tournament-board-scroll");
+        boardsScroll.getStyleClass().add(CSS_BOARD_SCROLL);
 
         summaryBox.setPadding(new Insets(4));
         summaryScroll = new ScrollPane(summaryBox);
         summaryScroll.setFitToWidth(true);
         summaryScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         summaryScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        summaryScroll.getStyleClass().add("tournament-board-scroll");
+        summaryScroll.getStyleClass().add(CSS_BOARD_SCROLL);
         summaryScroll.setVisible(false);
 
         StackPane mainContent = new StackPane(boardsScroll, summaryScroll);
@@ -356,14 +359,14 @@ public final class TournamentView {
             GridPane.setFillWidth(tb, true);
             strategyToggles.add(tb);
         }
-        allBtn.setOnAction(e  -> { if (!ctrl.isMuted()) selectSound.play(); strategyToggles.forEach(tb -> tb.setSelected(true)); });
-        noneBtn.setOnAction(e -> { if (!ctrl.isMuted()) selectSound.play(); strategyToggles.forEach(tb -> tb.setSelected(false)); });
+        allBtn.setOnAction(e  -> { if (!ctrl.isMuted()) { selectSound.play(); } strategyToggles.forEach(tb -> tb.setSelected(true)); });
+        noneBtn.setOnAction(e -> { if (!ctrl.isMuted()) { selectSound.play(); } strategyToggles.forEach(tb -> tb.setSelected(false)); });
 
         ScrollPane stratScroll = new ScrollPane(stratGrid);
         stratScroll.setFitToWidth(true);
         stratScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         stratScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        stratScroll.getStyleClass().add("tournament-board-scroll");
+        stratScroll.getStyleClass().add(CSS_BOARD_SCROLL);
 
         VBox section = new VBox(10, stratHeader, stratScroll);
         section.setPadding(new Insets(20, 36, 24, 36));
@@ -375,8 +378,8 @@ public final class TournamentView {
         gpmLabel.getStyleClass().add(STYLE_SECTION);
         gpmValueLabel = new Label(String.valueOf(gamesPerMatchup));
         gpmValueLabel.getStyleClass().add("tournament-spinner-value");
-        Button gpmMinus = new Button("−"); gpmMinus.getStyleClass().add("tournament-spinner-btn");
-        Button gpmPlus  = new Button("+"); gpmPlus.getStyleClass().add("tournament-spinner-btn");
+        Button gpmMinus = new Button("−"); gpmMinus.getStyleClass().add(CSS_SPINNER_BTN);
+        Button gpmPlus  = new Button("+"); gpmPlus.getStyleClass().add(CSS_SPINNER_BTN);
         gpmMinus.setOnAction(e -> {
             if (gamesPerMatchup > 1) { gamesPerMatchup--; gpmValueLabel.setText(String.valueOf(gamesPerMatchup)); updatePreview(); }
         });
@@ -391,8 +394,8 @@ public final class TournamentView {
         ccLabel.getStyleClass().add(STYLE_SECTION);
         ccValueLabel = new Label(String.valueOf(concurrentGames));
         ccValueLabel.getStyleClass().add("tournament-spinner-value");
-        Button ccMinus = new Button("−"); ccMinus.getStyleClass().add("tournament-spinner-btn");
-        Button ccPlus  = new Button("+"); ccPlus.getStyleClass().add("tournament-spinner-btn");
+        Button ccMinus = new Button("−"); ccMinus.getStyleClass().add(CSS_SPINNER_BTN);
+        Button ccPlus  = new Button("+"); ccPlus.getStyleClass().add(CSS_SPINNER_BTN);
         ccMinus.setOnAction(e -> {
             if (concurrentGames > 1) { concurrentGames--; ccValueLabel.setText(String.valueOf(concurrentGames)); updatePreview(); }
         });
@@ -402,7 +405,7 @@ public final class TournamentView {
         HBox ccSpinner = new HBox(6, ccMinus, ccValueLabel, ccPlus);
         ccSpinner.setAlignment(Pos.CENTER_LEFT);
         recommendedLabel = new Label();
-        recommendedLabel.getStyleClass().add("tournament-progress-label");
+        recommendedLabel.getStyleClass().add(CSS_PROGRESS_LABEL);
         VBox ccBox = new VBox(10, ccLabel, ccSpinner, recommendedLabel);
 
         HBox row = new HBox(52, gpmBox, ccBox);
@@ -497,23 +500,26 @@ public final class TournamentView {
         int recommended = computeRecommended(selCount);
         if (recommendedLabel  != null) recommendedLabel.setText("Recommended: " + recommended);
 
-        long estMs = 0;
-        if (total > 0 && concurrentGames > 0) {
-            long totalWork = 0;
-            for (Difficulty d1 : selected)
-                for (Difficulty d2 : selected)
-                    if (d1 != d2) {
-                        int moves = estimatedMovesPerPlayer(d1, d2);
-                        long gameMs = (long) moves * effectiveMsPerDecision(d1, d2)
-                                    + (long) moves * effectiveMsPerDecision(d2, d1);
-                        totalWork += gameMs * gamesPerMatchup;
-                    }
-            estMs = totalWork / concurrentGames;
-        }
+        long estMs = (total > 0 && concurrentGames > 0)
+                   ? estimateTotalWorkMs(selected) / concurrentGames
+                   : 0;
 
         if (setupStratCount != null) setupStratCount.setText(String.valueOf(selCount));
         if (setupTotalGames != null) setupTotalGames.setText(String.valueOf(total));
         if (setupDuration   != null) setupDuration.setText(estMs <= 0 ? "—" : formatDuration(estMs));
+    }
+
+    private long estimateTotalWorkMs(List<Difficulty> selected) {
+        long totalWork = 0;
+        for (Difficulty d1 : selected)
+            for (Difficulty d2 : selected)
+                if (d1 != d2) {
+                    int moves = estimatedMovesPerPlayer(d1, d2);
+                    totalWork += (moves * effectiveMsPerDecision(d1, d2)
+                               + moves * effectiveMsPerDecision(d2, d1))
+                               * gamesPerMatchup;
+                }
+        return totalWork;
     }
 
     /**
@@ -537,14 +543,15 @@ public final class TournamentView {
      * Larger skill gap → shorter game (dominant player wins decisively).
      */
     private static int estimatedMovesPerPlayer(Difficulty d1, Difficulty d2) {
-        int s1 = d1.skillLevel(), s2 = d2.skillLevel();
+        int s1 = d1.skillLevel();
+        int s2 = d2.skillLevel();
         int avg = (s1 + s2);          // 2..10
         int gap = Math.abs(s1 - s2);  // 0..4
         return Math.max(8, 12 + avg * 2 - gap * 4);
     }
 
     private static int computeRecommended(int stratCount) {
-        return Math.max(1, Math.min(stratCount / 2, Runtime.getRuntime().availableProcessors() - 1));
+        return Math.clamp(stratCount / 2, 1, Runtime.getRuntime().availableProcessors() - 1);
     }
 
     private void resetUiForStart(int total) {
