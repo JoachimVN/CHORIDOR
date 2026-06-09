@@ -381,7 +381,7 @@ public final class TournamentView {
             if (gamesPerMatchup > 1) { gamesPerMatchup--; gpmValueLabel.setText(String.valueOf(gamesPerMatchup)); updatePreview(); }
         });
         gpmPlus.setOnAction(e -> {
-            if (gamesPerMatchup < 20) { gamesPerMatchup++; gpmValueLabel.setText(String.valueOf(gamesPerMatchup)); updatePreview(); }
+            gamesPerMatchup++; gpmValueLabel.setText(String.valueOf(gamesPerMatchup)); updatePreview();
         });
         HBox gpmSpinner = new HBox(6, gpmMinus, gpmValueLabel, gpmPlus);
         gpmSpinner.setAlignment(Pos.CENTER_LEFT);
