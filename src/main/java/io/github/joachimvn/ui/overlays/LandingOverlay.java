@@ -99,10 +99,10 @@ public final class LandingOverlay {
         VBox watermark = new VBox(6, wmLogo, wmVersion);
         watermark.setAlignment(Pos.CENTER);
         watermark.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-        watermark.setOpacity(0.18);
+        watermark.setOpacity(0.30);
         watermark.setMouseTransparent(true);
-        StackPane.setAlignment(watermark, Pos.BOTTOM_RIGHT);
-        StackPane.setMargin(watermark, new Insets(0, 28, 24, 0));
+        StackPane.setAlignment(watermark, Pos.TOP_RIGHT);
+        StackPane.setMargin(watermark, new Insets(24, 28, 0, 0));
 
         VBox[] play = card(FontAwesomeSolid.PLAY,        "PLAY",     "Local or vs AI",    ACC_PLAY, "landing-card-play");
         VBox[] sim  = card(FontAwesomeSolid.ROBOT,       "SIMULATE", "Watch AIs compete", ACC_SIM,  "landing-card-sim");
