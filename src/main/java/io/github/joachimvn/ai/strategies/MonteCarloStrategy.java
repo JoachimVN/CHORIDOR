@@ -183,20 +183,44 @@ public class MonteCarloStrategy implements Strategy {
         return goalRowAdvance(state, current);
     }
 
-    /** Sample a few random legal walls; play the best by opponent path impact. */
+    /**
+     * Fast wall sampler for rollouts. Generates random wall positions, rejects overlaps via
+     * O(1) hash lookups (no BFS), then evaluates impact for the few that pass. Avoids the
+     * ~512-BFS cost of getLegalWallMoves while still finding impactful walls.
+     * Walls that would disconnect a player are detected by MAX_VALUE BFS result and skipped.
+     */
     private GameState sampleWallStep(GameState state, Player opp) {
-        List<WallMove> walls = validator.getLegalWallMoves(state);
-        if (walls.isEmpty()) return null;
-        int oppDist  = pathChecker.shortestPathWithJumps(state, opp);
+        if (state.getWallCount(state.getCurrentPlayer()) <= 0) return null;
+        int oppDist   = pathChecker.shortestPathWithJumps(state, opp);
         WallMove best = null;
-        int bestImpact = 1; // require at least +1 to bother
-        int samples = Math.min(WALL_SAMPLES, walls.size());
-        for (int i = 0; i < samples; i++) {
-            WallMove wm = walls.get(random.nextInt(walls.size()));
-            int impact = pathChecker.shortestPathWithJumps(state.withWallMove(wm.wall()), opp) - oppDist;
-            if (impact > bestImpact) { bestImpact = impact; best = wm; }
+        int bestImpact = 1;
+
+        for (int attempt = 0; attempt < WALL_SAMPLES * 4; attempt++) {
+            Wall.Orientation ori = random.nextBoolean()
+                ? Wall.Orientation.HORIZONTAL : Wall.Orientation.VERTICAL;
+            int r = random.nextInt(GameState.BOARD_SIZE - 1);
+            int c = random.nextInt(GameState.BOARD_SIZE - 1);
+            Wall w = new Wall(ori, r, c);
+            if (state.hasWall(w) || quickOverlap(state, w)) continue;
+            int newOppDist = pathChecker.shortestPathWithJumps(state.withWallMove(w), opp);
+            if (newOppDist == Integer.MAX_VALUE) continue; // would disconnect opponent
+            int impact = newOppDist - oppDist;
+            if (impact > bestImpact) { bestImpact = impact; best = new WallMove(w); }
         }
         return best != null ? state.withWallMove(best.wall()) : null;
+    }
+
+    /** Fast overlap check — mirrors MoveValidator logic without the BFS path check. */
+    private static boolean quickOverlap(GameState state, Wall w) {
+        if (w.orientation() == Wall.Orientation.HORIZONTAL) {
+            return state.hasWall(new Wall(Wall.Orientation.HORIZONTAL, w.row(), w.col() - 1))
+                || state.hasWall(new Wall(Wall.Orientation.HORIZONTAL, w.row(), w.col() + 1))
+                || state.hasWall(new Wall(Wall.Orientation.VERTICAL,   w.row(), w.col()));
+        } else {
+            return state.hasWall(new Wall(Wall.Orientation.VERTICAL,   w.row() - 1, w.col()))
+                || state.hasWall(new Wall(Wall.Orientation.VERTICAL,   w.row() + 1, w.col()))
+                || state.hasWall(new Wall(Wall.Orientation.HORIZONTAL, w.row(),     w.col()));
+        }
     }
 
     /** Goal-row greedy advance: no BFS per step, fast. */

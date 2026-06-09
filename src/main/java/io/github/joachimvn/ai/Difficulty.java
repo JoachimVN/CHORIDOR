@@ -13,7 +13,6 @@ public enum Difficulty {
     ECONOMIST       (EconomistStrategy::new),
     SHARP           (SharpStrategy::new),
     TRAPPER         (TrapperStrategy::new),
-    SNIPER          (SniperStrategy::new),
     COPYCAT         (CopycatStrategy::new),
     ONE_STEP        (OneStepStrategy::new),
     WALL_DUMPER     (WallDumperStrategy::new),
@@ -22,7 +21,12 @@ public enum Difficulty {
     THREAT_RESPONDER(ThreatResponderStrategy::new),
     PATH_COUNT      (PathCountStrategy::new),
     BAITER          (BaiterStrategy::new),
-    WIKI            (WikipediaStrategy::new);
+    WIKI            (WikipediaStrategy::new),
+    CORRIDOR        (CorridorStrategy::new),
+    TEMPO           (TempoStrategy::new),
+    DUAL_THREAT     (DualThreatStrategy::new),
+    INFLUENCE       (InfluenceStrategy::new),
+    ZUGZWANG        (ZugzwangStrategy::new);
 
     private final Function<Player, Strategy> factory;
     private final Strategy sample;
