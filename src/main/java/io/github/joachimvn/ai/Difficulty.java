@@ -46,10 +46,10 @@ public enum Difficulty {
      */
     public long msPerDecision() {
         return switch (this) {
-            case MONTE_CARLO                                          -> 950;
+            case MONTE_CARLO                                          -> 950; // truly time-limited loop
             case MINIMAX, ECONOMIST, SHARP, TRAPPER, BAITER,
-                 WIKI, PATH_COUNT                                     -> 1000;
-            default                                                   -> 15;
+                 WIKI, PATH_COUNT                                     -> 150; // iterative deepening, usually exits early
+            default                                                   -> 10;
         };
     }
 
