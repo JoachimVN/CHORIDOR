@@ -114,38 +114,7 @@ public final class LandingView {
         }
         bringCenterFront();
         wireCarousel();
-
-        // Arrow keys navigate the carousel when the landing is visible
-        root.sceneProperty().addListener((obs, ov, sc) -> {
-            if (sc != null) {
-                sc.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-                    if (!root.isVisible() || rotating) return;
-                    if      (e.getCode() == KeyCode.LEFT)  { onCardClick(order[0]); e.consume(); }
-                    else if (e.getCode() == KeyCode.RIGHT) { onCardClick(order[2]); e.consume(); }
-                });
-            }
-        });
-
-        // Auto-expand the initial centre card once it has been laid out
-        VBox initialCenter = allCards.get(order[1]);
-        initialCenter.heightProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> obs, Number ov, Number nv) {
-                if (nv.doubleValue() > 0) {
-                    initialCenter.heightProperty().removeListener(this);
-                    if (openBody == null)
-                        expandBody(initialCenter, (VBox) initialCenter.getChildren().get(1));
-                }
-            }
-        });
-
-        // Re-expand centre card whenever the overlay becomes visible (after game exit)
-        root.visibleProperty().addListener((obs, ov, nv) -> {
-            if (nv && openBody == null) {
-                VBox cc = allCards.get(order[1]);
-                expandBody(cc, (VBox) cc.getChildren().get(1));
-            }
-        });
+        wireAutoExpand();
 
         // Spacer above logo — proportional to viewport height so content sits
         // in a visually balanced position. Bound to scroll.height only (not page.height),
@@ -203,6 +172,38 @@ public final class LandingView {
             c.setOnMouseExited(e ->  { if (slotOf(idx) != 1)               hoverSide(idx, false); });
             c.setCursor(Cursor.HAND);
         }
+        // Arrow keys navigate the carousel when the landing is visible
+        root.sceneProperty().addListener((obs, ov, sc) -> {
+            if (sc != null) {
+                sc.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+                    if (!root.isVisible() || rotating) return;
+                    if      (e.getCode() == KeyCode.LEFT)  { onCardClick(order[0]); e.consume(); }
+                    else if (e.getCode() == KeyCode.RIGHT) { onCardClick(order[2]); e.consume(); }
+                });
+            }
+        });
+    }
+
+    private void wireAutoExpand() {
+        // Expand the initial centre card once it has been laid out
+        VBox initialCenter = allCards.get(order[1]);
+        initialCenter.heightProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> obs, Number ov, Number nv) {
+                if (nv.doubleValue() > 0) {
+                    initialCenter.heightProperty().removeListener(this);
+                    if (openBody == null)
+                        expandBody(initialCenter, (VBox) initialCenter.getChildren().get(1));
+                }
+            }
+        });
+        // Re-expand centre card whenever the overlay becomes visible (after game exit)
+        root.visibleProperty().addListener((obs, ov, nv) -> {
+            if (Boolean.TRUE.equals(nv) && openBody == null) {
+                VBox cc = allCards.get(order[1]);
+                expandBody(cc, (VBox) cc.getChildren().get(1));
+            }
+        });
     }
 
     private void onCardClick(int cardIdx) {
@@ -268,7 +269,8 @@ public final class LandingView {
         Timeline prev = rotTl.get(allCards.get(cardIdx));
         if (prev != null && prev.getStatus() == Animation.Status.RUNNING) return;
         int slot = slotOf(cardIdx);
-        Pos3D tgt = enter ? (slot == 0 ? P_L_HOV : P_R_HOV) : SLOTS[slot];
+        Pos3D hovered = slot == 0 ? P_L_HOV : P_R_HOV;
+        Pos3D tgt = enter ? hovered : SLOTS[slot];
         VBox c = allCards.get(cardIdx);
         new Timeline(new KeyFrame(DUR_HOVER,
             new KeyValue(c.scaleXProperty(),     tgt.sc(),  EASE),
