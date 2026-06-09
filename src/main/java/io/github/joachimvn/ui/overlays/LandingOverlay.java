@@ -490,24 +490,8 @@ public final class LandingOverlay {
         pr.setOnAction(e -> ctrl.playSelect());
         pb.setOnAction(e -> ctrl.playSelect());
 
-        startHvH.setOnAction(e -> {
-            ctrl.playSelect();
-            ctrl.startGame(null, null, "Player 1", "Player 2");
-            board.setFlipped(false); flipSelected.accept(false);
-            exitToGame(() -> {});
-        });
-        startAi.setOnAction(e -> {
-            ctrl.playSelect();
-            Difficulty d = combo.getValue();
-            boolean blue = pb.isSelected();
-            ctrl.startGame(
-                blue ? d.createStrategy(Player.ONE) : null,
-                blue ? null : d.createStrategy(Player.TWO),
-                blue ? d.sample().displayName() : "Player 1",
-                blue ? "Player 2" : d.sample().displayName());
-            board.setFlipped(blue); flipSelected.accept(blue);
-            exitToGame(() -> {});
-        });
+        startHvH.setOnAction(e -> launchHvH(board, flipSelected));
+        startAi.setOnAction(e  -> launchVsAi(combo, pb, board, flipSelected));
 
         body.getChildren().addAll(tabRow(hvhTab, vsAiTab), hvhPanel, aiPanel);
     }
@@ -543,15 +527,7 @@ public final class LandingOverlay {
         s1.setOnAction(e -> ctrl.playSelect());
         s2.setOnAction(e -> ctrl.playSelect());
 
-        startMatch.setOnAction(e -> {
-            ctrl.playSelect();
-            Difficulty d1 = s1.getValue();
-            Difficulty d2 = s2.getValue();
-            ctrl.startGame(d1.createStrategy(Player.ONE), d2.createStrategy(Player.TWO),
-                d1.sample().displayName(), d2.sample().displayName());
-            board.setFlipped(false); flipSelected.accept(false);
-            exitToGame(() -> {});
-        });
+        startMatch.setOnAction(e -> launchSimMatch(s1, s2, board, flipSelected));
         launchTour.setOnAction(e -> {
             ctrl.playSelect();
             root.setVisible(false);
@@ -568,6 +544,39 @@ public final class LandingOverlay {
         Label det  = new Label("Sound, themes, and more."); det.getStyleClass().add("landing-card-sub");
         VBox c = new VBox(10, soon, det); c.setPadding(new Insets(12, 0, 4, 0));
         body.getChildren().add(c);
+    }
+
+    // ── Game launch helpers ───────────────────────────────────────────────────
+
+    private void launchHvH(BoardView board, Consumer<Boolean> flipSelected) {
+        ctrl.playSelect();
+        ctrl.startGame(null, null, "Player 1", "Player 2");
+        board.setFlipped(false); flipSelected.accept(false);
+        exitToGame(() -> {});
+    }
+
+    private void launchVsAi(ComboBox<Difficulty> combo, ToggleButton pb,
+                             BoardView board, Consumer<Boolean> flipSelected) {
+        ctrl.playSelect();
+        Difficulty d = combo.getValue();
+        boolean blue = pb.isSelected();
+        ctrl.startGame(
+            blue ? d.createStrategy(Player.ONE) : null,
+            blue ? null : d.createStrategy(Player.TWO),
+            blue ? d.sample().displayName() : "Player 1",
+            blue ? "Player 2" : d.sample().displayName());
+        board.setFlipped(blue); flipSelected.accept(blue);
+        exitToGame(() -> {});
+    }
+
+    private void launchSimMatch(ComboBox<Difficulty> s1, ComboBox<Difficulty> s2,
+                                 BoardView board, Consumer<Boolean> flipSelected) {
+        ctrl.playSelect();
+        Difficulty d1 = s1.getValue(), d2 = s2.getValue();
+        ctrl.startGame(d1.createStrategy(Player.ONE), d2.createStrategy(Player.TWO),
+            d1.sample().displayName(), d2.sample().displayName());
+        board.setFlipped(false); flipSelected.accept(false);
+        exitToGame(() -> {});
     }
 
     // ── Widgets ───────────────────────────────────────────────────────────────

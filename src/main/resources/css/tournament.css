@@ -351,3 +351,102 @@
 .tournament-card {
     -fx-padding: 36 52 36 52;
 }
+
+/* ── Setup overlay ──────────────────────────────────────────────────────── */
+
+.tournament-setup-card {
+    -fx-background-color: #0C0E14;
+    -fx-border-color: #1E2130;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+
+.tournament-strategy-check {
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 13px;
+    -fx-min-width: 148;
+}
+
+.tournament-strategy-check .box {
+    -fx-background-color: #13151F;
+    -fx-border-color: #2A2E46;
+    -fx-border-width: 1;
+    -fx-border-radius: 2;
+    -fx-background-radius: 2;
+}
+
+.tournament-strategy-check:hover .box {
+    -fx-border-color: #464B72;
+}
+
+.tournament-strategy-check:selected .box {
+    -fx-background-color: #1A2A50;
+    -fx-border-color: #3A5A90;
+}
+
+.tournament-strategy-check:selected .mark {
+    -fx-background-color: #7890C8;
+}
+
+.tournament-spinner-btn {
+    -fx-background-color: #13151F;
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 14 3 14;
+    -fx-background-radius: 3;
+    -fx-border-color: #2A2E46;
+    -fx-border-radius: 3;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-min-width: 36;
+}
+
+.tournament-spinner-btn:hover {
+    -fx-background-color: #1A1D2A;
+    -fx-border-color: #464B72;
+    -fx-text-fill: #C8D0E8;
+}
+
+.tournament-spinner-btn:pressed {
+    -fx-background-color: #1E2236;
+}
+
+.tournament-spinner-value {
+    -fx-text-fill: #C8D0E8;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-min-width: 44;
+    -fx-alignment: center;
+}
+
+.tournament-preview-label {
+    -fx-text-fill: #606880;
+    -fx-font-size: 14px;
+}
+
+.tournament-setup-start-btn {
+    -fx-background-color: #1A2E50;
+    -fx-text-fill: #8AB8FF;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 7 24 7 24;
+    -fx-background-radius: 4;
+    -fx-border-color: #2E4E80;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.tournament-setup-start-btn:hover {
+    -fx-background-color: #1E3860;
+    -fx-border-color: #4E78C0;
+    -fx-text-fill: #AACBFF;
+}
+
+.tournament-setup-start-btn:pressed {
+    -fx-background-color: #3E68A8;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #5A84C4;
+}

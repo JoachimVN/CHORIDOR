@@ -59,7 +59,7 @@ public class App extends Application {
         LandingOverlay landing = new LandingOverlay(ctrl, board, bottomBar::setFlipSelected,
             () -> { if (startTournament[0] != null) startTournament[0].run(); });
         TournamentView tournament = new TournamentView(() -> landing.getRoot().setVisible(true), ctrl);
-        startTournament[0] = tournament::start;
+        startTournament[0] = tournament::showSetup;
 
         GameOverOverlay gameOver = new GameOverOverlay(ctrl, landing.getRoot());
 
