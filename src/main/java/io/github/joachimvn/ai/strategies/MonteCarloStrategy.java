@@ -223,18 +223,21 @@ public class MonteCarloStrategy implements Strategy {
         }
     }
 
-    /** Goal-row greedy advance: no BFS per step, fast. */
-    private GameState goalRowAdvance(GameState state, Player current) {
+    /**
+     * BFS-optimal advance: picks the pawn move with the shortest path to goal,
+     * correctly routing around walls. Goal-row greedy is faster but gets stuck
+     * behind walls and sends the pawn into dead ends — BFS is necessary here.
+     */
+    private GameState rolloutAdvance(GameState state, Player current) {
         List<PawnMove> pawns = validator.getLegalPawnMoves(state);
         if (pawns.isEmpty()) return state;
-        int goalRow  = current.goalRow();
-        PawnMove best = pawns.get(0);
-        int bestDist  = Math.abs(best.target().row() - goalRow);
+        PawnMove best = null;
+        int bestDist  = Integer.MAX_VALUE;
         for (PawnMove pm : pawns) {
-            int d = Math.abs(pm.target().row() - goalRow);
+            int d = pathChecker.shortestPathWithJumps(state.withPawnMove(pm.target()), current);
             if (d < bestDist) { bestDist = d; best = pm; }
         }
-        return state.withPawnMove(best.target());
+        return best != null ? state.withPawnMove(best.target()) : state.withPawnMove(pawns.get(0).target());
     }
 
     // ── Candidate generation ─────────────────────────────────────────────────
