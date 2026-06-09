@@ -180,7 +180,7 @@ public class MonteCarloStrategy implements Strategy {
             if (wState != null) return wState;
         }
 
-        return goalRowAdvance(state, current);
+        return rolloutAdvance(state, current);
     }
 
     /**

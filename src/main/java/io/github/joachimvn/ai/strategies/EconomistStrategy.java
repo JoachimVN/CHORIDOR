@@ -6,7 +6,7 @@ import io.github.joachimvn.core.model.Player;
 /**
  * Wall-pruned deep search that plays the wall economy: it values its wall reserve heavily,
  * so it only spends a wall when the deep search shows the resulting distance swing is worth
- * more than keeping the wall in hand. The result is a frugal hoarder that saves its walls
+ * more than keeping the wall in hand. The result is a frugal saver that saves its walls
  * for high-impact blocks late in the game.
  */
 public class EconomistStrategy extends AbstractPrunedSearchStrategy {

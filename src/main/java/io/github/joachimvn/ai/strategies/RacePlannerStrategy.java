@@ -35,7 +35,7 @@ public class RacePlannerStrategy implements Strategy {
 
     @Override public String displayName() { return "Race Planner"; }
     @Override public String description() {
-        return "Advances when winning the sprint, places the best blocking wall when losing — no search";
+        return "Advances when winning the sprint, places the best blocking wall when losing";
     }
 
     @Override

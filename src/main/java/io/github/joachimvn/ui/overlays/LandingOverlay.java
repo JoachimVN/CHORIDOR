@@ -25,6 +25,7 @@ import javafx.util.Duration;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,11 +40,11 @@ public final class LandingOverlay {
     // ── Carousel positions ────────────────────────────────────────────────────
     private record Pos3D(double tx, double ty, double rot, double sc, double op) {}
 
-    private static final Pos3D P_LEFT   = new Pos3D(-350, 24, -7.0, 0.82, 0.70);
+    private static final Pos3D P_LEFT   = new Pos3D(-350, 24, -7.0, 0.82, 0.85);
     private static final Pos3D P_CENTER = new Pos3D(0,     0,  0.0, 1.00, 1.00);
-    private static final Pos3D P_RIGHT  = new Pos3D( 350, 24,  7.0, 0.82, 0.70);
-    private static final Pos3D P_L_HOV  = new Pos3D(-350, 12, -7.0, 0.91, 0.85);
-    private static final Pos3D P_R_HOV  = new Pos3D( 350, 12,  7.0, 0.91, 0.85);
+    private static final Pos3D P_RIGHT  = new Pos3D( 350, 24,  7.0, 0.82, 0.85);
+    private static final Pos3D P_L_HOV  = new Pos3D(-350, 12, -7.0, 0.91, 0.92);
+    private static final Pos3D P_R_HOV  = new Pos3D( 350, 12,  7.0, 0.91, 0.92);
     private static final double EXPAND_DRIFT = 22;
     private static final Pos3D[] SLOTS = { P_LEFT, P_CENTER, P_RIGHT };
 
@@ -69,11 +70,12 @@ public final class LandingOverlay {
     private final GameController ctrl;
     private List<VBox> allCards;
     /** order[slot] = card index occupying that slot (0=left, 1=centre, 2=right). */
-    private final int[] order = {1, 0, 2};
+    private final int[] order = {2, 0, 1};
     private boolean rotating = false;
     private VBox    openBody = null;
     private final Map<VBox, Timeline> rotTl  = new HashMap<>();
     private final Map<VBox, Timeline> bodyTl = new HashMap<>();
+    private List<Region> indicatorBars;
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
@@ -118,13 +120,23 @@ public final class LandingOverlay {
         wireCarousel();
         wireAutoExpand();
 
+        // Carousel indicator as overlay below cards (fixed position, doesn't affect layout)
+        HBox indicator = buildCarouselIndicator();
+        StackPane arenaWithIndicator = new StackPane(arena);
+        VBox indicatorSpacer = new VBox(indicator);
+        indicatorSpacer.setAlignment(Pos.BOTTOM_CENTER);
+        indicatorSpacer.setPickOnBounds(false);
+        indicatorSpacer.setMouseTransparent(true);
+        StackPane.setAlignment(indicatorSpacer, Pos.BOTTOM_CENTER);
+        arenaWithIndicator.getChildren().add(indicatorSpacer);
+
         // Spacer above logo — proportional to viewport height so content sits
         // in a visually balanced position. Bound to scroll.height only (not page.height),
         // so it never changes when cards expand, keeping the card tops fixed.
         Region topSpacer = new Region();
         topSpacer.setMinHeight(0);
 
-        VBox page = new VBox(48, topSpacer, logo, arena);
+        VBox page = new VBox(48, topSpacer, logo, arenaWithIndicator);
         page.setAlignment(Pos.TOP_CENTER);
         page.setPadding(new Insets(0, 40, 64, 40));
         page.setMaxWidth(1280);
@@ -235,7 +247,10 @@ public final class LandingOverlay {
         VBox cc = allCards.get(order[1]);
         expandBody(cc, (VBox) cc.getChildren().get(1));
 
-        new Timeline(new KeyFrame(DUR_ROTATE, e -> rotating = false)).play();
+        new Timeline(new KeyFrame(DUR_ROTATE, e -> {
+            rotating = false;
+            updateIndicator();
+        })).play();
     }
 
     private void animTo(VBox c, Pos3D pos) {
@@ -419,6 +434,41 @@ public final class LandingOverlay {
             fi.setDelay(Duration.millis(70)); fi.setFromValue(0); fi.setToValue(1); fi.play();
         });
         fo.play();
+    }
+
+    // ── Carousel indicator ───────────────────────────────────────────────────
+
+    private HBox buildCarouselIndicator() {
+        indicatorBars = new ArrayList<>();
+        HBox indicator = new HBox(8);
+        indicator.setAlignment(Pos.CENTER);
+        for (int i = 0; i < 3; i++) {
+            Region bar = new Region();
+            bar.setPrefSize(28, 3);
+            bar.getStyleClass().add("carousel-indicator-bar");
+            indicatorBars.add(bar);
+            indicator.getChildren().add(bar);
+        }
+        updateIndicator();
+        return indicator;
+    }
+
+    private void updateIndicator() {
+        int centerCardIdx = order[1]; // which card is in the center position
+        for (int i = 0; i < 3; i++) {
+            Region bar = indicatorBars.get(i);
+            if (allCards.get(i) == allCards.get(centerCardIdx)) {
+                bar.getStyleClass().removeAll("carousel-indicator-inactive");
+                if (!bar.getStyleClass().contains("carousel-indicator-active")) {
+                    bar.getStyleClass().add("carousel-indicator-active");
+                }
+            } else {
+                bar.getStyleClass().removeAll("carousel-indicator-active");
+                if (!bar.getStyleClass().contains("carousel-indicator-inactive")) {
+                    bar.getStyleClass().add("carousel-indicator-inactive");
+                }
+            }
+        }
     }
 
     // ── Card factory ──────────────────────────────────────────────────────────

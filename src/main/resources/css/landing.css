@@ -34,15 +34,15 @@
 }
 
 .landing-card-play {
-    -fx-background-color: linear-gradient(to bottom, #130E0E, #0D0F1C);
+    -fx-background-color: linear-gradient(to bottom, #1A1410, #121523);
     -fx-border-color: #5C2C26 #17192A #17192A #17192A;
 }
 .landing-card-sim {
-    -fx-background-color: linear-gradient(to bottom, #0A0E1C, #0D0F1C);
+    -fx-background-color: linear-gradient(to bottom, #0F1328, #121523);
     -fx-border-color: #1C3860 #17192A #17192A #17192A;
 }
 .landing-card-set {
-    -fx-background-color: linear-gradient(to bottom, #0D0D1C, #0D0F1C);
+    -fx-background-color: linear-gradient(to bottom, #121424, #121523);
     -fx-border-color: #2A2C56 #17192A #17192A #17192A;
 }
 
@@ -60,17 +60,17 @@
    Both layers need explicit -fx-background-radius so the rounded corners apply
    to each layer separately. */
 .landing-card-play:hover {
-    -fx-background-color: rgba(158,74,64,0.11), linear-gradient(to bottom, #150F0F, #0F1020);
+    -fx-background-color: rgba(158,74,64,0.15), linear-gradient(to bottom, #1C1512, #131829);
     -fx-background-radius: 12, 12;
     -fx-background-insets: 0, 0;
 }
 .landing-card-sim:hover {
-    -fx-background-color: rgba(62,104,168,0.11), linear-gradient(to bottom, #0C1020, #0F1020);
+    -fx-background-color: rgba(62,104,168,0.15), linear-gradient(to bottom, #111530, #131829);
     -fx-background-radius: 12, 12;
     -fx-background-insets: 0, 0;
 }
 .landing-card-set:hover {
-    -fx-background-color: rgba(90,96,144,0.11), linear-gradient(to bottom, #0E0E20, #0F1020);
+    -fx-background-color: rgba(90,96,144,0.15), linear-gradient(to bottom, #141628, #131829);
     -fx-background-radius: 12, 12;
     -fx-background-insets: 0, 0;
 }
@@ -81,14 +81,14 @@
 /* ── Typography ───────────────────────────────────────────────────────────── */
 
 .landing-card-title {
-    -fx-text-fill: #C0C6DC;
+    -fx-text-fill: #E8EDF5;
     -fx-font-size: 17px;
     -fx-font-weight: bold;
     -fx-letter-spacing: 2.5;
 }
 
 .landing-card-sub {
-    -fx-text-fill: #484C68;
+    -fx-text-fill: #8B92B0;
     -fx-font-size: 12px;
 }
 
@@ -104,7 +104,7 @@
 
 .landing-tab-btn {
     -fx-background-color: transparent;
-    -fx-text-fill: #2A2E46;
+    -fx-text-fill: #5A6280;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-padding: 12 16 12 16;
@@ -117,19 +117,34 @@
 }
 
 .landing-tab-btn:hover {
-    -fx-text-fill: #464B72;
-    -fx-background-color: rgba(255, 255, 255, 0.018);
+    -fx-text-fill: #8A92B0;
+    -fx-background-color: rgba(255, 255, 255, 0.025);
 }
 
 .landing-tab-btn:selected {
-    -fx-background-color: #12152A;
-    -fx-text-fill: #7880B0;
+    -fx-background-color: #151D38;
+    -fx-text-fill: #A8B0D8;
+}
+
+.landing-card-play .landing-tab-btn:selected {
+    -fx-background-color: #3D2420;
+    -fx-text-fill: #E89080;
+}
+
+.landing-card-sim .landing-tab-btn:selected {
+    -fx-background-color: #151D38;
+    -fx-text-fill: #A8B0D8;
+}
+
+.landing-card-set .landing-tab-btn:selected {
+    -fx-background-color: #1F1D2E;
+    -fx-text-fill: #B0A8D8;
 }
 
 /* ── Config labels ────────────────────────────────────────────────────────── */
 
 .landing-config-label {
-    -fx-text-fill: #2C2F48;
+    -fx-text-fill: #6A7090;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
     -fx-letter-spacing: 1.5;
@@ -157,10 +172,24 @@
     -fx-opacity: 1.0;
 }
 
+/* ── Carousel indicator ───────────────────────────────────────────────────── */
+
+.carousel-indicator-bar {
+    -fx-background-radius: 1.5;
+}
+
+.carousel-indicator-active {
+    -fx-background-color: #6A7090;
+}
+
+.carousel-indicator-inactive {
+    -fx-background-color: #2A3048;
+}
+
 /* ── Coming soon ──────────────────────────────────────────────────────────── */
 
 .landing-coming-soon {
-    -fx-text-fill: #1E2038;
+    -fx-text-fill: #7A82A8;
     -fx-font-size: 24px;
     -fx-font-weight: bold;
 }
