@@ -129,6 +129,7 @@ public final class LandingOverlay {
         });
 
         HBox indicator = buildCarouselIndicator();
+        updateCursors();
         VBox carouselWithIndicator = new VBox(24, arena, indicator);
         carouselWithIndicator.setAlignment(Pos.TOP_CENTER);
 
@@ -186,7 +187,7 @@ public final class LandingOverlay {
             header.setOnMouseClicked(e -> { if (!rotating) onCardClick(idx); });
             c.setOnMouseEntered(e -> { if (slotOf(idx) != 1 && !rotating) hoverSide(idx, true); });
             c.setOnMouseExited(e ->  { if (slotOf(idx) != 1)               hoverSide(idx, false); });
-            c.setCursor(Cursor.HAND);
+            // cursor set dynamically via updateCursors()
         }
         // Arrow keys navigate the carousel when the landing is visible
         root.sceneProperty().addListener((obs, ov, sc) -> {
@@ -245,7 +246,8 @@ public final class LandingOverlay {
 
         for (int p = 0; p < 3; p++) animTo(allCards.get(order[p]), SLOTS[p]);
 
-        updateIndicator(); // update immediately on click, not when animation ends
+        updateIndicator();
+        updateCursors();
 
         // Expand incoming card immediately — it grows while sliding to centre
         VBox cc = allCards.get(order[1]);
@@ -470,6 +472,15 @@ public final class LandingOverlay {
             indicator.getChildren().add(bar);
         }
         return indicator;
+    }
+
+    private void updateCursors() {
+        for (int i = 0; i < 3; i++) {
+            VBox card = allCards.get(i);
+            Cursor cur = slotOf(i) == 1 ? Cursor.DEFAULT : Cursor.HAND;
+            card.setCursor(cur);
+            ((StackPane) card.getChildren().get(0)).setCursor(cur);
+        }
     }
 
     private void updateIndicator() {

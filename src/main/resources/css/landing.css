@@ -51,7 +51,6 @@
 /* ── Card header ──────────────────────────────────────────────────────────── */
 
 .landing-card-header {
-    -fx-cursor: hand;
     -fx-min-height: 150;
     -fx-background-radius: 12;
 }
