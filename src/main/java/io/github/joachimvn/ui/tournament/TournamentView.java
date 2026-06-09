@@ -599,7 +599,7 @@ public final class TournamentView {
             resort();
             boardsScroll.setVisible(false);
             summaryScroll.setVisible(true);
-            TournamentSummary.populate(summaryBox, runner, tableItems, strategies, durationMs);
+            TournamentSummary.populate(summaryBox, runner, tableItems, strategies, durationMs, gamesPerMatchup);
         };
     }
 
