@@ -23,10 +23,11 @@ public enum Difficulty {
     BAITER          (BaiterStrategy::new),
     WIKI            (WikipediaStrategy::new),
     CORRIDOR        (CorridorStrategy::new),
-    TEMPO           (TempoStrategy::new),
     DUAL_THREAT     (DualThreatStrategy::new),
-    INFLUENCE       (InfluenceStrategy::new),
-    ZUGZWANG        (ZugzwangStrategy::new);
+    GAMBLER         (GamblerStrategy::new),
+    PORTFOLIO       (PortfolioStrategy::new),
+    TACTICIAN       (TacticianStrategy::new),
+    STRATEGIST      (StrategistStrategy::new);
 
     private final Function<Player, Strategy> factory;
     private final Strategy sample;
@@ -48,7 +49,7 @@ public enum Difficulty {
         return switch (this) {
             case MONTE_CARLO                                               -> 950;
             case MINIMAX, ECONOMIST, SHARP, TRAPPER, BAITER,
-                 WIKI, PATH_COUNT                                          -> 1000;
+                 WIKI, PATH_COUNT, GAMBLER, TACTICIAN, STRATEGIST         -> 1000;
             default                                                        -> 0;
         };
     }
@@ -62,9 +63,11 @@ public enum Difficulty {
             case RANDOM                                                    -> 1;
             case GREEDY, ONE_STEP, WALL_DUMPER, COPYCAT                   -> 2;
             case RACE_PLANNER, THREAT_RESPONDER, CORRIDOR                 -> 3;
-            case TEMPO, DUAL_THREAT, INFLUENCE, ZUGZWANG                  -> 4;
+            case DUAL_THREAT                                               -> 4;
             case MINIMAX, ECONOMIST, SHARP, TRAPPER, BAITER,
-                 PATH_COUNT, WIKI, MONTE_CARLO                            -> 5;
+                 PATH_COUNT, WIKI, MONTE_CARLO,
+                 GAMBLER, TACTICIAN, STRATEGIST                           -> 5;
+            case PORTFOLIO                                                 -> 3;
         };
     }
 }
