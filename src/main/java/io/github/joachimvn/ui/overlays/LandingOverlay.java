@@ -71,8 +71,9 @@ public final class LandingOverlay {
     private List<VBox> allCards;
     /** order[slot] = card index occupying that slot (0=left, 1=centre, 2=right). */
     private final int[] order = {2, 0, 1};
-    private boolean rotating = false;
-    private VBox    openBody = null;
+    private boolean  rotating = false;
+    private VBox     openBody = null;
+    private Runnable onExitStarted;
     private final Map<VBox, Timeline> rotTl  = new HashMap<>();
     private final Map<VBox, Timeline> bodyTl = new HashMap<>();
     private List<Region> indicatorBars;
@@ -169,11 +170,13 @@ public final class LandingOverlay {
     }
 
     public StackPane getRoot() { return root; }
+    public void setOnExitStarted(Runnable r) { this.onExitStarted = r; }
 
     // ── Game exit transition ──────────────────────────────────────────────────
 
     private void exitToGame(Runnable gameStart) {
         gameStart.run();
+        if (onExitStarted != null) onExitStarted.run();
         root.setMouseTransparent(true);
         FadeTransition ft = new FadeTransition(Duration.millis(520), root);
         ft.setToValue(0);
