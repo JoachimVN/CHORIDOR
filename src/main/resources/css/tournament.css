@@ -410,6 +410,28 @@
     -fx-text-fill: #4A5478;
 }
 
+/* Summary stat boxes */
+.setup-stat-box {
+    -fx-background-color: #0F111A;
+    -fx-border-color: #181B27;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 18 24 18 24;
+}
+
+.setup-stat-number {
+    -fx-text-fill: #C8D0E8;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.setup-stat-label {
+    -fx-text-fill: #3A3F58;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
 /* Spinners */
 .tournament-spinner-btn {
     -fx-background-color: #13151F;

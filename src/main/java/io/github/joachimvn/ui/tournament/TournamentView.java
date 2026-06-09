@@ -100,8 +100,10 @@ public final class TournamentView {
     private int gamesPerMatchup = 1;
     private int concurrentGames = computeRecommended(Difficulty.values().length);
     private final List<ToggleButton> strategyToggles = new ArrayList<>();
-    private Label previewLabel;
     private Label recommendedLabel;
+    private Label setupStratCount;
+    private Label setupTotalGames;
+    private Label setupDuration;
     private Label gpmValueLabel;
     private Label ccValueLabel;
     private StackPane setupPane;
@@ -296,26 +298,25 @@ public final class TournamentView {
         overlay.setVisible(false);
         overlay.setPadding(new Insets(48, 0, 48, 0));
 
-        VBox card = new VBox(20);
+        VBox card = new VBox(0);
         card.getStyleClass().add("tournament-setup-card");
         card.setMaxWidth(1160);
         card.setMaxHeight(Region.USE_PREF_SIZE);
-        card.setPadding(new Insets(28, 36, 28, 36));
         StackPane.setAlignment(card, Pos.CENTER);
 
-        // ── Title ─────────────────────────────────────────────────────────
+        // ── Header ────────────────────────────────────────────────────────
         Label title = new Label("TOURNAMENT SETUP");
         title.getStyleClass().add("tournament-title");
+        VBox header = new VBox(title);
+        header.setPadding(new Insets(28, 36, 22, 36));
 
-        // ── Strategy cards ────────────────────────────────────────────────
+        // ── Strategies ────────────────────────────────────────────────────
         Label stratSection = new Label("STRATEGIES");
         stratSection.getStyleClass().add(STYLE_SECTION);
-        Button allBtn  = new Button("All");
-        Button noneBtn = new Button("None");
-        allBtn.getStyleClass().add("tournament-copy-btn");
-        noneBtn.getStyleClass().add("tournament-stop-btn");
-        Region stratSpacer = new Region(); HBox.setHgrow(stratSpacer, Priority.ALWAYS);
-        HBox stratHeader = new HBox(8, stratSection, stratSpacer, allBtn, noneBtn);
+        Button allBtn  = new Button("All");  allBtn.getStyleClass().add("tournament-copy-btn");
+        Button noneBtn = new Button("None"); noneBtn.getStyleClass().add("tournament-stop-btn");
+        Region sp1 = new Region(); HBox.setHgrow(sp1, Priority.ALWAYS);
+        HBox stratHeader = new HBox(8, stratSection, sp1, allBtn, noneBtn);
         stratHeader.setAlignment(Pos.CENTER_LEFT);
 
         TilePane stratGrid = new TilePane(8, 8);
@@ -331,7 +332,10 @@ public final class TournamentView {
         allBtn.setOnAction(e  -> { if (!ctrl.isMuted()) selectSound.play(); strategyToggles.forEach(tb -> tb.setSelected(true)); });
         noneBtn.setOnAction(e -> { if (!ctrl.isMuted()) selectSound.play(); strategyToggles.forEach(tb -> tb.setSelected(false)); });
 
-        // ── Bottom row: spinners + preview + start ────────────────────────
+        VBox strategiesSection = new VBox(10, stratHeader, stratGrid);
+        strategiesSection.setPadding(new Insets(20, 36, 24, 36));
+
+        // ── Configuration ─────────────────────────────────────────────────
         Label gpmSection = new Label("GAMES PER MATCHUP");
         gpmSection.getStyleClass().add(STYLE_SECTION);
         gpmValueLabel = new Label(String.valueOf(gamesPerMatchup));
@@ -346,13 +350,14 @@ public final class TournamentView {
         });
         HBox gpmRow = new HBox(6, gpmMinus, gpmValueLabel, gpmPlus);
         gpmRow.setAlignment(Pos.CENTER_LEFT);
-        VBox gpmBox = new VBox(8, gpmSection, gpmRow);
+        VBox gpmBox = new VBox(10, gpmSection, gpmRow);
 
         recommendedLabel = new Label();
         recommendedLabel.getStyleClass().add("tournament-progress-label");
         Label ccSection = new Label("CONCURRENT GAMES");
         ccSection.getStyleClass().add(STYLE_SECTION);
-        HBox ccHeader = new HBox(8, ccSection, new Region() {{ HBox.setHgrow(this, Priority.ALWAYS); }}, recommendedLabel);
+        Region sp2 = new Region(); HBox.setHgrow(sp2, Priority.ALWAYS);
+        HBox ccHeader = new HBox(8, ccSection, sp2, recommendedLabel);
         ccHeader.setAlignment(Pos.CENTER_LEFT);
         ccValueLabel = new Label(String.valueOf(concurrentGames));
         ccValueLabel.getStyleClass().add("tournament-spinner-value");
@@ -366,19 +371,37 @@ public final class TournamentView {
         });
         HBox ccRow = new HBox(6, ccMinus, ccValueLabel, ccPlus);
         ccRow.setAlignment(Pos.CENTER_LEFT);
-        VBox ccBox = new VBox(8, ccHeader, ccRow);
+        VBox ccBox = new VBox(10, ccHeader, ccRow);
 
-        previewLabel = new Label();
-        previewLabel.getStyleClass().add("tournament-preview-label");
+        HBox configRow = new HBox(52, gpmBox, ccBox);
+        configRow.setAlignment(Pos.CENTER_LEFT);
+        VBox configSection = new VBox(configRow);
+        configSection.setPadding(new Insets(20, 36, 24, 36));
 
-        Button cancelBtn = new Button("Cancel"); cancelBtn.getStyleClass().add("tournament-stop-btn");
+        // ── Summary stats ─────────────────────────────────────────────────
+        setupStratCount = new Label("—");
+        setupTotalGames = new Label("—");
+        setupDuration   = new Label("—");
+
+        VBox statStrategies = buildStatBox(setupStratCount, "Strategies");
+        VBox statGames      = buildStatBox(setupTotalGames, "Total Games");
+        VBox statDuration   = buildStatBox(setupDuration,   "Estimated Duration");
+        HBox.setHgrow(statStrategies, Priority.ALWAYS);
+        HBox.setHgrow(statGames,      Priority.ALWAYS);
+        HBox.setHgrow(statDuration,   Priority.ALWAYS);
+
+        HBox statsRow = new HBox(12, statStrategies, statGames, statDuration);
+        statsRow.setAlignment(Pos.CENTER_LEFT);
+
+        // ── Actions ───────────────────────────────────────────────────────
+        Button cancelBtn = new Button("Cancel");          cancelBtn.getStyleClass().add("tournament-stop-btn");
         Button startBtn  = new Button("Start Tournament"); startBtn.getStyleClass().add("tournament-setup-start-btn");
-        VBox actionBox = new VBox(8, previewLabel, new HBox(8, cancelBtn, startBtn) {{ setAlignment(Pos.BOTTOM_RIGHT); }});
-        actionBox.setAlignment(Pos.BOTTOM_RIGHT);
-        HBox.setHgrow(actionBox, Priority.ALWAYS);
+        Region sp3 = new Region(); HBox.setHgrow(sp3, Priority.ALWAYS);
+        HBox actionsRow = new HBox(10, sp3, cancelBtn, startBtn);
+        actionsRow.setAlignment(Pos.CENTER_LEFT);
 
-        HBox bottomRow = new HBox(36, gpmBox, ccBox, actionBox);
-        bottomRow.setAlignment(Pos.BOTTOM_LEFT);
+        VBox summarySection = new VBox(16, statsRow, actionsRow);
+        summarySection.setPadding(new Insets(20, 36, 28, 36));
 
         cancelBtn.setOnAction(e -> {
             if (!ctrl.isMuted()) selectSound.play();
@@ -391,11 +414,37 @@ public final class TournamentView {
             confirmStart();
         });
 
-        card.getChildren().addAll(title, stratHeader, stratGrid, bottomRow);
+        card.getChildren().addAll(
+            header,
+            buildDivider(),
+            strategiesSection,
+            buildDivider(),
+            configSection,
+            buildDivider(),
+            summarySection
+        );
         overlay.getChildren().add(card);
 
         updatePreview();
         return overlay;
+    }
+
+    private static VBox buildStatBox(Label numLabel, String labelText) {
+        numLabel.getStyleClass().add("setup-stat-number");
+        Label lbl = new Label(labelText);
+        lbl.getStyleClass().add("setup-stat-label");
+        VBox box = new VBox(5, numLabel, lbl);
+        box.getStyleClass().add("setup-stat-box");
+        box.setAlignment(Pos.CENTER_LEFT);
+        return box;
+    }
+
+    private static Region buildDivider() {
+        Region div = new Region();
+        div.setPrefHeight(1);
+        div.setMaxHeight(1);
+        div.setStyle("-fx-background-color: #181B27;");
+        return div;
     }
 
     private ToggleButton buildStrategyCard(Difficulty d) {
@@ -421,11 +470,12 @@ public final class TournamentView {
         long selCount = strategyToggles.stream().filter(ToggleButton::isSelected).count();
         int total = (int)(selCount * (selCount - 1)) * gamesPerMatchup;
         int recommended = computeRecommended((int) selCount);
-        if (recommendedLabel != null) recommendedLabel.setText("Recommended: " + recommended);
+        if (recommendedLabel  != null) recommendedLabel.setText("Recommended: " + recommended);
         long estMs = (total <= 0 || concurrentGames <= 0) ? 0
                    : (long)(Math.ceil((double) total / concurrentGames) * AVERAGE_GAME_MS);
-        if (previewLabel != null)
-            previewLabel.setText(selCount + " strategies · " + total + " games · approximately " + formatDuration(estMs));
+        if (setupStratCount != null) setupStratCount.setText(String.valueOf(selCount));
+        if (setupTotalGames != null) setupTotalGames.setText(String.valueOf(total));
+        if (setupDuration   != null) setupDuration.setText(estMs <= 0 ? "—" : formatDuration(estMs));
     }
 
     private static int computeRecommended(int stratCount) {
