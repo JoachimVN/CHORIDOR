@@ -19,10 +19,6 @@ tests:
   - changed-files:
     - any-glob-to-any-file: 'src/test/**'
 
-dependencies:
-  - changed-files:
-    - any-glob-to-any-file: 'pom.xml'
-
 docs:
   - changed-files:
     - any-glob-to-any-file: '*.md'
