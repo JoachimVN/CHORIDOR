@@ -91,9 +91,12 @@ public final class LandingView {
         VBox[] sim  = card(FontAwesomeSolid.ROBOT,       "SIMULATE", "Watch AIs compete", ACC_SIM,  "landing-card-sim");
         VBox[] set  = card(FontAwesomeSolid.COG,         "SETTINGS", "Preferences",       ACC_SET,  "landing-card-set");
 
-        VBox playCard = play[0], playBody = play[1];
-        VBox simCard  = sim[0],  simBody  = sim[1];
-        VBox setCard  = set[0],  setBody  = set[1];
+        VBox playCard = play[0];
+        VBox playBody = play[1];
+        VBox simCard  = sim[0];
+        VBox simBody  = sim[1];
+        VBox setCard  = set[0];
+        VBox setBody  = set[1];
         allCards = List.of(playCard, simCard, setCard);
 
         populatePlay(playBody, ctrl, board, flipSelected);
@@ -144,22 +147,27 @@ public final class LandingView {
             }
         });
 
-        VBox page = new VBox(48, logo, arena);
+        // Spacer above logo — proportional to viewport height so content sits
+        // in a visually balanced position. Bound to scroll.height only (not page.height),
+        // so it never changes when cards expand, keeping the card tops fixed.
+        Region topSpacer = new Region();
+        topSpacer.setMinHeight(0);
+
+        VBox page = new VBox(48, topSpacer, logo, arena);
         page.setAlignment(Pos.TOP_CENTER);
-        page.setPadding(new Insets(64, 40, 64, 40));
+        page.setPadding(new Insets(0, 40, 64, 40));
         page.setMaxWidth(1280);
         page.setMaxHeight(Region.USE_PREF_SIZE);
 
         StackPane centred = new StackPane(page);
-        // TOP_CENTER: the page is anchored at the top so card expansion only
-        // moves the bottom edge — CENTER would shift the whole page upward.
-        centred.setAlignment(Pos.CENTER);
+        centred.setAlignment(Pos.TOP_CENTER);
 
         ScrollPane scroll = new ScrollPane(centred);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.getStyleClass().add("landing-scroll");
         centred.minHeightProperty().bind(scroll.heightProperty());
+        topSpacer.prefHeightProperty().bind(scroll.heightProperty().multiply(0.25));
 
         root.getChildren().add(scroll);
     }
@@ -453,7 +461,8 @@ public final class LandingView {
 
         ComboBox<Difficulty> combo = combo();
         ToggleGroup cg = new ToggleGroup();
-        ToggleButton pr = dot("color-pick-p1", cg), pb = dot("color-pick-p2", cg);
+        ToggleButton pr = dot("color-pick-p1", cg);
+        ToggleButton pb = dot("color-pick-p2", cg);
         pr.setSelected(true);
         HBox cr = new HBox(10, cfgLabel("PLAY AS"), pr, pb);
         cr.setAlignment(Pos.CENTER_LEFT);
@@ -474,7 +483,8 @@ public final class LandingView {
             exitToGame(() -> {});
         });
         startAi.setOnAction(e -> {
-            Difficulty d = combo.getValue(); boolean blue = pb.isSelected();
+            Difficulty d = combo.getValue();
+            boolean blue = pb.isSelected();
             ctrl.startGame(
                 blue ? d.createStrategy(Player.ONE) : null,
                 blue ? null : d.createStrategy(Player.TWO),
@@ -495,7 +505,8 @@ public final class LandingView {
         ToggleButton oneTab  = tabBtn("1 vs 1",     tabs);
         ToggleButton tourTab = tabBtn("Tournament", tabs);
 
-        ComboBox<Difficulty> s1 = combo(), s2 = combo();
+        ComboBox<Difficulty> s1 = combo();
+        ComboBox<Difficulty> s2 = combo();
         if (s2.getItems().size() > 1) s2.getSelectionModel().select(1);
         Button startMatch = actionBtn("Start Match", ACC_SIM);
         VBox onePanel = new VBox(12, cfgLabel("RED AI"), s1, cfgLabel("BLUE AI"), s2, startMatch);
@@ -513,7 +524,8 @@ public final class LandingView {
         });
 
         startMatch.setOnAction(e -> {
-            Difficulty d1 = s1.getValue(), d2 = s2.getValue();
+            Difficulty d1 = s1.getValue();
+            Difficulty d2 = s2.getValue();
             ctrl.startGame(d1.createStrategy(Player.ONE), d2.createStrategy(Player.TWO),
                 d1.sample().displayName(), d2.sample().displayName());
             board.setFlipped(false); flipSelected.accept(false);
