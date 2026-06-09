@@ -141,8 +141,8 @@
 .landing-card-play .landing-tab-btn:hover   { -fx-text-fill: #A07068; -fx-background-color: rgba(180,80,70,0.06); }
 .landing-card-play .landing-tab-btn:selected { -fx-background-color: #3A1E1C; -fx-text-fill: #B87870; }
 
-.landing-card-sim .landing-tab-btn          { -fx-text-fill: #3A5878; }
-.landing-card-sim .landing-tab-btn:hover    { -fx-text-fill: #5878A0; -fx-background-color: rgba(60,110,200,0.06); }
+.landing-card-sim .landing-tab-btn          { -fx-text-fill: #506890; }
+.landing-card-sim .landing-tab-btn:hover    { -fx-text-fill: #7090B8; -fx-background-color: rgba(60,110,200,0.06); }
 .landing-card-sim .landing-tab-btn:selected { -fx-background-color: #142038; -fx-text-fill: #8AAAC8; }
 
 .landing-card-set .landing-tab-btn:selected {

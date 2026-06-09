@@ -76,6 +76,8 @@ public final class LandingOverlay {
     private final Map<VBox, Timeline> rotTl  = new HashMap<>();
     private final Map<VBox, Timeline> bodyTl = new HashMap<>();
     private List<Region> indicatorBars;
+    private final Map<Region, Timeline> barTl = new HashMap<>();
+    private final Map<Region, Color>    barColor = new HashMap<>();
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
@@ -436,6 +438,15 @@ public final class LandingOverlay {
         fo.play();
     }
 
+    // Indicator palette — active and inactive colors per card type
+    private static final Color IND_PLAY_ON  = Color.web("#C85A50");
+    private static final Color IND_PLAY_OFF = Color.web("#5A3A30");
+    private static final Color IND_SIM_ON   = Color.web("#5A8FD8");
+    private static final Color IND_SIM_OFF  = Color.web("#2A4570");
+    private static final Color IND_SET_ON   = Color.web("#9B7FE8");
+    private static final Color IND_SET_OFF  = Color.web("#3A2860");
+    private static final Duration IND_DUR   = Duration.millis(380);
+
     // ── Carousel indicator ───────────────────────────────────────────────────
 
     private HBox buildCarouselIndicator() {
@@ -444,46 +455,73 @@ public final class LandingOverlay {
         indicator.setAlignment(Pos.CENTER);
         indicator.setPrefSize(120, 20);
         indicator.setMaxSize(120, 20);
+
+        int centerCardIdx = order[1];
         for (int i = 0; i < 3; i++) {
             Region bar = new Region();
             bar.setPrefSize(28, 3);
             bar.setMaxSize(28, 3);
-            bar.getStyleClass().addAll("carousel-indicator-bar", "carousel-indicator-inactive");
+            bar.getStyleClass().add("carousel-indicator-bar");
+            boolean isCenter = (i == centerCardIdx);
+            Color[] palette = accentPalette(allCards.get(i));
+            Color initial = isCenter ? palette[0] : palette[1];
+            barColor.put(bar, initial);
+            bar.setStyle("-fx-background-color: " + toWeb(initial) + ";");
             indicatorBars.add(bar);
             indicator.getChildren().add(bar);
         }
-        updateIndicator();
         return indicator;
     }
 
     private void updateIndicator() {
         int centerCardIdx = order[1];
         VBox centerCard = allCards.get(centerCardIdx);
-        String accentClass = getAccentClass(centerCard);
 
         for (int i = 0; i < 3; i++) {
             final Region bar = indicatorBars.get(i);
-            final boolean isCenter = (allCards.get(i) == centerCard);
-            final String stateClass = isCenter ? "carousel-indicator-active" : "carousel-indicator-inactive";
-
-            FadeTransition out = new FadeTransition(Duration.millis(100), bar);
-            out.setToValue(0);
-            out.setOnFinished(e -> {
-                bar.getStyleClass().removeAll("carousel-accent-play", "carousel-accent-sim", "carousel-accent-set",
-                        "carousel-indicator-active", "carousel-indicator-inactive");
-                bar.getStyleClass().addAll(accentClass, stateClass);
-                FadeTransition in = new FadeTransition(Duration.millis(220), bar);
-                in.setToValue(1.0);
-                in.play();
-            });
-            out.play();
+            boolean isCenter = (allCards.get(i) == centerCard);
+            Color[] palette = accentPalette(allCards.get(i));
+            Color target = isCenter ? palette[0] : palette[1];
+            animateBarColor(bar, target);
         }
     }
 
-    private String getAccentClass(VBox card) {
-        if (card.getStyleClass().contains("landing-card-play")) return "carousel-accent-play";
-        if (card.getStyleClass().contains("landing-card-sim"))  return "carousel-accent-sim";
-        return "carousel-accent-set";
+    private void animateBarColor(Region bar, Color target) {
+        Timeline prev = barTl.get(bar);
+        if (prev != null) prev.stop();
+
+        Color from = barColor.getOrDefault(bar, target);
+        // Interpolate through 60 steps manually — JavaFX can't KeyValue a CSS string property
+        final int STEPS = 60;
+        KeyFrame[] frames = new KeyFrame[STEPS];
+        for (int s = 1; s <= STEPS; s++) {
+            double t = (double) s / STEPS;
+            Color c = from.interpolate(target, EASE.interpolate(0, 1, t));
+            String css = "-fx-background-color: " + toWeb(c) + ";";
+            frames[s - 1] = new KeyFrame(IND_DUR.multiply((double) s / STEPS),
+                    e -> bar.setStyle(css));
+        }
+        Timeline tl = new Timeline(frames);
+        tl.setOnFinished(e -> {
+            barColor.put(bar, target);
+            barTl.remove(bar);
+        });
+        barTl.put(bar, tl);
+        tl.play();
+    }
+
+    private Color[] accentPalette(VBox card) {
+        if (card.getStyleClass().contains("landing-card-play")) return new Color[]{IND_PLAY_ON, IND_PLAY_OFF};
+        if (card.getStyleClass().contains("landing-card-sim"))  return new Color[]{IND_SIM_ON,  IND_SIM_OFF};
+        return new Color[]{IND_SET_ON, IND_SET_OFF};
+    }
+
+    private static String toWeb(Color c) {
+        return String.format("rgba(%d,%d,%d,%.3f)",
+            (int) Math.round(c.getRed()   * 255),
+            (int) Math.round(c.getGreen() * 255),
+            (int) Math.round(c.getBlue()  * 255),
+            c.getOpacity());
     }
 
     // ── Card factory ──────────────────────────────────────────────────────────
