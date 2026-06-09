@@ -8,26 +8,34 @@ import io.github.joachimvn.core.rules.PathChecker;
 import java.util.*;
 
 /**
- * Monte Carlo tree search with UCB1 candidate selection and heuristic rollouts.
+ * MCTS with UCB1 tree policy, BFS-guided rollouts, and combined-impact wall pruning.
  *
- * <p>Candidates use impact-based wall filtering (Chebyshev ≤ 4, impact ≥ 1, top 8 by impact)
- * rather than naive Chebyshev proximity. This reduces the candidate set from ~30 to ~8–12,
- * allowing roughly 3× more rollouts per second and focusing the search on walls that actually
- * matter. The UCB1 selection ensures exploration/exploitation balance across all candidates.
+ * <p><b>Tree policy:</b> UCB1 selection on fully-expanded nodes; one random child
+ * expanded per iteration. {@code wins} at every node is tracked from the mover's
+ * perspective so the adversarial structure is correct at all depths, not just root.
  *
- * <p>Oscillation prevention: if the chosen pawn move would return to the previous pawn position,
- * the strategy overrides to the BFS-optimal advancing move instead.
+ * <p><b>Rollout:</b> goal-row greedy advance (no per-step BFS, ~10× faster) with
+ * sampled wall placement evaluated by BFS impact. Periodic early cutoff via BFS
+ * when one player has a dominant lead. Terminal evaluated by BFS distance.
+ *
+ * <p><b>Wall pruning:</b> score = {@code oppImpact + myGain} (opponent path
+ * lengthened + own path shortened). Walls with {@code score > 0} qualify, so
+ * walls that don't slow the opponent but protect your own advance are included.
+ * Chebyshev proximity filter (≤ 5) bounds candidate set size.
+ *
+ * <p><b>Final selection:</b> most-visited child (robust best), with BFS tiebreaker.
  */
 public class MonteCarloStrategy implements Strategy {
 
-    private static final long   TIME_LIMIT_MS       = 1000;
+    private static final long   TIME_LIMIT_MS       = 950;
     private static final int    MAX_ROLLOUT_DEPTH   = 60;
-    private static final int    WALL_PRUNE_DIST     = 4;
-    private static final int    MIN_WALL_IMPACT     = 1;
-    private static final int    MAX_WALL_CANDIDATES = 8;
-    private static final float  WALL_PROB           = 0.30f;
-    private static final int    WALL_SAMPLES        = 5;
+    private static final int    WALL_PRUNE_DIST     = 5;
+    private static final int    MAX_WALL_CANDIDATES = 10;
+    private static final float  WALL_PROB           = 0.25f;
+    private static final int    WALL_SAMPLES        = 3;
     private static final double UCB_C               = Math.sqrt(2);
+    private static final int    CUTOFF_INTERVAL     = 10;
+    private static final int    CUTOFF_MARGIN       = 5;
 
     private final Player        aiPlayer;
     private final MoveValidator validator   = new MoveValidator();
@@ -36,81 +44,108 @@ public class MonteCarloStrategy implements Strategy {
 
     private Position prevPosition = null;
 
-    public MonteCarloStrategy(Player aiPlayer) {
-        this.aiPlayer = aiPlayer;
+    // ── MCTS node ────────────────────────────────────────────────────────────
+
+    private static final class Node {
+        final GameState  state;
+        final Move       move;
+        final Node       parent;
+        final Player     mover;
+        final List<Node> children = new ArrayList<>();
+        List<Move>       untried;
+        int wins;
+        int visits;
+
+        Node(GameState state, Move move, Node parent, Player mover, List<Move> candidates) {
+            this.state   = state;
+            this.move    = move;
+            this.parent  = parent;
+            this.mover   = mover;
+            this.untried = new ArrayList<>(candidates);
+        }
+
+        boolean isFullyExpanded() { return untried.isEmpty(); }
     }
+
+    // ── Construction ─────────────────────────────────────────────────────────
+
+    public MonteCarloStrategy(Player aiPlayer) { this.aiPlayer = aiPlayer; }
 
     @Override public String displayName() { return "Monte Carlo"; }
     @Override public String description() {
-        return "UCB1-guided simulations with impact-filtered wall candidates and BFS tiebreaking";
+        return "MCTS with UCB1 tree policy, BFS rollouts, and combined-impact wall pruning";
     }
+
+    // ── Main entry ───────────────────────────────────────────────────────────
 
     @Override
     public Move decide(GameState state) {
         List<Move> candidates = buildCandidates(state);
         if (candidates.isEmpty()) throw new NoSuchElementException("No legal moves");
 
-        int n        = candidates.size();
-        int[] wins   = new int[n];
-        int[] visits = new int[n];
-        int   total  = 0;
-
+        // Root mover = opponent because whoever moved TO reach this state was them
+        Node root    = new Node(state, null, null, aiPlayer.opponent(), candidates);
         long deadline = System.currentTimeMillis() + TIME_LIMIT_MS;
+
         while (System.currentTimeMillis() < deadline) {
-            int idx = selectUCB1(wins, visits, total, n);
-            GameState after = apply(state, candidates.get(idx));
-            if (rollout(after, deadline)) wins[idx]++;
-            visits[idx]++;
-            total++;
+            Node node = selectAndExpand(root, deadline);
+            if (node == null) break;
+            boolean aiWon = rollout(node.state, deadline);
+            backpropagate(node, aiWon);
         }
 
-        Position myPos = state.getPawnPosition(aiPlayer);
-
-        // Select best: win rate primary, BFS distances as tiebreakers
-        int    best        = 0;
-        double bestRate    = visits[0] == 0 ? 0 : (double) wins[0] / visits[0];
-        int    bestMyDist  = myDistAfter(state, candidates.get(0));
-        int    bestOppDist = oppDistAfter(state, candidates.get(0));
-
-        for (int i = 1; i < n; i++) {
-            double rate    = visits[i] == 0 ? 0 : (double) wins[i] / visits[i];
-            int myDist     = myDistAfter(state, candidates.get(i));
-            int oppDist    = oppDistAfter(state, candidates.get(i));
-            boolean better = rate > bestRate
-                || (rate == bestRate && myDist < bestMyDist)
-                || (rate == bestRate && myDist == bestMyDist && oppDist > bestOppDist);
-            if (better) {
-                best        = i;
-                bestRate    = rate;
-                bestMyDist  = myDist;
-                bestOppDist = oppDist;
-            }
-        }
-
-        Move chosen = candidates.get(best);
-
-        // Anti-oscillation: override if chosen move returns to previous position
-        if (chosen instanceof PawnMove pm && pm.target().equals(prevPosition)) {
-            Move bfsAdvance = bfsBestAdvance(state);
-            if (bfsAdvance != null) chosen = bfsAdvance;
-        }
-
-        prevPosition = myPos;
+        Move chosen = robustBest(root, state);
+        prevPosition = state.getPawnPosition(aiPlayer);
         return chosen;
     }
 
-    private int selectUCB1(int[] wins, int[] visits, int total, int n) {
-        for (int i = 0; i < n; i++) { if (visits[i] == 0) return i; }
-        double best    = Double.NEGATIVE_INFINITY;
-        int    bestIdx = 0;
-        double lnTotal = Math.log(total);
-        for (int i = 0; i < n; i++) {
-            double score = (double) wins[i] / visits[i]
-                         + UCB_C * Math.sqrt(lnTotal / visits[i]);
-            if (score > best) { best = score; bestIdx = i; }
+    // ── Selection + expansion ────────────────────────────────────────────────
+
+    private Node selectAndExpand(Node root, long deadline) {
+        Node node = root;
+
+        // Walk down via UCB1 until an unexpanded or childless node
+        while (node.isFullyExpanded() && !node.children.isEmpty()) {
+            if (System.currentTimeMillis() >= deadline) return null;
+            node = ucb1Select(node);
         }
-        return bestIdx;
+
+        // Expand one random untried child
+        if (!node.untried.isEmpty()) {
+            Move move      = node.untried.remove(random.nextInt(node.untried.size()));
+            GameState next = apply(node.state, move);
+            Player mover   = node.state.getCurrentPlayer();
+            Node child     = new Node(next, move, node, mover, buildCandidates(next));
+            node.children.add(child);
+            return child;
+        }
+
+        return node; // terminal node
     }
+
+    private Node ucb1Select(Node parent) {
+        double logN = Math.log(parent.visits);
+        Node   best = null;
+        double bestScore = Double.NEGATIVE_INFINITY;
+        for (Node child : parent.children) {
+            double score = (double) child.wins / child.visits
+                         + UCB_C * Math.sqrt(logN / child.visits);
+            if (score > bestScore) { bestScore = score; best = child; }
+        }
+        return best;
+    }
+
+    // ── Backpropagation ──────────────────────────────────────────────────────
+
+    private void backpropagate(Node node, boolean aiWon) {
+        for (Node cur = node; cur != null; cur = cur.parent) {
+            cur.visits++;
+            // wins from this node's mover's perspective
+            if ((cur.mover == aiPlayer) == aiWon) cur.wins++;
+        }
+    }
+
+    // ── Rollout ──────────────────────────────────────────────────────────────
 
     private boolean rollout(GameState state, long deadline) {
         GameState cur = state;
@@ -118,38 +153,59 @@ public class MonteCarloStrategy implements Strategy {
             if (hasWon(cur, aiPlayer))            return true;
             if (hasWon(cur, aiPlayer.opponent())) return false;
             if (System.currentTimeMillis() >= deadline) break;
-            cur = heuristicStep(cur);
+
+            // Periodic BFS early cutoff — cheap on 9×9
+            if (d % CUTOFF_INTERVAL == 0) {
+                int myD  = pathChecker.shortestPathWithJumps(cur, aiPlayer);
+                int oppD = pathChecker.shortestPathWithJumps(cur, aiPlayer.opponent());
+                if (myD  <= 1)                   return true;
+                if (oppD <= 1)                   return false;
+                if (myD  <= oppD - CUTOFF_MARGIN) return true;
+                if (oppD <= myD  - CUTOFF_MARGIN) return false;
+            }
+
+            cur = rolloutStep(cur);
         }
-        int myDist  = pathChecker.shortestPathWithJumps(cur, aiPlayer);
-        int oppDist = pathChecker.shortestPathWithJumps(cur, aiPlayer.opponent());
-        return myDist <= oppDist;
+        int fd1 = pathChecker.shortestPathWithJumps(cur, aiPlayer);
+        int fd2 = pathChecker.shortestPathWithJumps(cur, aiPlayer.opponent());
+        return fd1 < fd2;
     }
 
-    private GameState heuristicStep(GameState state) {
+    private GameState rolloutStep(GameState state) {
         Player current = state.getCurrentPlayer();
         Player opp     = current.opponent();
 
         if (state.getWallCount(current) > 0 && random.nextFloat() < WALL_PROB) {
-            List<WallMove> walls = validator.getLegalWallMoves(state);
-            if (!walls.isEmpty()) {
-                int oppDist    = pathChecker.shortestPathWithJumps(state, opp);
-                WallMove best  = null;
-                int bestImpact = 0;
-                int samples    = Math.min(WALL_SAMPLES, walls.size());
-                for (int i = 0; i < samples; i++) {
-                    WallMove wm = walls.get(random.nextInt(walls.size()));
-                    int impact = pathChecker.shortestPathWithJumps(state.withWallMove(wm.wall()), opp) - oppDist;
-                    if (impact > bestImpact) { bestImpact = impact; best = wm; }
-                }
-                if (best != null && bestImpact > 0) return state.withWallMove(best.wall());
-            }
+            GameState wState = sampleWallStep(state, opp);
+            if (wState != null) return wState;
         }
 
+        return goalRowAdvance(state, current);
+    }
+
+    /** Sample a few random legal walls; play the best by opponent path impact. */
+    private GameState sampleWallStep(GameState state, Player opp) {
+        List<WallMove> walls = validator.getLegalWallMoves(state);
+        if (walls.isEmpty()) return null;
+        int oppDist  = pathChecker.shortestPathWithJumps(state, opp);
+        WallMove best = null;
+        int bestImpact = 1; // require at least +1 to bother
+        int samples = Math.min(WALL_SAMPLES, walls.size());
+        for (int i = 0; i < samples; i++) {
+            WallMove wm = walls.get(random.nextInt(walls.size()));
+            int impact = pathChecker.shortestPathWithJumps(state.withWallMove(wm.wall()), opp) - oppDist;
+            if (impact > bestImpact) { bestImpact = impact; best = wm; }
+        }
+        return best != null ? state.withWallMove(best.wall()) : null;
+    }
+
+    /** Goal-row greedy advance: no BFS per step, fast. */
+    private GameState goalRowAdvance(GameState state, Player current) {
         List<PawnMove> pawns = validator.getLegalPawnMoves(state);
         if (pawns.isEmpty()) return state;
-        int goalRow    = current.goalRow();
-        PawnMove best  = pawns.get(0);
-        int bestDist   = Math.abs(best.target().row() - goalRow);
+        int goalRow  = current.goalRow();
+        PawnMove best = pawns.get(0);
+        int bestDist  = Math.abs(best.target().row() - goalRow);
         for (PawnMove pm : pawns) {
             int d = Math.abs(pm.target().row() - goalRow);
             if (d < bestDist) { bestDist = d; best = pm; }
@@ -157,51 +213,88 @@ public class MonteCarloStrategy implements Strategy {
         return state.withPawnMove(best.target());
     }
 
+    // ── Candidate generation ─────────────────────────────────────────────────
+
+    /**
+     * Pawn moves + top wall candidates scored by {@code oppImpact + myGain}.
+     * Including walls where myGain > 0 captures defensive placements that protect
+     * your own path even when they don't immediately slow the opponent.
+     */
     private List<Move> buildCandidates(GameState state) {
         Player current = state.getCurrentPlayer();
         Player opp     = current.opponent();
-        int oppDist    = pathChecker.shortestPathWithJumps(state, opp);
-
         List<Move> moves = new ArrayList<>(validator.getLegalPawnMoves(state));
+        if (state.getWallCount(current) <= 0) return moves;
 
-        if (state.getWallCount(current) > 0) {
-            Position p1 = state.getPawnPosition(Player.ONE);
-            Position p2 = state.getPawnPosition(Player.TWO);
-            List<WallMove> legalWalls = validator.getLegalWallMoves(state);
-            List<int[]> impacts = new ArrayList<>();
-            for (int i = 0; i < legalWalls.size(); i++) {
-                Wall w = legalWalls.get(i).wall();
-                if (!nearEither(w, p1, p2)) continue;
-                int impact = pathChecker.shortestPathWithJumps(state.withWallMove(w), opp) - oppDist;
-                if (impact >= MIN_WALL_IMPACT) impacts.add(new int[]{impact, i});
-            }
-            impacts.sort(Comparator.comparingInt((int[] e) -> e[0]).reversed());
-            int limit = Math.min(impacts.size(), MAX_WALL_CANDIDATES);
-            for (int k = 0; k < limit; k++) moves.add(legalWalls.get(impacts.get(k)[1]));
+        int oppDist = pathChecker.shortestPathWithJumps(state, opp);
+        int myDist  = pathChecker.shortestPathWithJumps(state, current);
+        Position p1 = state.getPawnPosition(Player.ONE);
+        Position p2 = state.getPawnPosition(Player.TWO);
+
+        List<WallMove> legalWalls = validator.getLegalWallMoves(state);
+        List<int[]> scored = new ArrayList<>();
+        for (int i = 0; i < legalWalls.size(); i++) {
+            Wall w = legalWalls.get(i).wall();
+            if (!nearEither(w, p1, p2)) continue;
+            GameState after = state.withWallMove(w);
+            int oppImpact = pathChecker.shortestPathWithJumps(after, opp) - oppDist;
+            int myGain    = myDist - pathChecker.shortestPathWithJumps(after, current);
+            int score     = oppImpact + myGain;
+            if (score > 0) scored.add(new int[]{score, i});
         }
+
+        scored.sort(Comparator.comparingInt((int[] e) -> e[0]).reversed());
+        int limit = Math.min(scored.size(), MAX_WALL_CANDIDATES);
+        for (int k = 0; k < limit; k++) moves.add(legalWalls.get(scored.get(k)[1]));
         return moves;
     }
 
-    private int myDistAfter(GameState state, Move move) {
-        return pathChecker.shortestPathWithJumps(apply(state, move), aiPlayer);
+    // ── Final move selection ──────────────────────────────────────────────────
+
+    private Move robustBest(Node root, GameState state) {
+        if (root.children.isEmpty()) {
+            // No tree built — fall back to best pawn move by BFS
+            return bfsBestAdvance(state);
+        }
+
+        Node best = null;
+        for (Node child : root.children) {
+            if (best == null
+                    || child.visits > best.visits
+                    || (child.visits == best.visits
+                        && myDistAfter(state, child.move) < myDistAfter(state, best.move))) {
+                best = child;
+            }
+        }
+
+        Move chosen = best.move;
+
+        // Anti-oscillation: if chosen pawn move returns to previous position, use BFS advance
+        if (chosen instanceof PawnMove pm && pm.target().equals(prevPosition)) {
+            Move alt = bfsBestAdvance(state);
+            if (alt != null) chosen = alt;
+        }
+        return chosen;
     }
 
-    private int oppDistAfter(GameState state, Move move) {
-        return pathChecker.shortestPathWithJumps(apply(state, move), aiPlayer.opponent());
-    }
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private Move bfsBestAdvance(GameState state) {
         List<PawnMove> pawns = validator.getLegalPawnMoves(state);
         if (pawns.isEmpty()) return null;
-        int best = Integer.MAX_VALUE;
-        PawnMove bestMove = null;
+        PawnMove best = null;
+        int bestDist  = Integer.MAX_VALUE;
         for (PawnMove pm : pawns) {
             if (!pm.target().equals(prevPosition)) {
                 int d = pathChecker.shortestPathWithJumps(state.withPawnMove(pm.target()), aiPlayer);
-                if (d < best) { best = d; bestMove = pm; }
+                if (d < bestDist) { bestDist = d; best = pm; }
             }
         }
-        return bestMove;
+        return best != null ? best : pawns.get(0);
+    }
+
+    private int myDistAfter(GameState state, Move move) {
+        return pathChecker.shortestPathWithJumps(apply(state, move), aiPlayer);
     }
 
     private boolean hasWon(GameState state, Player player) {
