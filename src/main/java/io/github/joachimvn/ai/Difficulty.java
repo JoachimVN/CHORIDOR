@@ -52,4 +52,19 @@ public enum Difficulty {
             default                                                   -> 15;
         };
     }
+
+    /**
+     * Relative skill tier (1 = weakest, 5 = strongest).
+     * Used to estimate game length: closely matched = longer game; large gap = short decisive game.
+     */
+    public int skillLevel() {
+        return switch (this) {
+            case RANDOM                                                    -> 1;
+            case GREEDY, ONE_STEP, WALL_DUMPER, COPYCAT                   -> 2;
+            case RACE_PLANNER, THREAT_RESPONDER, CORRIDOR                 -> 3;
+            case TEMPO, DUAL_THREAT, INFLUENCE, ZUGZWANG                  -> 4;
+            case MINIMAX, ECONOMIST, SHARP, TRAPPER, BAITER,
+                 PATH_COUNT, WIKI, MONTE_CARLO                            -> 5;
+        };
+    }
 }

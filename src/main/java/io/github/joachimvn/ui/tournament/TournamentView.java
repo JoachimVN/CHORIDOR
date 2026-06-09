@@ -108,7 +108,6 @@ public final class TournamentView {
     private Label ccValueLabel;
     private StackPane setupPane;
 
-    private static final int  MOVES_PER_PLAYER = 30; // avg moves each player makes per game
     private static final int  MAX_CONCURRENT   = Runtime.getRuntime().availableProcessors();
 
     public TournamentView(Runnable onClose, GameController ctrl) {
@@ -504,7 +503,7 @@ public final class TournamentView {
             for (Difficulty d1 : selected)
                 for (Difficulty d2 : selected)
                     if (d1 != d2)
-                        totalWork += (long) MOVES_PER_PLAYER
+                        totalWork += (long) estimatedMovesPerPlayer(d1, d2)
                                    * (d1.msPerDecision() + d2.msPerDecision())
                                    * gamesPerMatchup;
             estMs = totalWork / concurrentGames;
@@ -513,6 +512,18 @@ public final class TournamentView {
         if (setupStratCount != null) setupStratCount.setText(String.valueOf(selCount));
         if (setupTotalGames != null) setupTotalGames.setText(String.valueOf(total));
         if (setupDuration   != null) setupDuration.setText(estMs <= 0 ? "—" : formatDuration(estMs));
+    }
+
+    /**
+     * Estimated moves each player makes in a game between d1 and d2.
+     * Higher average skill → longer game (more defensive wall play).
+     * Larger skill gap → shorter game (dominant player wins decisively).
+     */
+    private static int estimatedMovesPerPlayer(Difficulty d1, Difficulty d2) {
+        int s1 = d1.skillLevel(), s2 = d2.skillLevel();
+        int avg = (s1 + s2);          // 2..10
+        int gap = Math.abs(s1 - s2);  // 0..4
+        return Math.max(8, 12 + avg * 2 - gap * 4);
     }
 
     private static int computeRecommended(int stratCount) {
