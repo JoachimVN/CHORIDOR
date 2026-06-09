@@ -15,8 +15,8 @@
 }
 
 .tournament-title {
+    -fx-font-family: "Adlam Display";
     -fx-font-size: 20px;
-    -fx-font-weight: bold;
     -fx-text-fill: #8890A8;
 }
 
