@@ -90,7 +90,7 @@ public final class LandingOverlay {
         ImageView logo = new ImageView(new Image(
             getClass().getResourceAsStream("/images/logos/CHORIDOR_Logo.png")));
         logo.setPreserveRatio(true);
-        logo.setFitWidth(310);
+        logo.setFitWidth(CARD_W);
         logo.setSmooth(true);
 
         VBox[] play = card(FontAwesomeSolid.PLAY,        "PLAY",     "Local or vs AI",    ACC_PLAY, "landing-card-play");
