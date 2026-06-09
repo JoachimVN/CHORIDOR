@@ -245,14 +245,13 @@ public final class LandingOverlay {
 
         for (int p = 0; p < 3; p++) animTo(allCards.get(order[p]), SLOTS[p]);
 
+        updateIndicator(); // update immediately on click, not when animation ends
+
         // Expand incoming card immediately — it grows while sliding to centre
         VBox cc = allCards.get(order[1]);
         expandBody(cc, (VBox) cc.getChildren().get(1));
 
-        new Timeline(new KeyFrame(DUR_ROTATE, e -> {
-            rotating = false;
-            updateIndicator();
-        })).play();
+        new Timeline(new KeyFrame(DUR_ROTATE, e -> rotating = false)).play();
     }
 
     private void animTo(VBox c, Pos3D pos) {
