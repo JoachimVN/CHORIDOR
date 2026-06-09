@@ -662,7 +662,10 @@ public final class LandingOverlay {
 
     private static Button actionBtn(String text, String accent) {
         Button b = new Button(text); b.getStyleClass().add("landing-action-btn");
-        b.setStyle("-fx-background-color:" + accent + ";-fx-border-color:derive(" + accent + ",22%);");
+        b.setStyle(
+            "-fx-background-color: linear-gradient(to bottom, derive(" + accent + ",-5%), derive(" + accent + ",-28%));" +
+            "-fx-border-color: derive(" + accent + ",18%);"
+        );
         b.setMaxWidth(Double.MAX_VALUE);
         return b;
     }

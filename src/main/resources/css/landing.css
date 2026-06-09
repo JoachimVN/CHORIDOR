@@ -34,7 +34,7 @@
 }
 
 .landing-card-play {
-    -fx-background-color: linear-gradient(to bottom, #261210, #1A1228);
+    -fx-background-color: linear-gradient(to bottom, #261210, #1A0E0E);
     -fx-border-color: #7A2820 #17192A #17192A #17192A;
 }
 .landing-card-sim {
@@ -60,7 +60,7 @@
    Both layers need explicit -fx-background-radius so the rounded corners apply
    to each layer separately. */
 .landing-card-play:hover {
-    -fx-background-color: rgba(180,70,60,0.15), linear-gradient(to bottom, #2C1412, #1E142E);
+    -fx-background-color: rgba(180,70,60,0.15), linear-gradient(to bottom, #2C1412, #1E1010);
     -fx-background-radius: 12, 12;
     -fx-background-insets: 0, 0;
 }
@@ -138,12 +138,12 @@
 
 /* Unselected + hover tab buttons per card */
 .landing-card-play .landing-tab-btn         { -fx-text-fill: #7A5048; }
-.landing-card-play .landing-tab-btn:hover   { -fx-text-fill: #AA7870; -fx-background-color: rgba(180,80,70,0.06); }
-.landing-card-play .landing-tab-btn:selected { -fx-background-color: #3D2420; -fx-text-fill: #E89080; }
+.landing-card-play .landing-tab-btn:hover   { -fx-text-fill: #A07068; -fx-background-color: rgba(180,80,70,0.06); }
+.landing-card-play .landing-tab-btn:selected { -fx-background-color: #3A1E1C; -fx-text-fill: #B87870; }
 
 .landing-card-sim .landing-tab-btn          { -fx-text-fill: #3A5878; }
-.landing-card-sim .landing-tab-btn:hover    { -fx-text-fill: #6080A0; -fx-background-color: rgba(60,110,200,0.06); }
-.landing-card-sim .landing-tab-btn:selected { -fx-background-color: #152840; -fx-text-fill: #A0C0E0; }
+.landing-card-sim .landing-tab-btn:hover    { -fx-text-fill: #5878A0; -fx-background-color: rgba(60,110,200,0.06); }
+.landing-card-sim .landing-tab-btn:selected { -fx-background-color: #142038; -fx-text-fill: #8AAAC8; }
 
 .landing-card-set .landing-tab-btn:selected {
     -fx-background-color: #251D3A;
@@ -177,11 +177,13 @@
 
 .landing-action-btn:hover {
     -fx-text-fill: #ffffff;
-    -fx-opacity: 0.82;
+    -fx-opacity: 1.0;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 8, 0.2, 0, 2);
 }
 
 .landing-action-btn:pressed {
-    -fx-opacity: 1.0;
+    -fx-opacity: 0.85;
+    -fx-effect: null;
 }
 
 /* ── Carousel indicator ───────────────────────────────────────────────────── */
