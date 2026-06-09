@@ -137,18 +137,18 @@
 }
 
 /* Unselected + hover tab buttons per card */
-.landing-card-play .landing-tab-btn         { -fx-text-fill: #7A5048; }
-.landing-card-play .landing-tab-btn:hover   { -fx-text-fill: #A07068; -fx-background-color: rgba(180,80,70,0.06); }
-.landing-card-play .landing-tab-btn:selected { -fx-background-color: #3A1E1C; -fx-text-fill: #B87870; }
+.landing-card-play .landing-tab-btn                  { -fx-text-fill: #7A5048; }
+.landing-card-play .landing-tab-btn:hover            { -fx-text-fill: #D09080; -fx-background-color: rgba(180,80,70,0.06); }
+.landing-card-play .landing-tab-btn:selected         { -fx-background-color: #3A1E1C; -fx-text-fill: #C88878; }
+.landing-card-play .landing-tab-btn:selected:hover   { -fx-background-color: #4A2624; -fx-text-fill: #E8A898; }
 
-.landing-card-sim .landing-tab-btn          { -fx-text-fill: #506890; }
-.landing-card-sim .landing-tab-btn:hover    { -fx-text-fill: #7090B8; -fx-background-color: rgba(60,110,200,0.06); }
-.landing-card-sim .landing-tab-btn:selected { -fx-background-color: #142038; -fx-text-fill: #8AAAC8; }
+.landing-card-sim .landing-tab-btn                   { -fx-text-fill: #6888A8; }
+.landing-card-sim .landing-tab-btn:hover             { -fx-text-fill: #C0DCF4; -fx-background-color: rgba(60,110,200,0.06); }
+.landing-card-sim .landing-tab-btn:selected          { -fx-background-color: #1A2E50; -fx-text-fill: #C8E0F4; }
+.landing-card-sim .landing-tab-btn:selected:hover    { -fx-background-color: #223860; -fx-text-fill: #E0F0FF; }
 
-.landing-card-set .landing-tab-btn:selected {
-    -fx-background-color: #251D3A;
-    -fx-text-fill: #C8B8E8;
-}
+.landing-card-set .landing-tab-btn:selected          { -fx-background-color: #251D3A; -fx-text-fill: #C8B8E8; }
+.landing-card-set .landing-tab-btn:selected:hover    { -fx-background-color: #302448; -fx-text-fill: #E0D0F8; }
 
 /* ── Config labels ────────────────────────────────────────────────────────── */
 
