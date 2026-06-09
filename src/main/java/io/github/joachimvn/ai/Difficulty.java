@@ -8,21 +8,21 @@ import java.util.function.Function;
 public enum Difficulty {
 
     RANDOM          (p -> new RandomStrategy()),
-    GREEDY          (p -> new GreedyStrategy()),
+    SPRINTER        (p -> new GreedyStrategy()),
     MINIMAX         (p -> new MinimaxStrategy(p, 1000)),
-    ECONOMIST       (EconomistStrategy::new),
     SHARP           (SharpStrategy::new),
     TRAPPER         (TrapperStrategy::new),
-    SNIPER          (SniperStrategy::new),
     COPYCAT         (CopycatStrategy::new),
-    ONE_STEP        (OneStepStrategy::new),
-    WALL_DUMPER     (WallDumperStrategy::new),
+    SHORT_SIGHTED   (OneStepStrategy::new),
+    FORTNITE        (WallDumperStrategy::new),
     MONTE_CARLO     (MonteCarloStrategy::new),
-    RACE_PLANNER    (RacePlannerStrategy::new),
+    COMEBACKER      (RacePlannerStrategy::new),
     THREAT_RESPONDER(ThreatResponderStrategy::new),
     PATH_COUNT      (PathCountStrategy::new),
     BAITER          (BaiterStrategy::new),
-    WIKI            (WikipediaStrategy::new);
+    WIKIPEDIA       (WikipediaStrategy::new),
+    CORRIDOR        (CorridorStrategy::new),
+    FORKER          (DualThreatStrategy::new);
 
     private final Function<Player, Strategy> factory;
     private final Strategy sample;
@@ -35,4 +35,32 @@ public enum Difficulty {
     /** A representative instance — source of truth for name and description. */
     public Strategy sample()                 { return sample; }
     public Strategy createStrategy(Player p) { return factory.apply(p); }
+
+    /**
+     * The wall-clock time budget this strategy is allowed per decision, in milliseconds.
+     * Returns 0 for fast heuristics that have no explicit budget.
+     */
+    public long timeBudgetMs() {
+        return switch (this) {
+            case MONTE_CARLO                                               -> 950;
+            case MINIMAX, SHARP, TRAPPER, BAITER,
+                 WIKIPEDIA, PATH_COUNT                                     -> 1000;
+            default                                                        -> 0;
+        };
+    }
+
+    /**
+     * Relative skill tier (1 = weakest, 5 = strongest).
+     * Used to estimate game length: closely matched = longer game; large gap = short decisive game.
+     */
+    public int skillLevel() {
+        return switch (this) {
+            case RANDOM                                                    -> 1;
+            case SPRINTER, SHORT_SIGHTED, FORTNITE, COPYCAT               -> 2;
+            case COMEBACKER, THREAT_RESPONDER, CORRIDOR                   -> 3;
+            case FORKER                                                    -> 4;
+            case MINIMAX, SHARP, TRAPPER, BAITER,
+                 PATH_COUNT, WIKIPEDIA, MONTE_CARLO                       -> 5;
+        };
+    }
 }

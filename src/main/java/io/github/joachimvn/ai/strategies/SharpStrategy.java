@@ -39,7 +39,7 @@ public class SharpStrategy extends AbstractSearchStrategy {
 
     @Override public String displayName() { return "Sharp"; }
     @Override public String description() {
-        return "Deeper search that ignores weak moves — only advancing pawn moves and high-impact walls";
+        return "Deep search that attempts to ignore weak moves";
     }
 
     @Override

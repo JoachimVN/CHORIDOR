@@ -33,9 +33,9 @@ public class RacePlannerStrategy implements Strategy {
         this.aiPlayer = aiPlayer;
     }
 
-    @Override public String displayName() { return "Race Planner"; }
+    @Override public String displayName() { return "Comebacker"; }
     @Override public String description() {
-        return "Advances when winning the sprint, places the best blocking wall when losing — no search";
+        return "Advances when winning the sprint, places the best blocking wall when losing";
     }
 
     @Override

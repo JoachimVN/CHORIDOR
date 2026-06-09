@@ -73,8 +73,12 @@ public class TournamentRunner {
     public boolean isPaused()  { return paused; }
 
     public int totalGames(List<Difficulty> strategies) {
+        return totalGames(strategies, 1);
+    }
+
+    public int totalGames(List<Difficulty> strategies, int gamesPerMatchup) {
         int n = strategies.size();
-        return n * (n - 1);
+        return n * (n - 1) * gamesPerMatchup;
     }
 
     public void pause()  { paused = true; }
@@ -85,7 +89,7 @@ public class TournamentRunner {
      * @param onGameResult called on the FX thread with (winner, loser) after each game
      * @param onComplete   called on the FX thread when all games finish (not called if cancelled)
      */
-    public void start(List<Difficulty> strategies,
+    public void start(List<Difficulty> strategies, int gamesPerMatchup, int threadCount,
                       BiConsumer<Integer, Integer>     onProgress,
                       BiConsumer<Difficulty, Difficulty> onGameResult,
                       Runnable                          onComplete) {
@@ -110,13 +114,11 @@ public class TournamentRunner {
             matchupWins.put(a, row);
         }
 
-        List<Difficulty[]> matchups = buildMatchups(strategies);
+        List<Difficulty[]> matchups = buildMatchups(strategies, gamesPerMatchup);
         int total = matchups.size();
         AtomicInteger completed = new AtomicInteger(0);
 
-        // Cap concurrent games at half the strategy count so each AI gets reasonable CPU time.
-        int threads = Math.max(1, Math.min(strategies.size() / 2,
-                                           Runtime.getRuntime().availableProcessors() - 1));
+        int threads = Math.max(1, Math.min(threadCount, Runtime.getRuntime().availableProcessors()));
         pool = Executors.newFixedThreadPool(threads, r -> {
             Thread t = new Thread(r, "tournament-worker");
             t.setDaemon(true);
@@ -158,11 +160,15 @@ public class TournamentRunner {
         finalWallOwners.clear();
     }
 
-    private static List<Difficulty[]> buildMatchups(List<Difficulty> strategies) {
+    private static List<Difficulty[]> buildMatchups(List<Difficulty> strategies, int gamesPerMatchup) {
         List<Difficulty[]> matchups = new ArrayList<>();
         for (Difficulty a : strategies) {
             for (Difficulty b : strategies) {
-                if (a != b) matchups.add(new Difficulty[]{a, b});
+                if (a != b) {
+                    for (int i = 0; i < gamesPerMatchup; i++) {
+                        matchups.add(new Difficulty[]{a, b});
+                    }
+                }
             }
         }
         Collections.shuffle(matchups);

@@ -196,6 +196,30 @@
     -fx-padding: 0;
 }
 
+/* ── Landing card combo overrides ──────────────────────────────────────── */
+
+.landing-card-play .strategy-combo {
+    -fx-background-color: #1A100E;
+    -fx-border-color: #3A1C16;
+}
+.landing-card-play .strategy-combo:hover {
+    -fx-border-color: #5A2C22;
+}
+.landing-card-play .strategy-combo > .combo-box-base > .arrow-button > .arrow {
+    -fx-background-color: #6A3830;
+}
+
+.landing-card-sim .strategy-combo {
+    -fx-background-color: #0C1220;
+    -fx-border-color: #16284A;
+}
+.landing-card-sim .strategy-combo:hover {
+    -fx-border-color: #1E3E6A;
+}
+.landing-card-sim .strategy-combo > .combo-box-base > .arrow-button > .arrow {
+    -fx-background-color: #2A4870;
+}
+
 /* ── Primary action button ──────────────────────────────────────────────── */
 
 .start-button {

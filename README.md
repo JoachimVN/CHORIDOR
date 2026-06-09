@@ -165,11 +165,13 @@ src/main/java/io/github/joachimvn
     core/model/              # domain model (GameState, Player, Wall, Move, Position, …)
     core/rules/              # rules engine (MoveValidator, PathChecker, GameEngine)
     ai/                      # Strategy interface, Difficulty enum, and all AI strategies
+    tournament/              # TournamentRunner, GameRecord
     ui/
         GameController.java  # game state bridge between AI/rules and the UI
         BoardView.java       # BoardView canvas
         bars/                # TopBar, BottomBar, ReviewBar
-        overlays/            # SetupOverlay, GameOverOverlay
+        overlays/            # LandingOverlay, SetupOverlay, GameOverOverlay, SplashOverlay
+        tournament/          # TournamentView, TournamentSummary, MiniBoard, BoardRenderer
         common/              # UiScale, UiConstants, LogoFactory
 
 src/main/resources

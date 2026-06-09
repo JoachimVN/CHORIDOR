@@ -55,7 +55,7 @@ public final class TournamentView {
     // ── State ────────────────────────────────────────────────────────────────
     private final StackPane root;
     private final TournamentRunner runner    = new TournamentRunner();
-    private final List<Difficulty> strategies = Arrays.asList(Difficulty.values());
+    private List<Difficulty> strategies = new ArrayList<>(Arrays.asList(Difficulty.values()));
     private final ObservableList<Difficulty> tableItems;
     private final ObservableList<String> recentResults = FXCollections.observableArrayList();
 
@@ -96,9 +96,26 @@ public final class TournamentView {
     private long    etaDisplayMs = 0;
     private final ArrayDeque<Long> recentGameTimes = new ArrayDeque<>();
     private final GameController ctrl;
+    private final Runnable onClose;
+    private int gamesPerMatchup = 1;
+    private int concurrentGames = computeRecommended(Difficulty.values().length);
+    private final List<ToggleButton> strategyToggles = new ArrayList<>();
+    private Label recommendedLabel;
+    private Label setupStratCount;
+    private Label setupTotalGames;
+    private Label setupDuration;
+    private Label gpmValueLabel;
+    private Label ccValueLabel;
+    private StackPane setupPane;
+
+    private static final int    MAX_CONCURRENT       = Runtime.getRuntime().availableProcessors();
+    private static final String CSS_PROGRESS_LABEL   = "tournament-progress-label";
+    private static final String CSS_BOARD_SCROLL     = "tournament-board-scroll";
+    private static final String CSS_SPINNER_BTN      = "tournament-spinner-btn";
 
     public TournamentView(Runnable onClose, GameController ctrl) {
-        this.ctrl = ctrl;
+        this.ctrl    = ctrl;
+        this.onClose = onClose;
         root = new StackPane();
         root.getStyleClass().add("tournament-view");
         root.setVisible(false);
@@ -108,8 +125,8 @@ public final class TournamentView {
 
         // ── Top bar ──────────────────────────────────────────────────────────
         titleLabel.getStyleClass().add("tournament-title");
-        progressLabel.getStyleClass().add("tournament-progress-label");
-        etaLabel.getStyleClass().add("tournament-progress-label");
+        progressLabel.getStyleClass().add(CSS_PROGRESS_LABEL);
+        etaLabel.getStyleClass().add(CSS_PROGRESS_LABEL);
         progressBar.getStyleClass().add("tournament-progress-bar");
 
         pauseIcon.setIconSize(12);
@@ -132,7 +149,7 @@ public final class TournamentView {
         restartBtn.getStyleClass().add("new-game-button");
         restartBtn.setVisible(false);
         restartBtn.setManaged(false);
-        restartBtn.setOnAction(e -> start());
+        restartBtn.setOnAction(e -> showSetup());
 
         stopIcon.setIconSize(12);
         stopIcon.setIconColor(Color.web(ICON_COLOR_STOP));
@@ -186,14 +203,14 @@ public final class TournamentView {
         boardsScroll.setFitToWidth(true);
         boardsScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         boardsScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        boardsScroll.getStyleClass().add("tournament-board-scroll");
+        boardsScroll.getStyleClass().add(CSS_BOARD_SCROLL);
 
         summaryBox.setPadding(new Insets(4));
         summaryScroll = new ScrollPane(summaryBox);
         summaryScroll.setFitToWidth(true);
         summaryScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         summaryScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        summaryScroll.getStyleClass().add("tournament-board-scroll");
+        summaryScroll.getStyleClass().add(CSS_BOARD_SCROLL);
         summaryScroll.setVisible(false);
 
         StackPane mainContent = new StackPane(boardsScroll, summaryScroll);
@@ -234,13 +251,23 @@ public final class TournamentView {
         VBox.setVgrow(center, Priority.ALWAYS);
         layout.getStyleClass().add("tournament-layout");
         root.getChildren().add(layout);
+        setupPane = buildSetupPanel();
+        root.getChildren().add(setupPane);
     }
 
     public StackPane getRoot() { return root; }
 
     // ── Start ─────────────────────────────────────────────────────────────────
 
-    public void start() {
+    public void showSetup() {
+        root.setVisible(true);
+        setupPane.setVisible(true);
+        if (gpmValueLabel != null) gpmValueLabel.setText(String.valueOf(gamesPerMatchup));
+        if (ccValueLabel  != null) ccValueLabel.setText(String.valueOf(concurrentGames));
+        updatePreview();
+    }
+
+    private void start() {
         running      = true;
         paused       = false;
         etaDisplayMs = 0;
@@ -249,10 +276,282 @@ public final class TournamentView {
         etaTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> tickEta()));
         etaTimeline.setCycleCount(Animation.INDEFINITE);
         etaTimeline.play();
-        int total = runner.totalGames(strategies);
+        int total = runner.totalGames(strategies, gamesPerMatchup);
         final long startMs = System.currentTimeMillis();
         resetUiForStart(total);
-        runner.start(strategies, buildProgressCallback(), buildResultCallback(), buildCompleteCallback(startMs));
+        runner.start(strategies, gamesPerMatchup, concurrentGames, buildProgressCallback(), buildResultCallback(), buildCompleteCallback(startMs));
+    }
+
+    private void confirmStart() {
+        List<Difficulty> selected = new ArrayList<>();
+        Difficulty[] all = Difficulty.values();
+        for (int i = 0; i < strategyToggles.size(); i++) {
+            if (strategyToggles.get(i).isSelected()) selected.add(all[i]);
+        }
+        if (selected.size() < 2) return;
+        strategies = selected;
+        setupPane.setVisible(false);
+        start();
+    }
+
+    private StackPane buildSetupPanel() {
+        StackPane overlay = new StackPane();
+        overlay.setStyle("-fx-background-color: rgba(0,0,0,0.80);");
+        overlay.setVisible(false);
+        overlay.setPadding(new Insets(48, 0, 48, 0));
+
+        VBox card = new VBox(0);
+        card.getStyleClass().add("tournament-setup-card");
+        card.setMaxWidth(1160);
+        card.setMaxHeight(Region.USE_PREF_SIZE);
+        StackPane.setAlignment(card, Pos.CENTER);
+
+        Label title = new Label("TOURNAMENT SETUP");
+        title.getStyleClass().add("tournament-title");
+        VBox header = new VBox(title);
+        header.setPadding(new Insets(28, 36, 22, 36));
+
+        card.getChildren().addAll(
+            header,              buildDivider(),
+            buildStrategiesSection(), buildDivider(),
+            buildConfigSection(), buildDivider(),
+            buildSummarySection(overlay)
+        );
+        overlay.getChildren().add(card);
+        updatePreview();
+        return overlay;
+    }
+
+    private VBox buildStrategiesSection() {
+        Label sectionLabel = new Label("STRATEGIES");
+        sectionLabel.getStyleClass().add(STYLE_SECTION);
+        Button allBtn  = new Button("All");  allBtn.getStyleClass().add("setup-neutral-btn");
+        Button noneBtn = new Button("None"); noneBtn.getStyleClass().add("setup-neutral-btn");
+        Region sp = new Region(); HBox.setHgrow(sp, Priority.ALWAYS);
+        HBox stratHeader = new HBox(8, sectionLabel, sp, allBtn, noneBtn);
+        stratHeader.setAlignment(Pos.CENTER_LEFT);
+
+        GridPane stratGrid = new GridPane();
+        stratGrid.setHgap(8);
+        stratGrid.setVgap(8);
+        for (int col = 0; col < 4; col++) {
+            ColumnConstraints cc = new ColumnConstraints();
+            cc.setPercentWidth(25);
+            cc.setHgrow(Priority.ALWAYS);
+            cc.setFillWidth(true);
+            stratGrid.getColumnConstraints().add(cc);
+        }
+        int rows = (int) Math.ceil(Difficulty.values().length / 4.0);
+        for (int row = 0; row < rows; row++) {
+            RowConstraints rc = new RowConstraints();
+            rc.setMinHeight(90);
+            rc.setPrefHeight(90);
+            rc.setMaxHeight(90);
+            rc.setVgrow(Priority.NEVER);
+            stratGrid.getRowConstraints().add(rc);
+        }
+        strategyToggles.clear();
+        Difficulty[] diffs = Difficulty.values();
+        for (int i = 0; i < diffs.length; i++) {
+            ToggleButton tb = buildStrategyCard(diffs[i]);
+            stratGrid.add(tb, i % 4, i / 4);
+            GridPane.setHgrow(tb, Priority.ALWAYS);
+            GridPane.setFillWidth(tb, true);
+            strategyToggles.add(tb);
+        }
+        allBtn.setOnAction(e  -> { if (!ctrl.isMuted()) { selectSound.play(); } strategyToggles.forEach(tb -> tb.setSelected(true)); });
+        noneBtn.setOnAction(e -> { if (!ctrl.isMuted()) { selectSound.play(); } strategyToggles.forEach(tb -> tb.setSelected(false)); });
+
+        ScrollPane stratScroll = new ScrollPane(stratGrid);
+        stratScroll.setFitToWidth(true);
+        stratScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        stratScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        stratScroll.getStyleClass().add(CSS_BOARD_SCROLL);
+
+        VBox section = new VBox(10, stratHeader, stratScroll);
+        section.setPadding(new Insets(20, 36, 24, 36));
+        return section;
+    }
+
+    private VBox buildConfigSection() {
+        Label gpmLabel = new Label("GAMES PER MATCHUP");
+        gpmLabel.getStyleClass().add(STYLE_SECTION);
+        gpmValueLabel = new Label(String.valueOf(gamesPerMatchup));
+        gpmValueLabel.getStyleClass().add("tournament-spinner-value");
+        Button gpmMinus = new Button("−"); gpmMinus.getStyleClass().add(CSS_SPINNER_BTN);
+        Button gpmPlus  = new Button("+"); gpmPlus.getStyleClass().add(CSS_SPINNER_BTN);
+        gpmMinus.setOnAction(e -> {
+            if (gamesPerMatchup > 1) { gamesPerMatchup--; gpmValueLabel.setText(String.valueOf(gamesPerMatchup)); updatePreview(); }
+        });
+        gpmPlus.setOnAction(e -> {
+            gamesPerMatchup++; gpmValueLabel.setText(String.valueOf(gamesPerMatchup)); updatePreview();
+        });
+        HBox gpmSpinner = new HBox(6, gpmMinus, gpmValueLabel, gpmPlus);
+        gpmSpinner.setAlignment(Pos.CENTER_LEFT);
+        VBox gpmBox = new VBox(10, gpmLabel, gpmSpinner);
+
+        Label ccLabel = new Label("CONCURRENT GAMES");
+        ccLabel.getStyleClass().add(STYLE_SECTION);
+        ccValueLabel = new Label(String.valueOf(concurrentGames));
+        ccValueLabel.getStyleClass().add("tournament-spinner-value");
+        Button ccMinus = new Button("−"); ccMinus.getStyleClass().add(CSS_SPINNER_BTN);
+        Button ccPlus  = new Button("+"); ccPlus.getStyleClass().add(CSS_SPINNER_BTN);
+        ccMinus.setOnAction(e -> {
+            if (concurrentGames > 1) { concurrentGames--; ccValueLabel.setText(String.valueOf(concurrentGames)); updatePreview(); }
+        });
+        ccPlus.setOnAction(e -> {
+            if (concurrentGames < MAX_CONCURRENT) { concurrentGames++; ccValueLabel.setText(String.valueOf(concurrentGames)); updatePreview(); }
+        });
+        HBox ccSpinner = new HBox(6, ccMinus, ccValueLabel, ccPlus);
+        ccSpinner.setAlignment(Pos.CENTER_LEFT);
+        recommendedLabel = new Label();
+        recommendedLabel.getStyleClass().add(CSS_PROGRESS_LABEL);
+        VBox ccBox = new VBox(10, ccLabel, ccSpinner, recommendedLabel);
+
+        HBox row = new HBox(52, gpmBox, ccBox);
+        row.setAlignment(Pos.CENTER_LEFT);
+        VBox section = new VBox(row);
+        section.setPadding(new Insets(20, 36, 24, 36));
+        return section;
+    }
+
+    private VBox buildSummarySection(StackPane overlay) {
+        setupStratCount = new Label("—");
+        setupTotalGames = new Label("—");
+        setupDuration   = new Label("—");
+
+        VBox statStrategies = buildStatBox(setupStratCount, "Strategies");
+        VBox statGames      = buildStatBox(setupTotalGames, "Total Games");
+        VBox statDuration   = buildStatBox(setupDuration,   "Estimated Duration");
+        HBox.setHgrow(statStrategies, Priority.ALWAYS);
+        HBox.setHgrow(statGames,      Priority.ALWAYS);
+        HBox.setHgrow(statDuration,   Priority.ALWAYS);
+        HBox statsRow = new HBox(12, statStrategies, statGames, statDuration);
+
+        Button cancelBtn = new Button("Cancel");
+        cancelBtn.getStyleClass().add("tournament-stop-btn");
+        Button startBtn = new Button("Start Tournament");
+        startBtn.getStyleClass().add("tournament-setup-start-btn");
+        Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox actionsRow = new HBox(10, spacer, cancelBtn, startBtn);
+        actionsRow.setAlignment(Pos.CENTER_LEFT);
+
+        cancelBtn.setOnAction(e -> {
+            if (!ctrl.isMuted()) selectSound.play();
+            overlay.setVisible(false);
+            root.setVisible(false);
+            onClose.run();
+        });
+        startBtn.setOnAction(e -> {
+            if (!ctrl.isMuted()) selectSound.play();
+            confirmStart();
+        });
+
+        VBox section = new VBox(16, statsRow, actionsRow);
+        section.setPadding(new Insets(20, 36, 28, 36));
+        return section;
+    }
+
+    private static VBox buildStatBox(Label numLabel, String labelText) {
+        numLabel.getStyleClass().add("setup-stat-number");
+        Label lbl = new Label(labelText);
+        lbl.getStyleClass().add("setup-stat-label");
+        VBox box = new VBox(5, numLabel, lbl);
+        box.getStyleClass().add("setup-stat-box");
+        box.setAlignment(Pos.CENTER_LEFT);
+        return box;
+    }
+
+    private static Region buildDivider() {
+        Region div = new Region();
+        div.setPrefHeight(1);
+        div.setMaxHeight(1);
+        div.setStyle("-fx-background-color: #181B27;");
+        return div;
+    }
+
+    private ToggleButton buildStrategyCard(Difficulty d) {
+        Label name = new Label(d.sample().displayName());
+        name.getStyleClass().add("setup-card-name");
+        Label desc = new Label(d.sample().description());
+        desc.getStyleClass().add("setup-card-desc");
+        desc.setWrapText(true);
+        desc.setMaxHeight(50);
+        VBox content = new VBox(5, name, desc);
+        content.setMouseTransparent(true);
+        ToggleButton tb = new ToggleButton();
+        tb.setGraphic(content);
+        tb.setAlignment(Pos.TOP_LEFT);
+        tb.setSelected(true);
+        tb.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        tb.getStyleClass().add("tournament-strategy-card");
+        tb.selectedProperty().addListener((obs, old, nv) -> updatePreview());
+        return tb;
+    }
+
+    private void updatePreview() {
+        Difficulty[] all = Difficulty.values();
+        List<Difficulty> selected = new ArrayList<>();
+        for (int i = 0; i < strategyToggles.size(); i++)
+            if (strategyToggles.get(i).isSelected()) selected.add(all[i]);
+
+        int selCount = selected.size();
+        int total = selCount * (selCount - 1) * gamesPerMatchup;
+        int recommended = computeRecommended(selCount);
+        if (recommendedLabel  != null) recommendedLabel.setText("Recommended: " + recommended);
+
+        long estMs = (total > 0 && concurrentGames > 0)
+                   ? estimateTotalWorkMs(selected) / concurrentGames
+                   : 0;
+
+        if (setupStratCount != null) setupStratCount.setText(String.valueOf(selCount));
+        if (setupTotalGames != null) setupTotalGames.setText(String.valueOf(total));
+        if (setupDuration   != null) setupDuration.setText(estMs <= 0 ? "—" : formatDuration(estMs));
+    }
+
+    private long estimateTotalWorkMs(List<Difficulty> selected) {
+        long totalWork = 0;
+        for (Difficulty d1 : selected)
+            for (Difficulty d2 : selected)
+                if (d1 != d2) {
+                    int moves = estimatedMovesPerPlayer(d1, d2);
+                    totalWork += (moves * effectiveMsPerDecision(d1, d2)
+                               + moves * effectiveMsPerDecision(d2, d1))
+                               * gamesPerMatchup;
+                }
+        return totalWork;
+    }
+
+    /**
+     * Effective ms a strategy spends per decision against a specific opponent.
+     * MCTS always burns its full 950ms budget. Search strategies use iterative deepening:
+     * they exit early against weak opponents (~15% of budget) but approach their full
+     * budget against equally strong ones (~85%).
+     */
+    private static long effectiveMsPerDecision(Difficulty d, Difficulty opponent) {
+        long budget = d.timeBudgetMs();
+        if (budget == 0) return 10; // fast heuristic
+        if (d == Difficulty.MONTE_CARLO) return 950; // always runs until deadline
+        // Scale 15% of budget (vs weakest) → 85% (vs strongest)
+        double fraction = 0.15 + 0.175 * (opponent.skillLevel() - 1);
+        return Math.round(budget * fraction);
+    }
+
+    /**
+     * Estimated moves each player makes in a game between d1 and d2.
+     * Higher average skill → longer game (more defensive wall play).
+     * Larger skill gap → shorter game (dominant player wins decisively).
+     */
+    private static int estimatedMovesPerPlayer(Difficulty d1, Difficulty d2) {
+        int s1 = d1.skillLevel();
+        int s2 = d2.skillLevel();
+        int avg = (s1 + s2);          // 2..10
+        int gap = Math.abs(s1 - s2);  // 0..4
+        return Math.max(8, 12 + avg * 2 - gap * 4);
+    }
+
+    private static int computeRecommended(int stratCount) {
+        return Math.clamp(stratCount / 2, 1, Runtime.getRuntime().availableProcessors() - 1);
     }
 
     private void resetUiForStart(int total) {
@@ -328,14 +627,14 @@ public final class TournamentView {
             actionBtn.setText("Close");
             pauseBtn.setDisable(true);
             progressBar.setProgress(1.0);
-            progressLabel.setText(runner.totalGames(strategies) + " games");
+            progressLabel.setText(runner.totalGames(strategies, gamesPerMatchup) + " games");
             etaLabel.setText("  " + formatDuration(durationMs));
             restartBtn.setVisible(true);
             restartBtn.setManaged(true);
             resort();
             boardsScroll.setVisible(false);
             summaryScroll.setVisible(true);
-            TournamentSummary.populate(summaryBox, runner, tableItems, strategies, durationMs);
+            TournamentSummary.populate(summaryBox, runner, tableItems, strategies, durationMs, gamesPerMatchup);
         };
     }
 
@@ -344,7 +643,7 @@ public final class TournamentView {
     private void tickEta() {
         if (etaDisplayMs <= 0) return;
         etaDisplayMs = Math.max(0, etaDisplayMs - 1000);
-        etaLabel.setText("  ~" + formatDuration(etaDisplayMs));
+        etaLabel.setText("   ~" + formatDuration(etaDisplayMs));
     }
 
     private static String formatDuration(long ms) {
@@ -616,7 +915,7 @@ public final class TournamentView {
     }
 
     private String formatResults() {
-        int total = runner.totalGames(strategies);
+        int total = runner.totalGames(strategies, gamesPerMatchup);
         Map<Difficulty, int[]> res = runner.getResults();
         Map<Difficulty, Map<Difficulty, Integer>> mw = runner.getMatchupWins();
         StringBuilder sb = new StringBuilder();

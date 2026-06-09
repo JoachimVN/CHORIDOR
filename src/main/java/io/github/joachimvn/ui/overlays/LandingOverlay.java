@@ -25,6 +25,7 @@ import javafx.util.Duration;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,16 +35,16 @@ import java.util.function.Consumer;
  * Full-screen landing page. Three cards in a radial carousel — clicking a side card rotates it
  * to centre, where it auto-expands. Exiting to a game fades the overlay, revealing the live board.
  */
-public final class LandingView {
+public final class LandingOverlay {
 
     // ── Carousel positions ────────────────────────────────────────────────────
     private record Pos3D(double tx, double ty, double rot, double sc, double op) {}
 
-    private static final Pos3D P_LEFT   = new Pos3D(-350, 24, -7.0, 0.82, 0.70);
+    private static final Pos3D P_LEFT   = new Pos3D(-350, 24, -7.0, 0.82, 0.85);
     private static final Pos3D P_CENTER = new Pos3D(0,     0,  0.0, 1.00, 1.00);
-    private static final Pos3D P_RIGHT  = new Pos3D( 350, 24,  7.0, 0.82, 0.70);
-    private static final Pos3D P_L_HOV  = new Pos3D(-350, 12, -7.0, 0.91, 0.85);
-    private static final Pos3D P_R_HOV  = new Pos3D( 350, 12,  7.0, 0.91, 0.85);
+    private static final Pos3D P_RIGHT  = new Pos3D( 350, 24,  7.0, 0.82, 0.85);
+    private static final Pos3D P_L_HOV  = new Pos3D(-350, 12, -7.0, 0.91, 0.92);
+    private static final Pos3D P_R_HOV  = new Pos3D( 350, 12,  7.0, 0.91, 0.92);
     private static final double EXPAND_DRIFT = 22;
     private static final Pos3D[] SLOTS = { P_LEFT, P_CENTER, P_RIGHT };
 
@@ -66,34 +67,53 @@ public final class LandingView {
     // ── Mutable state ─────────────────────────────────────────────────────────
     private final StackPane root;
     private final StackPane arena = new StackPane();
+    private final GameController ctrl;
     private List<VBox> allCards;
     /** order[slot] = card index occupying that slot (0=left, 1=centre, 2=right). */
-    private final int[] order = {1, 0, 2};
-    private boolean rotating = false;
-    private VBox    openBody = null;
+    private final int[] order = {2, 0, 1};
+    private boolean  rotating = false;
+    private VBox     openBody = null;
+    private Runnable onExitStarted;
     private final Map<VBox, Timeline> rotTl  = new HashMap<>();
     private final Map<VBox, Timeline> bodyTl = new HashMap<>();
+    private List<Region> indicatorBars;
+    private final Map<Region, Timeline> barTl = new HashMap<>();
+    private final Map<Region, Color>    barColor = new HashMap<>();
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
-    public LandingView(GameController ctrl, BoardView board,
+    public LandingOverlay(GameController ctrl, BoardView board,
                        Consumer<Boolean> flipSelected, Runnable onTournament) {
+        this.ctrl = ctrl;
         root = new StackPane();
         root.getStyleClass().add("landing-root");
 
-        ImageView logo = new ImageView(new Image(
+        // Watermark — bottom-right corner of the root overlay
+        ImageView wmLogo = new ImageView(new Image(
             getClass().getResourceAsStream("/images/logos/CHORIDOR_Logo.png")));
-        logo.setPreserveRatio(true);
-        logo.setFitWidth(310);
-        logo.setSmooth(true);
+        wmLogo.setPreserveRatio(true);
+        wmLogo.setFitWidth(170);
+        wmLogo.setSmooth(true);
+        Label wmVersion = new Label("v" + loadVersion());
+        wmVersion.getStyleClass().add("landing-watermark-version");
+        VBox watermark = new VBox(6, wmLogo, wmVersion);
+        watermark.setAlignment(Pos.CENTER);
+        watermark.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        watermark.setOpacity(0.30);
+        watermark.setMouseTransparent(true);
+        StackPane.setAlignment(watermark, Pos.TOP_RIGHT);
+        StackPane.setMargin(watermark, new Insets(24, 28, 0, 0));
 
         VBox[] play = card(FontAwesomeSolid.PLAY,        "PLAY",     "Local or vs AI",    ACC_PLAY, "landing-card-play");
         VBox[] sim  = card(FontAwesomeSolid.ROBOT,       "SIMULATE", "Watch AIs compete", ACC_SIM,  "landing-card-sim");
         VBox[] set  = card(FontAwesomeSolid.COG,         "SETTINGS", "Preferences",       ACC_SET,  "landing-card-set");
 
-        VBox playCard = play[0], playBody = play[1];
-        VBox simCard  = sim[0],  simBody  = sim[1];
-        VBox setCard  = set[0],  setBody  = set[1];
+        VBox playCard = play[0];
+        VBox playBody = play[1];
+        VBox simCard  = sim[0];
+        VBox simBody  = sim[1];
+        VBox setCard  = set[0];
+        VBox setBody  = set[1];
         allCards = List.of(playCard, simCard, setCard);
 
         populatePlay(playBody, ctrl, board, flipSelected);
@@ -111,65 +131,52 @@ public final class LandingView {
         }
         bringCenterFront();
         wireCarousel();
+        wireAutoExpand();
 
-        // Arrow keys navigate the carousel when the landing is visible
-        root.sceneProperty().addListener((obs, ov, sc) -> {
-            if (sc != null) {
-                sc.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-                    if (!root.isVisible() || rotating) return;
-                    if      (e.getCode() == KeyCode.LEFT)  { onCardClick(order[0]); e.consume(); }
-                    else if (e.getCode() == KeyCode.RIGHT) { onCardClick(order[2]); e.consume(); }
-                });
-            }
+        // Ratchet arena's minHeight upward only — so the indicator below never moves up
+        arena.heightProperty().addListener((obs, ov, nv) -> {
+            if (nv.doubleValue() > arena.getMinHeight())
+                arena.setMinHeight(nv.doubleValue());
         });
 
-        // Auto-expand the initial centre card once it has been laid out
-        VBox initialCenter = allCards.get(order[1]);
-        initialCenter.heightProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> obs, Number ov, Number nv) {
-                if (nv.doubleValue() > 0) {
-                    initialCenter.heightProperty().removeListener(this);
-                    if (openBody == null)
-                        expandBody(initialCenter, (VBox) initialCenter.getChildren().get(1));
-                }
-            }
-        });
+        HBox indicator = buildCarouselIndicator();
+        updateCursors();
+        VBox carouselWithIndicator = new VBox(24, arena, indicator);
+        carouselWithIndicator.setAlignment(Pos.TOP_CENTER);
 
-        // Re-expand centre card whenever the overlay becomes visible (after game exit)
-        root.visibleProperty().addListener((obs, ov, nv) -> {
-            if (nv && openBody == null) {
-                VBox cc = allCards.get(order[1]);
-                expandBody(cc, (VBox) cc.getChildren().get(1));
-            }
-        });
+        // Spacer above logo — proportional to viewport height so content sits
+        // in a visually balanced position. Bound to scroll.height only (not page.height),
+        // so it never changes when cards expand, keeping the card tops fixed.
+        Region topSpacer = new Region();
+        topSpacer.setMinHeight(0);
 
-        VBox page = new VBox(48, logo, arena);
+        VBox page = new VBox(48, topSpacer, carouselWithIndicator);
         page.setAlignment(Pos.TOP_CENTER);
-        page.setPadding(new Insets(64, 40, 64, 40));
+        page.setPadding(new Insets(0, 40, 64, 40));
         page.setMaxWidth(1280);
         page.setMaxHeight(Region.USE_PREF_SIZE);
 
         StackPane centred = new StackPane(page);
-        // TOP_CENTER: the page is anchored at the top so card expansion only
-        // moves the bottom edge — CENTER would shift the whole page upward.
-        centred.setAlignment(Pos.CENTER);
+        centred.setAlignment(Pos.TOP_CENTER);
 
         ScrollPane scroll = new ScrollPane(centred);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.getStyleClass().add("landing-scroll");
         centred.minHeightProperty().bind(scroll.heightProperty());
+        topSpacer.prefHeightProperty().bind(scroll.heightProperty().multiply(0.25));
 
-        root.getChildren().add(scroll);
+        root.getChildren().addAll(scroll, watermark);
     }
 
     public StackPane getRoot() { return root; }
+    public void setOnExitStarted(Runnable r) { this.onExitStarted = r; }
 
     // ── Game exit transition ──────────────────────────────────────────────────
 
     private void exitToGame(Runnable gameStart) {
         gameStart.run();
+        if (onExitStarted != null) onExitStarted.run();
         root.setMouseTransparent(true);
         FadeTransition ft = new FadeTransition(Duration.millis(520), root);
         ft.setToValue(0);
@@ -193,8 +200,40 @@ public final class LandingView {
             header.setOnMouseClicked(e -> { if (!rotating) onCardClick(idx); });
             c.setOnMouseEntered(e -> { if (slotOf(idx) != 1 && !rotating) hoverSide(idx, true); });
             c.setOnMouseExited(e ->  { if (slotOf(idx) != 1)               hoverSide(idx, false); });
-            c.setCursor(Cursor.HAND);
+            // cursor set dynamically via updateCursors()
         }
+        // Arrow keys navigate the carousel when the landing is visible
+        root.sceneProperty().addListener((obs, ov, sc) -> {
+            if (sc != null) {
+                sc.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+                    if (!root.isVisible() || rotating) return;
+                    if      (e.getCode() == KeyCode.LEFT)  { onCardClick(order[0]); e.consume(); }
+                    else if (e.getCode() == KeyCode.RIGHT) { onCardClick(order[2]); e.consume(); }
+                });
+            }
+        });
+    }
+
+    private void wireAutoExpand() {
+        // Expand the initial centre card once it has been laid out
+        VBox initialCenter = allCards.get(order[1]);
+        initialCenter.heightProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> obs, Number ov, Number nv) {
+                if (nv.doubleValue() > 0) {
+                    initialCenter.heightProperty().removeListener(this);
+                    if (openBody == null)
+                        expandBody(initialCenter, (VBox) initialCenter.getChildren().get(1));
+                }
+            }
+        });
+        // Re-expand centre card whenever the overlay becomes visible (after game exit)
+        root.visibleProperty().addListener((obs, ov, nv) -> {
+            if (Boolean.TRUE.equals(nv) && openBody == null) {
+                VBox cc = allCards.get(order[1]);
+                expandBody(cc, (VBox) cc.getChildren().get(1));
+            }
+        });
     }
 
     private void onCardClick(int cardIdx) {
@@ -203,6 +242,7 @@ public final class LandingView {
     }
 
     private void rotate(int targetIdx) {
+        ctrl.playWall();
         // Collapse departing centre immediately (concurrent with rotation)
         if (openBody != null) collapseBody(allCards.get(order[1]), openBody);
 
@@ -218,6 +258,9 @@ public final class LandingView {
         bringCenterFront();
 
         for (int p = 0; p < 3; p++) animTo(allCards.get(order[p]), SLOTS[p]);
+
+        updateIndicator();
+        updateCursors();
 
         // Expand incoming card immediately — it grows while sliding to centre
         VBox cc = allCards.get(order[1]);
@@ -260,7 +303,8 @@ public final class LandingView {
         Timeline prev = rotTl.get(allCards.get(cardIdx));
         if (prev != null && prev.getStatus() == Animation.Status.RUNNING) return;
         int slot = slotOf(cardIdx);
-        Pos3D tgt = enter ? (slot == 0 ? P_L_HOV : P_R_HOV) : SLOTS[slot];
+        Pos3D hovered = slot == 0 ? P_L_HOV : P_R_HOV;
+        Pos3D tgt = enter ? hovered : SLOTS[slot];
         VBox c = allCards.get(cardIdx);
         new Timeline(new KeyFrame(DUR_HOVER,
             new KeyValue(c.scaleXProperty(),     tgt.sc(),  EASE),
@@ -408,6 +452,101 @@ public final class LandingView {
         fo.play();
     }
 
+    // Indicator palette — active and inactive colors per card type
+    private static final Color IND_PLAY_ON  = Color.web("#C85A50");
+    private static final Color IND_PLAY_OFF = Color.web("#5A3A30");
+    private static final Color IND_SIM_ON   = Color.web("#5A8FD8");
+    private static final Color IND_SIM_OFF  = Color.web("#2A4570");
+    private static final Color IND_SET_ON   = Color.web("#9B7FE8");
+    private static final Color IND_SET_OFF  = Color.web("#3A2860");
+    private static final Duration IND_DUR   = Duration.millis(380);
+
+    // ── Carousel indicator ───────────────────────────────────────────────────
+
+    private HBox buildCarouselIndicator() {
+        indicatorBars = new ArrayList<>();
+        HBox indicator = new HBox(8);
+        indicator.setAlignment(Pos.CENTER);
+        indicator.setPrefSize(120, 20);
+        indicator.setMaxSize(120, 20);
+
+        int centerCardIdx = order[1];
+        for (int i = 0; i < 3; i++) {
+            Region bar = new Region();
+            bar.setPrefSize(28, 3);
+            bar.setMaxSize(28, 3);
+            bar.getStyleClass().add("carousel-indicator-bar");
+            boolean isCenter = (i == centerCardIdx);
+            Color[] palette = accentPalette(allCards.get(i));
+            Color initial = isCenter ? palette[0] : palette[1];
+            barColor.put(bar, initial);
+            bar.setStyle("-fx-background-color: " + toWeb(initial) + ";");
+            indicatorBars.add(bar);
+            indicator.getChildren().add(bar);
+        }
+        return indicator;
+    }
+
+    private void updateCursors() {
+        for (int i = 0; i < 3; i++) {
+            VBox card = allCards.get(i);
+            Cursor cur = slotOf(i) == 1 ? Cursor.DEFAULT : Cursor.HAND;
+            card.setCursor(cur);
+            ((StackPane) card.getChildren().get(0)).setCursor(cur);
+        }
+    }
+
+    private void updateIndicator() {
+        int centerCardIdx = order[1];
+        VBox centerCard = allCards.get(centerCardIdx);
+
+        for (int i = 0; i < 3; i++) {
+            final Region bar = indicatorBars.get(i);
+            boolean isCenter = (allCards.get(i) == centerCard);
+            Color[] palette = accentPalette(allCards.get(i));
+            Color target = isCenter ? palette[0] : palette[1];
+            animateBarColor(bar, target);
+        }
+    }
+
+    private void animateBarColor(Region bar, Color target) {
+        Timeline prev = barTl.get(bar);
+        if (prev != null) prev.stop();
+
+        Color from = barColor.getOrDefault(bar, target);
+        // Interpolate through 60 steps manually — JavaFX can't KeyValue a CSS string property
+        final int STEPS = 60;
+        KeyFrame[] frames = new KeyFrame[STEPS];
+        for (int s = 1; s <= STEPS; s++) {
+            double t = (double) s / STEPS;
+            Color c = from.interpolate(target, EASE.interpolate(0, 1, t));
+            String css = "-fx-background-color: " + toWeb(c) + ";";
+            frames[s - 1] = new KeyFrame(IND_DUR.multiply((double) s / STEPS),
+                    e -> bar.setStyle(css));
+        }
+        Timeline tl = new Timeline(frames);
+        tl.setOnFinished(e -> {
+            barColor.put(bar, target);
+            barTl.remove(bar);
+        });
+        barTl.put(bar, tl);
+        tl.play();
+    }
+
+    private Color[] accentPalette(VBox card) {
+        if (card.getStyleClass().contains("landing-card-play")) return new Color[]{IND_PLAY_ON, IND_PLAY_OFF};
+        if (card.getStyleClass().contains("landing-card-sim"))  return new Color[]{IND_SIM_ON,  IND_SIM_OFF};
+        return new Color[]{IND_SET_ON, IND_SET_OFF};
+    }
+
+    private static String toWeb(Color c) {
+        return String.format("rgba(%d,%d,%d,%.3f)",
+            (int) Math.round(c.getRed()   * 255),
+            (int) Math.round(c.getGreen() * 255),
+            (int) Math.round(c.getBlue()  * 255),
+            c.getOpacity());
+    }
+
     // ── Card factory ──────────────────────────────────────────────────────────
 
     private static VBox[] card(FontAwesomeSolid icon, String title,
@@ -451,9 +590,10 @@ public final class LandingView {
         VBox hvhPanel = new VBox(startHvH);
         hvhPanel.setPadding(new Insets(18, 0, 0, 0));
 
-        ComboBox<Difficulty> combo = combo();
+        ComboBox<Difficulty> combo = combo("#D07068");
         ToggleGroup cg = new ToggleGroup();
-        ToggleButton pr = dot("color-pick-p1", cg), pb = dot("color-pick-p2", cg);
+        ToggleButton pr = dot("color-pick-p1", cg);
+        ToggleButton pb = dot("color-pick-p2", cg);
         pr.setSelected(true);
         HBox cr = new HBox(10, cfgLabel("PLAY AS"), pr, pb);
         cr.setAlignment(Pos.CENTER_LEFT);
@@ -463,26 +603,21 @@ public final class LandingView {
         aiPanel.setManaged(false); aiPanel.setVisible(false); aiPanel.setOpacity(0);
 
         hvhTab.setSelected(true);
+        // Tab buttons play select on switch; the selected-toggle listener handles the visual swap
+        hvhTab.setOnAction(e -> ctrl.playSelect());
+        vsAiTab.setOnAction(e -> ctrl.playSelect());
         tabs.selectedToggleProperty().addListener((o, ov, v) -> {
             if (v == hvhTab) switchTab(body, aiPanel, hvhPanel);
             else             switchTab(body, hvhPanel, aiPanel);
         });
 
-        startHvH.setOnAction(e -> {
-            ctrl.startGame(null, null, "Player 1", "Player 2");
-            board.setFlipped(false); flipSelected.accept(false);
-            exitToGame(() -> {});
-        });
-        startAi.setOnAction(e -> {
-            Difficulty d = combo.getValue(); boolean blue = pb.isSelected();
-            ctrl.startGame(
-                blue ? d.createStrategy(Player.ONE) : null,
-                blue ? null : d.createStrategy(Player.TWO),
-                blue ? d.sample().displayName() : "Player 1",
-                blue ? "Player 2" : d.sample().displayName());
-            board.setFlipped(blue); flipSelected.accept(blue);
-            exitToGame(() -> {});
-        });
+        // Difficulty combo and color picker play select on interaction
+        combo.setOnAction(e -> ctrl.playSelect());
+        pr.setOnAction(e -> ctrl.playSelect());
+        pb.setOnAction(e -> ctrl.playSelect());
+
+        startHvH.setOnAction(e -> launchHvH(board, flipSelected));
+        startAi.setOnAction(e  -> launchVsAi(combo, pb, board, flipSelected));
 
         body.getChildren().addAll(tabRow(hvhTab, vsAiTab), hvhPanel, aiPanel);
     }
@@ -495,7 +630,8 @@ public final class LandingView {
         ToggleButton oneTab  = tabBtn("1 vs 1",     tabs);
         ToggleButton tourTab = tabBtn("Tournament", tabs);
 
-        ComboBox<Difficulty> s1 = combo(), s2 = combo();
+        ComboBox<Difficulty> s1 = combo("#8AAADA");
+        ComboBox<Difficulty> s2 = combo("#8AAADA");
         if (s2.getItems().size() > 1) s2.getSelectionModel().select(1);
         Button startMatch = actionBtn("Start Match", ACC_SIM);
         VBox onePanel = new VBox(12, cfgLabel("RED AI"), s1, cfgLabel("BLUE AI"), s2, startMatch);
@@ -507,19 +643,19 @@ public final class LandingView {
         tourPanel.setManaged(false); tourPanel.setVisible(false); tourPanel.setOpacity(0);
 
         oneTab.setSelected(true);
+        oneTab.setOnAction(e -> ctrl.playSelect());
+        tourTab.setOnAction(e -> ctrl.playSelect());
         tabs.selectedToggleProperty().addListener((o, ov, v) -> {
             if (v == oneTab) switchTab(body, tourPanel, onePanel);
             else             switchTab(body, onePanel, tourPanel);
         });
 
-        startMatch.setOnAction(e -> {
-            Difficulty d1 = s1.getValue(), d2 = s2.getValue();
-            ctrl.startGame(d1.createStrategy(Player.ONE), d2.createStrategy(Player.TWO),
-                d1.sample().displayName(), d2.sample().displayName());
-            board.setFlipped(false); flipSelected.accept(false);
-            exitToGame(() -> {});
-        });
+        s1.setOnAction(e -> ctrl.playSelect());
+        s2.setOnAction(e -> ctrl.playSelect());
+
+        startMatch.setOnAction(e -> launchSimMatch(s1, s2, board, flipSelected));
         launchTour.setOnAction(e -> {
+            ctrl.playSelect();
             root.setVisible(false);
             if (onTournament != null) onTournament.run();
         });
@@ -534,6 +670,52 @@ public final class LandingView {
         Label det  = new Label("Sound, themes, and more."); det.getStyleClass().add("landing-card-sub");
         VBox c = new VBox(10, soon, det); c.setPadding(new Insets(12, 0, 4, 0));
         body.getChildren().add(c);
+    }
+
+    // ── Game launch helpers ───────────────────────────────────────────────────
+
+    private void launchHvH(BoardView board, Consumer<Boolean> flipSelected) {
+        ctrl.playSelect();
+        ctrl.startGame(null, null, "Player 1", "Player 2");
+        board.setFlipped(false); flipSelected.accept(false);
+        exitToGame(() -> {});
+    }
+
+    private void launchVsAi(ComboBox<Difficulty> combo, ToggleButton pb,
+                             BoardView board, Consumer<Boolean> flipSelected) {
+        ctrl.playSelect();
+        Difficulty d = combo.getValue();
+        boolean blue = pb.isSelected();
+        ctrl.startGame(
+            blue ? d.createStrategy(Player.ONE) : null,
+            blue ? null : d.createStrategy(Player.TWO),
+            blue ? d.sample().displayName() : "Player 1",
+            blue ? "Player 2" : d.sample().displayName());
+        board.setFlipped(blue); flipSelected.accept(blue);
+        exitToGame(() -> {});
+    }
+
+    private void launchSimMatch(ComboBox<Difficulty> s1, ComboBox<Difficulty> s2,
+                                 BoardView board, Consumer<Boolean> flipSelected) {
+        ctrl.playSelect();
+        Difficulty d1 = s1.getValue(), d2 = s2.getValue();
+        ctrl.startGame(d1.createStrategy(Player.ONE), d2.createStrategy(Player.TWO),
+            d1.sample().displayName(), d2.sample().displayName());
+        board.setFlipped(false); flipSelected.accept(false);
+        exitToGame(() -> {});
+    }
+
+    // ── Version ───────────────────────────────────────────────────────────────
+
+    private static String loadVersion() {
+        try (var in = LandingOverlay.class.getResourceAsStream("/app.properties")) {
+            if (in == null) return "?";
+            java.util.Properties p = new java.util.Properties();
+            p.load(in);
+            return p.getProperty("version", "?");
+        } catch (Exception e) {
+            return "?";
+        }
     }
 
     // ── Widgets ───────────────────────────────────────────────────────────────
@@ -554,7 +736,10 @@ public final class LandingView {
 
     private static Button actionBtn(String text, String accent) {
         Button b = new Button(text); b.getStyleClass().add("landing-action-btn");
-        b.setStyle("-fx-background-color:" + accent + ";-fx-border-color:derive(" + accent + ",22%);");
+        b.setStyle(
+            "-fx-background-color: linear-gradient(to bottom, derive(" + accent + ",-5%), derive(" + accent + ",-28%));" +
+            "-fx-border-color: derive(" + accent + ",18%);"
+        );
         b.setMaxWidth(Double.MAX_VALUE);
         return b;
     }
@@ -563,7 +748,7 @@ public final class LandingView {
         Label l = new Label(t); l.getStyleClass().add("landing-config-label"); return l;
     }
 
-    private static ComboBox<Difficulty> combo() {
+    private static ComboBox<Difficulty> combo(String textFill) {
         ComboBox<Difficulty> c = new ComboBox<>();
         c.getItems().addAll(Difficulty.values());
         c.getStyleClass().add("strategy-combo"); c.setMaxWidth(Double.MAX_VALUE);
@@ -581,7 +766,7 @@ public final class LandingView {
             @Override protected void updateItem(Difficulty d, boolean e) {
                 super.updateItem(d, e);
                 setText(e || d == null ? "" : d.sample().displayName());
-                setStyle("-fx-text-fill:#8AAADA;-fx-font-weight:bold;-fx-font-size:15px;");
+                setStyle("-fx-text-fill:" + textFill + ";-fx-font-weight:bold;-fx-font-size:15px;");
             }
         });
         c.getSelectionModel().selectFirst();

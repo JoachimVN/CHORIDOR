@@ -35,7 +35,7 @@ final class TournamentSummary {
      */
     static void populate(VBox summaryBox, TournamentRunner runner,
                          List<Difficulty> tableItems, List<Difficulty> strategies,
-                         long durationMs) {
+                         long durationMs, int gamesPerMatchup) {
         summaryBox.getChildren().clear();
 
         HBox notableRow = buildNotableRow(runner);
@@ -44,7 +44,7 @@ final class TournamentSummary {
         }
 
         summaryBox.getChildren().add(separator());
-        summaryBox.getChildren().add(buildStatsBox(runner, tableItems, strategies, durationMs));
+        summaryBox.getChildren().add(buildStatsBox(runner, tableItems, strategies, durationMs, gamesPerMatchup));
         summaryBox.getChildren().add(separator());
 
         Label h2hTitle = new Label("HEAD-TO-HEAD BREAKDOWN");
@@ -54,7 +54,7 @@ final class TournamentSummary {
         Map<Difficulty, int[]> res = runner.getResults();
         Map<Difficulty, Map<Difficulty, Integer>> mw = runner.getMatchupWins();
         for (Difficulty d : tableItems) {
-            summaryBox.getChildren().add(buildH2hPane(d, mw, tableItems, res));
+            summaryBox.getChildren().add(buildH2hPane(d, mw, tableItems, res, gamesPerMatchup));
         }
     }
 
@@ -88,7 +88,7 @@ final class TournamentSummary {
     }
 
     private static VBox buildStatsBox(TournamentRunner runner, List<Difficulty> tableItems,
-                                       List<Difficulty> strategies, long durationMs) {
+                                       List<Difficulty> strategies, long durationMs, int gpm) {
         Map<Difficulty, int[]> res = runner.getResults();
         Map<Difficulty, Map<Difficulty, Integer>> mw = runner.getMatchupWins();
         VBox box = new VBox(6);
@@ -97,12 +97,12 @@ final class TournamentSummary {
         HBox finisher = buildFinisherChip(runner, tableItems);
         if (finisher != null) box.getChildren().add(finisher);
 
-        HBox cycleStat = buildCycleStatChip(mw, tableItems);
+        HBox cycleStat = buildCycleStatChip(mw, tableItems, gpm);
         if (cycleStat != null) box.getChildren().add(cycleStat);
 
         box.getChildren().add(statChip("Duration",
                 formatDuration(durationMs) + "  ·  " + strategies.size()
-                + " strategies  ·  " + runner.totalGames(strategies) + " games",
+                + " strategies  ·  " + runner.totalGames(strategies, gpm) + " games",
                 "#1A1A2A", "#8890A8"));
         return box;
     }
@@ -144,53 +144,55 @@ final class TournamentSummary {
         var moveTotals = runner.getStrategyMoveTotals();
         Difficulty fastest = null;
         Difficulty slowest = null;
-        double fastestAvg = Double.MAX_VALUE;
-        double slowestAvg = 0;
+        double fastestAverage = Double.MAX_VALUE;
+        double slowestAverage = 0;
         double totalMoveSum = 0;
         long totalMoveCount = 0;
         for (Difficulty d : tableItems) {
             long[] mt = moveTotals.get(d);
             if (mt == null || mt[1] == 0) continue;
-            double avg = (double) mt[0] / mt[1];
-            if (avg < fastestAvg) { fastestAvg = avg; fastest = d; }
-            if (avg > slowestAvg) { slowestAvg = avg; slowest = d; }
+            double average = (double) mt[0] / mt[1];
+            if (average < fastestAverage) { fastestAverage = average; fastest = d; }
+            if (average > slowestAverage) { slowestAverage = average; slowest = d; }
             totalMoveSum += mt[0];
             totalMoveCount += mt[1];
         }
         if (fastest == null || slowest == null || totalMoveCount == 0) return null;
 
         double mean = totalMoveSum / totalMoveCount;
-        if ((mean - fastestAvg) >= (slowestAvg - mean)) {
+        if ((mean - fastestAverage) >= (slowestAverage - mean)) {
             return statChip("Fastest finisher",
-                    fastest.sample().displayName() + "  avg " + (int) Math.round(fastestAvg) + " moves per game",
+                    fastest.sample().displayName() + " average " + (int) Math.round(fastestAverage) + " moves per game",
                     "#1A2A1A", "#5ABF78");
         }
         return statChip("Slowest finisher",
-                slowest.sample().displayName() + "  avg " + (int) Math.round(slowestAvg) + " moves per game",
+                slowest.sample().displayName() + " average " + (int) Math.round(slowestAverage) + " moves per game",
                 "#2A1A1A", "#C8706A");
     }
 
     /** Biggest upset → nemesis of #1 → most dominant — picks whichever is most interesting. */
     private static HBox buildCycleStatChip(Map<Difficulty, Map<Difficulty, Integer>> mw,
-                                            List<Difficulty> tableItems) {
-        HBox chip = buildUpsetChip(mw, tableItems);
+                                            List<Difficulty> tableItems, int gpm) {
+        int gamesPerPair = 2 * gpm; // each pair plays gpm games as each colour
+        HBox chip = buildUpsetChip(mw, tableItems, gamesPerPair);
         if (chip != null) return chip;
-        chip = buildNemesisChip(mw, tableItems);
+        chip = buildNemesisChip(mw, tableItems, gamesPerPair);
         if (chip != null) return chip;
-        return buildDominantChip(mw, tableItems);
+        return buildDominantChip(mw, tableItems, gamesPerPair);
     }
 
     private static HBox buildUpsetChip(Map<Difficulty, Map<Difficulty, Integer>> mw,
-                                        List<Difficulty> tableItems) {
+                                        List<Difficulty> tableItems, int gamesPerPair) {
         int n = tableItems.size();
         int biggestGap = 0;
         Difficulty upsetter = null;
         Difficulty victim = null;
+        int threshold = (gamesPerPair / 2) + 1; // strict majority
         for (int lo = 1; lo < n; lo++) {
             Map<Difficulty, Integer> loWins = mw.get(tableItems.get(lo));
             if (loWins == null) continue;
             for (int hi = 0; hi < lo; hi++) {
-                if (loWins.getOrDefault(tableItems.get(hi), 0) >= 2 && lo - hi > biggestGap) {
+                if (loWins.getOrDefault(tableItems.get(hi), 0) >= threshold && lo - hi > biggestGap) {
                     biggestGap = lo - hi;
                     upsetter = tableItems.get(lo);
                     victim = tableItems.get(hi);
@@ -198,52 +200,59 @@ final class TournamentSummary {
             }
         }
         if (upsetter == null || biggestGap < Math.max(2, n / 3)) return null;
+        int wins = mw.get(upsetter).getOrDefault(victim, 0);
         return statChip("Biggest upset",
                 upsetter.sample().displayName() + " (#" + (tableItems.indexOf(upsetter) + 1) + ")"
-                + " swept " + victim.sample().displayName() + " (#" + (tableItems.indexOf(victim) + 1) + ")",
+                + " beat " + victim.sample().displayName() + " (#" + (tableItems.indexOf(victim) + 1) + ")"
+                + "  " + wins + "–" + (gamesPerPair - wins),
                 "#2A1A2A", "#9B59B6");
     }
 
     private static HBox buildNemesisChip(Map<Difficulty, Map<Difficulty, Integer>> mw,
-                                          List<Difficulty> tableItems) {
+                                          List<Difficulty> tableItems, int gamesPerPair) {
         Difficulty top = tableItems.get(0);
         Difficulty nemesis = null;
         int nemesisWins = 0;
+        int threshold = (gamesPerPair / 2) + 1; // strict majority
         for (Difficulty d : tableItems) {
             if (d == top) continue;
             int w = mw.getOrDefault(d, Map.of()).getOrDefault(top, 0);
             if (w > nemesisWins) { nemesisWins = w; nemesis = d; }
         }
-        if (nemesis == null || nemesisWins < 2) return null;
+        if (nemesis == null || nemesisWins < threshold) return null;
         return statChip("Nemesis of #1",
-                nemesis.sample().displayName() + " went " + nemesisWins + "-" + (2 - nemesisWins)
+                nemesis.sample().displayName() + " went "
+                + nemesisWins + "–" + (gamesPerPair - nemesisWins)
                 + " vs " + top.sample().displayName(),
                 "#2A1A1A", "#E67E22");
     }
 
     private static HBox buildDominantChip(Map<Difficulty, Map<Difficulty, Integer>> mw,
-                                           List<Difficulty> tableItems) {
+                                           List<Difficulty> tableItems, int gamesPerPair) {
         Difficulty sweeper = null;
         int maxSweeps = 0;
+        int threshold = (gamesPerPair / 2) + 1; // strict majority
         for (Difficulty d : tableItems) {
             Map<Difficulty, Integer> dWins = mw.get(d);
             if (dWins == null) continue;
-            int sweeps = (int) dWins.values().stream().filter(v -> v >= 2).count();
+            int sweeps = (int) dWins.values().stream().filter(v -> v >= threshold).count();
             if (sweeps > maxSweeps) { maxSweeps = sweeps; sweeper = d; }
         }
         if (sweeper == null || maxSweeps < 2) return null;
         return statChip("Most dominant",
-                sweeper.sample().displayName() + " swept " + maxSweeps + " of " + (tableItems.size() - 1) + " opponents",
+                sweeper.sample().displayName() + " won majority vs " + maxSweeps + " of " + (tableItems.size() - 1) + " opponents",
                 "#1A1A2A", COLOR_BLUE);
     }
 
     private static TitledPane buildH2hPane(Difficulty d, Map<Difficulty, Map<Difficulty, Integer>> mw,
-                                            List<Difficulty> tableItems, Map<Difficulty, int[]> res) {
+                                            List<Difficulty> tableItems, Map<Difficulty, int[]> res,
+                                            int gpm) {
         int[] wr = res.getOrDefault(d, new int[]{0, 0});
         int w = wr[0];
         int l = wr[1];
         String pct = (w + l == 0) ? "—" : (int) Math.round(100.0 * w / (w + l)) + "%";
 
+        int gamesPerPair = 2 * gpm;
         VBox content = new VBox(4);
         content.setPadding(new Insets(6, 10, 6, 10));
         content.setStyle("-fx-background-color: #0C0E14;");
@@ -252,7 +261,7 @@ final class TournamentSummary {
             List<Difficulty> opponents = new ArrayList<>(tableItems);
             opponents.remove(d);
             for (Difficulty opp : opponents) {
-                content.getChildren().add(h2hRow(opp, wins.getOrDefault(opp, 0)));
+                content.getChildren().add(h2hRow(opp, wins.getOrDefault(opp, 0), gamesPerPair));
             }
         }
 
@@ -302,21 +311,22 @@ final class TournamentSummary {
         row.getChildren().add(card);
     }
 
-    private static HBox h2hRow(Difficulty opp, int wins) {
+    private static HBox h2hRow(Difficulty opp, int wins, int gamesPerPair) {
         Label oppLabel = new Label(opp.sample().displayName());
         oppLabel.setStyle(FX_FILL + "#606880; -fx-font-size: 12px;");
         oppLabel.setMinWidth(120);
 
+        int losses = gamesPerPair - wins;
+        String scoreText = wins + "–" + losses;
         String chipBg;
         String chipFg;
-        String chipText;
-        switch (wins) {
-            case 2  -> { chipBg = "#1A3A1A"; chipFg = "#4CAF50"; chipText = "✓✓  2–0"; }
-            case 1  -> { chipBg = "#2A2A1A"; chipFg = COLOR_GOLD; chipText = "✓✗  1–1"; }
-            default -> { chipBg = "#3A1A1A"; chipFg = "#C8706A"; chipText = "✗✗  0–2"; }
-        }
+        if (wins == gamesPerPair)        { chipBg = "#1A3A1A"; chipFg = "#4CAF50"; }  // sweep
+        else if (wins > gamesPerPair / 2.0) { chipBg = "#1A2A1A"; chipFg = "#8BC48A"; }  // majority
+        else if (wins == losses)         { chipBg = "#2A2A1A"; chipFg = COLOR_GOLD; }  // tied
+        else if (wins > 0)               { chipBg = "#2A1E1A"; chipFg = "#C89070"; }  // minority
+        else                             { chipBg = "#3A1A1A"; chipFg = "#C8706A"; }  // swept
 
-        Label chip = new Label(chipText);
+        Label chip = new Label(scoreText);
         chip.setStyle("-fx-background-color: " + chipBg + "; " + FX_FILL + chipFg
                 + "; -fx-font-size: 11px; -fx-font-weight: bold;"
                 + " -fx-padding: 2 8 2 8; -fx-background-radius: 3;");

@@ -7,9 +7,12 @@ import io.github.joachimvn.ui.bars.ReviewBar;
 import io.github.joachimvn.ui.bars.TopBar;
 import io.github.joachimvn.ui.common.UiScale;
 import io.github.joachimvn.ui.overlays.GameOverOverlay;
-import io.github.joachimvn.ui.overlays.LandingView;
+import io.github.joachimvn.ui.overlays.LandingOverlay;
+import io.github.joachimvn.ui.overlays.SplashOverlay;
 import io.github.joachimvn.ui.tournament.TournamentView;
 
+import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
 import javafx.application.Application;
 import javafx.beans.binding.DoubleBinding;
 import javafx.scene.Scene;
@@ -18,7 +21,9 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.Node;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.util.logging.Logger;
 
@@ -55,12 +60,30 @@ public class App extends Application {
         // Tournament overlay is created first so setup can reference it; the start
         // callback is wired after setup is ready via a one-element array (lambda capture).
         Runnable[] startTournament = {null};
-        LandingView landing = new LandingView(ctrl, board, bottomBar::setFlipSelected,
+        LandingOverlay landing = new LandingOverlay(ctrl, board, bottomBar::setFlipSelected,
             () -> { if (startTournament[0] != null) startTournament[0].run(); });
         TournamentView tournament = new TournamentView(() -> landing.getRoot().setVisible(true), ctrl);
-        startTournament[0] = tournament::start;
+        startTournament[0] = tournament::showSetup;
 
         GameOverOverlay gameOver = new GameOverOverlay(ctrl, landing.getRoot());
+
+        // Bars hidden while landing is visible; fade in when game starts, fade out when returning
+        Node topRoot = topBar.getRoot();
+        Node botRoot = bottomBar.getRoot();
+        topRoot.setOpacity(0);
+        botRoot.setOpacity(0);
+
+        landing.setOnExitStarted(() -> {
+            fadeTo(topRoot, 1.0, 520);
+            fadeTo(botRoot, 1.0, 520);
+        });
+
+        landing.getRoot().visibleProperty().addListener((obs, ov, isVisible) -> {
+            if (isVisible) {
+                fadeTo(topRoot, 0.0, 220);
+                fadeTo(botRoot, 0.0, 220);
+            }
+        });
 
         bottomBar.setOnChangeMode(() -> {
             gameOver.getRoot().setVisible(false);
@@ -93,8 +116,9 @@ public class App extends Application {
         topBar.update(ctrl);
         bottomBar.updateStatus();
 
+        SplashOverlay splash = new SplashOverlay();
         StackPane sceneRoot = new StackPane(gamePane, gameOver.getRoot(), landing.getRoot(),
-                                            tournament.getRoot());
+                                            tournament.getRoot(), splash.getRoot());
 
         Scene scene = new Scene(sceneRoot);
         for (String sheet : new String[]{"base", "chrome", "setup", "landing", "game-over", "tournament"}) {
@@ -112,6 +136,7 @@ public class App extends Application {
         stage.setMinHeight(360);
         stage.setMaximized(true);
         stage.show();
+        splash.playAndExit();
     }
 
     private static void handleKey(KeyEvent e, Stage stage, GameController ctrl,
@@ -140,6 +165,13 @@ public class App extends Application {
             default    -> { return; }
         }
         e.consume();
+    }
+
+    private static void fadeTo(Node node, double target, double millis) {
+        FadeTransition ft = new FadeTransition(Duration.millis(millis), node);
+        ft.setToValue(target);
+        ft.setInterpolator(Interpolator.EASE_BOTH);
+        ft.play();
     }
 
     public static void main(String[] args) {
