@@ -362,33 +362,55 @@
     -fx-background-radius: 6;
 }
 
-.tournament-strategy-check {
-    -fx-text-fill: #8890A8;
-    -fx-font-size: 13px;
-    -fx-min-width: 148;
-}
-
-.tournament-strategy-check .box {
-    -fx-background-color: #13151F;
-    -fx-border-color: #2A2E46;
+/* Strategy selection cards */
+.tournament-strategy-card {
+    -fx-background-color: #10121A;
+    -fx-text-fill: #606880;
+    -fx-border-color: #1E2235;
     -fx-border-width: 1;
-    -fx-border-radius: 2;
-    -fx-background-radius: 2;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 10 12 10 12;
+    -fx-cursor: hand;
+    -fx-alignment: top-left;
 }
 
-.tournament-strategy-check:hover .box {
-    -fx-border-color: #464B72;
+.tournament-strategy-card:hover {
+    -fx-background-color: #141824;
+    -fx-border-color: #323660;
 }
 
-.tournament-strategy-check:selected .box {
-    -fx-background-color: #1A2A50;
-    -fx-border-color: #3A5A90;
+.tournament-strategy-card:selected {
+    -fx-background-color: #111A2E;
+    -fx-border-color: #2E4A7A;
 }
 
-.tournament-strategy-check:selected .mark {
-    -fx-background-color: #7890C8;
+.tournament-strategy-card:selected:hover {
+    -fx-background-color: #152038;
+    -fx-border-color: #3E5A90;
 }
 
+.setup-card-name {
+    -fx-text-fill: #8890A8;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.tournament-strategy-card:selected .setup-card-name {
+    -fx-text-fill: #8AB0E8;
+}
+
+.setup-card-desc {
+    -fx-text-fill: #3A3F58;
+    -fx-font-size: 11px;
+    -fx-wrap-text: true;
+}
+
+.tournament-strategy-card:selected .setup-card-desc {
+    -fx-text-fill: #4A5478;
+}
+
+/* Spinners */
 .tournament-spinner-btn {
     -fx-background-color: #13151F;
     -fx-text-fill: #8890A8;
@@ -422,10 +444,11 @@
 }
 
 .tournament-preview-label {
-    -fx-text-fill: #606880;
-    -fx-font-size: 14px;
+    -fx-text-fill: #3A3F58;
+    -fx-font-size: 13px;
 }
 
+/* Start button */
 .tournament-setup-start-btn {
     -fx-background-color: #1A2E50;
     -fx-text-fill: #8AB8FF;
