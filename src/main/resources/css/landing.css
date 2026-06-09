@@ -215,6 +215,15 @@
     -fx-background-color: #3A2860;
 }
 
+/* ── Watermark ────────────────────────────────────────────────────────────── */
+
+.landing-watermark-version {
+    -fx-text-fill: #C0C6DC;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1.5;
+}
+
 /* ── Coming soon ──────────────────────────────────────────────────────────── */
 
 .landing-coming-soon {

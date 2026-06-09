@@ -87,11 +87,21 @@ public final class LandingOverlay {
         root = new StackPane();
         root.getStyleClass().add("landing-root");
 
-        ImageView logo = new ImageView(new Image(
+        // Watermark — bottom-right corner of the root overlay
+        ImageView wmLogo = new ImageView(new Image(
             getClass().getResourceAsStream("/images/logos/CHORIDOR_Logo.png")));
-        logo.setPreserveRatio(true);
-        logo.setFitWidth(CARD_W);
-        logo.setSmooth(true);
+        wmLogo.setPreserveRatio(true);
+        wmLogo.setFitWidth(170);
+        wmLogo.setSmooth(true);
+        Label wmVersion = new Label("v" + loadVersion());
+        wmVersion.getStyleClass().add("landing-watermark-version");
+        VBox watermark = new VBox(6, wmLogo, wmVersion);
+        watermark.setAlignment(Pos.CENTER);
+        watermark.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        watermark.setOpacity(0.18);
+        watermark.setMouseTransparent(true);
+        StackPane.setAlignment(watermark, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(watermark, new Insets(0, 28, 24, 0));
 
         VBox[] play = card(FontAwesomeSolid.PLAY,        "PLAY",     "Local or vs AI",    ACC_PLAY, "landing-card-play");
         VBox[] sim  = card(FontAwesomeSolid.ROBOT,       "SIMULATE", "Watch AIs compete", ACC_SIM,  "landing-card-sim");
@@ -139,7 +149,7 @@ public final class LandingOverlay {
         Region topSpacer = new Region();
         topSpacer.setMinHeight(0);
 
-        VBox page = new VBox(48, topSpacer, logo, carouselWithIndicator);
+        VBox page = new VBox(48, topSpacer, carouselWithIndicator);
         page.setAlignment(Pos.TOP_CENTER);
         page.setPadding(new Insets(0, 40, 64, 40));
         page.setMaxWidth(1280);
@@ -155,7 +165,7 @@ public final class LandingOverlay {
         centred.minHeightProperty().bind(scroll.heightProperty());
         topSpacer.prefHeightProperty().bind(scroll.heightProperty().multiply(0.25));
 
-        root.getChildren().add(scroll);
+        root.getChildren().addAll(scroll, watermark);
     }
 
     public StackPane getRoot() { return root; }
@@ -690,6 +700,19 @@ public final class LandingOverlay {
             d1.sample().displayName(), d2.sample().displayName());
         board.setFlipped(false); flipSelected.accept(false);
         exitToGame(() -> {});
+    }
+
+    // ── Version ───────────────────────────────────────────────────────────────
+
+    private static String loadVersion() {
+        try (var in = LandingOverlay.class.getResourceAsStream("/app.properties")) {
+            if (in == null) return "?";
+            java.util.Properties p = new java.util.Properties();
+            p.load(in);
+            return p.getProperty("version", "?");
+        } catch (Exception e) {
+            return "?";
+        }
     }
 
     // ── Widgets ───────────────────────────────────────────────────────────────
