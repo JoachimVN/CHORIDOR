@@ -362,52 +362,74 @@
     -fx-background-radius: 6;
 }
 
+/* All / None buttons — neutral, no accent colour */
+.setup-neutral-btn {
+    -fx-background-color: #13151F;
+    -fx-text-fill: #606880;
+    -fx-font-size: 12px;
+    -fx-padding: 4 14 4 14;
+    -fx-background-radius: 3;
+    -fx-border-color: #2A2E46;
+    -fx-border-radius: 3;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.setup-neutral-btn:hover {
+    -fx-background-color: #1A1D2A;
+    -fx-border-color: #464B72;
+    -fx-text-fill: #8890A8;
+}
+
+.setup-neutral-btn:pressed {
+    -fx-background-color: #1E2236;
+}
+
 /* Strategy selection cards */
 .tournament-strategy-card {
-    -fx-background-color: #10121A;
-    -fx-text-fill: #606880;
-    -fx-border-color: #1E2235;
+    -fx-background-color: #0E1018;
+    -fx-border-color: #1C1F30;
     -fx-border-width: 1;
-    -fx-border-radius: 4;
-    -fx-background-radius: 4;
-    -fx-padding: 10 12 10 12;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 12 14 12 14;
     -fx-cursor: hand;
     -fx-alignment: top-left;
 }
 
 .tournament-strategy-card:hover {
-    -fx-background-color: #141824;
-    -fx-border-color: #323660;
+    -fx-background-color: #131626;
+    -fx-border-color: #2E3255;
 }
 
 .tournament-strategy-card:selected {
-    -fx-background-color: #111A2E;
-    -fx-border-color: #2E4A7A;
+    -fx-background-color: #0E1828;
+    -fx-border-color: #2A4470;
 }
 
 .tournament-strategy-card:selected:hover {
-    -fx-background-color: #152038;
-    -fx-border-color: #3E5A90;
+    -fx-background-color: #122036;
+    -fx-border-color: #3A5A8A;
 }
 
 .setup-card-name {
     -fx-text-fill: #8890A8;
-    -fx-font-size: 12px;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
 }
 
 .tournament-strategy-card:selected .setup-card-name {
-    -fx-text-fill: #8AB0E8;
+    -fx-text-fill: #90B8F0;
 }
 
 .setup-card-desc {
-    -fx-text-fill: #3A3F58;
+    -fx-text-fill: #4A506A;
     -fx-font-size: 11px;
     -fx-wrap-text: true;
 }
 
 .tournament-strategy-card:selected .setup-card-desc {
-    -fx-text-fill: #4A5478;
+    -fx-text-fill: #5A6080;
 }
 
 /* Summary stat boxes */
