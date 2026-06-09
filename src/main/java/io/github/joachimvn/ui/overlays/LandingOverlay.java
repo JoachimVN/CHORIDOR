@@ -120,7 +120,12 @@ public final class LandingOverlay {
         wireCarousel();
         wireAutoExpand();
 
-        // Carousel indicator below the cards (in separate container)
+        // Ratchet arena's minHeight upward only — so the indicator below never moves up
+        arena.heightProperty().addListener((obs, ov, nv) -> {
+            if (nv.doubleValue() > arena.getMinHeight())
+                arena.setMinHeight(nv.doubleValue());
+        });
+
         HBox indicator = buildCarouselIndicator();
         VBox carouselWithIndicator = new VBox(24, arena, indicator);
         carouselWithIndicator.setAlignment(Pos.TOP_CENTER);
@@ -457,17 +462,21 @@ public final class LandingOverlay {
         String accentClass = getAccentClass(centerCard);
 
         for (int i = 0; i < 3; i++) {
-            Region bar = indicatorBars.get(i);
-            boolean isCenter = (allCards.get(i) == centerCard);
+            final Region bar = indicatorBars.get(i);
+            final boolean isCenter = (allCards.get(i) == centerCard);
+            final String stateClass = isCenter ? "carousel-indicator-active" : "carousel-indicator-inactive";
 
-            // Remove old accent and state classes
-            bar.getStyleClass().removeAll("carousel-accent-play", "carousel-accent-sim", "carousel-accent-set");
-            bar.getStyleClass().removeAll("carousel-indicator-active", "carousel-indicator-inactive");
-
-            // Add new classes with smooth color transition
-            bar.getStyleClass().add(accentClass);
-            String targetState = isCenter ? "carousel-indicator-active" : "carousel-indicator-inactive";
-            bar.getStyleClass().add(targetState);
+            FadeTransition out = new FadeTransition(Duration.millis(100), bar);
+            out.setToValue(0);
+            out.setOnFinished(e -> {
+                bar.getStyleClass().removeAll("carousel-accent-play", "carousel-accent-sim", "carousel-accent-set",
+                        "carousel-indicator-active", "carousel-indicator-inactive");
+                bar.getStyleClass().addAll(accentClass, stateClass);
+                FadeTransition in = new FadeTransition(Duration.millis(220), bar);
+                in.setToValue(1.0);
+                in.play();
+            });
+            out.play();
         }
     }
 
@@ -520,7 +529,7 @@ public final class LandingOverlay {
         VBox hvhPanel = new VBox(startHvH);
         hvhPanel.setPadding(new Insets(18, 0, 0, 0));
 
-        ComboBox<Difficulty> combo = combo();
+        ComboBox<Difficulty> combo = combo("#D07068");
         ToggleGroup cg = new ToggleGroup();
         ToggleButton pr = dot("color-pick-p1", cg);
         ToggleButton pb = dot("color-pick-p2", cg);
@@ -560,8 +569,8 @@ public final class LandingOverlay {
         ToggleButton oneTab  = tabBtn("1 vs 1",     tabs);
         ToggleButton tourTab = tabBtn("Tournament", tabs);
 
-        ComboBox<Difficulty> s1 = combo();
-        ComboBox<Difficulty> s2 = combo();
+        ComboBox<Difficulty> s1 = combo("#8AAADA");
+        ComboBox<Difficulty> s2 = combo("#8AAADA");
         if (s2.getItems().size() > 1) s2.getSelectionModel().select(1);
         Button startMatch = actionBtn("Start Match", ACC_SIM);
         VBox onePanel = new VBox(12, cfgLabel("RED AI"), s1, cfgLabel("BLUE AI"), s2, startMatch);
@@ -662,7 +671,7 @@ public final class LandingOverlay {
         Label l = new Label(t); l.getStyleClass().add("landing-config-label"); return l;
     }
 
-    private static ComboBox<Difficulty> combo() {
+    private static ComboBox<Difficulty> combo(String textFill) {
         ComboBox<Difficulty> c = new ComboBox<>();
         c.getItems().addAll(Difficulty.values());
         c.getStyleClass().add("strategy-combo"); c.setMaxWidth(Double.MAX_VALUE);
@@ -680,7 +689,7 @@ public final class LandingOverlay {
             @Override protected void updateItem(Difficulty d, boolean e) {
                 super.updateItem(d, e);
                 setText(e || d == null ? "" : d.sample().displayName());
-                setStyle("-fx-text-fill:#8AAADA;-fx-font-weight:bold;-fx-font-size:15px;");
+                setStyle("-fx-text-fill:" + textFill + ";-fx-font-weight:bold;-fx-font-size:15px;");
             }
         });
         c.getSelectionModel().selectFirst();
