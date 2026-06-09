@@ -8,6 +8,7 @@ import io.github.joachimvn.ui.bars.TopBar;
 import io.github.joachimvn.ui.common.UiScale;
 import io.github.joachimvn.ui.overlays.GameOverOverlay;
 import io.github.joachimvn.ui.overlays.LandingOverlay;
+import io.github.joachimvn.ui.overlays.SplashOverlay;
 import io.github.joachimvn.ui.tournament.TournamentView;
 
 import javafx.application.Application;
@@ -93,8 +94,9 @@ public class App extends Application {
         topBar.update(ctrl);
         bottomBar.updateStatus();
 
+        SplashOverlay splash = new SplashOverlay();
         StackPane sceneRoot = new StackPane(gamePane, gameOver.getRoot(), landing.getRoot(),
-                                            tournament.getRoot());
+                                            tournament.getRoot(), splash.getRoot());
 
         Scene scene = new Scene(sceneRoot);
         for (String sheet : new String[]{"base", "chrome", "setup", "landing", "game-over", "tournament"}) {
@@ -112,6 +114,7 @@ public class App extends Application {
         stage.setMinHeight(360);
         stage.setMaximized(true);
         stage.show();
+        splash.playAndExit();
     }
 
     private static void handleKey(KeyEvent e, Stage stage, GameController ctrl,
