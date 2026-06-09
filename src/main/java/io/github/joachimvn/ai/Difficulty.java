@@ -10,7 +10,6 @@ public enum Difficulty {
     RANDOM          (p -> new RandomStrategy()),
     SPRINTER        (p -> new GreedyStrategy()),
     MINIMAX         (p -> new MinimaxStrategy(p, 1000)),
-    ECONOMIST       (EconomistStrategy::new),
     SHARP           (SharpStrategy::new),
     TRAPPER         (TrapperStrategy::new),
     COPYCAT         (CopycatStrategy::new),
@@ -23,11 +22,7 @@ public enum Difficulty {
     BAITER          (BaiterStrategy::new),
     WIKIPEDIA       (WikipediaStrategy::new),
     CORRIDOR        (CorridorStrategy::new),
-    FORKER          (DualThreatStrategy::new),
-    GAMBLER         (GamblerStrategy::new),
-    PORTFOLIO       (PortfolioStrategy::new),
-    TACTICIAN       (TacticianStrategy::new),
-    MINIMAX_2       (StrategistStrategy::new);
+    FORKER          (DualThreatStrategy::new);
 
     private final Function<Player, Strategy> factory;
     private final Strategy sample;
@@ -48,8 +43,8 @@ public enum Difficulty {
     public long timeBudgetMs() {
         return switch (this) {
             case MONTE_CARLO                                               -> 950;
-            case MINIMAX, ECONOMIST, SHARP, TRAPPER, BAITER,
-                 WIKIPEDIA, PATH_COUNT, GAMBLER, TACTICIAN, MINIMAX_2     -> 1000;
+            case MINIMAX, SHARP, TRAPPER, BAITER,
+                 WIKIPEDIA, PATH_COUNT                                     -> 1000;
             default                                                        -> 0;
         };
     }
@@ -62,11 +57,10 @@ public enum Difficulty {
         return switch (this) {
             case RANDOM                                                    -> 1;
             case SPRINTER, SHORT_SIGHTED, FORTNITE, COPYCAT               -> 2;
-            case COMEBACKER, THREAT_RESPONDER, CORRIDOR, PORTFOLIO        -> 3;
+            case COMEBACKER, THREAT_RESPONDER, CORRIDOR                   -> 3;
             case FORKER                                                    -> 4;
-            case MINIMAX, ECONOMIST, SHARP, TRAPPER, BAITER,
-                 PATH_COUNT, WIKIPEDIA, MONTE_CARLO,
-                 GAMBLER, TACTICIAN, MINIMAX_2                            -> 5;
+            case MINIMAX, SHARP, TRAPPER, BAITER,
+                 PATH_COUNT, WIKIPEDIA, MONTE_CARLO                       -> 5;
         };
     }
 }
