@@ -339,6 +339,15 @@ public final class TournamentView {
             cc.setFillWidth(true);
             stratGrid.getColumnConstraints().add(cc);
         }
+        int rows = (int) Math.ceil(Difficulty.values().length / 4.0);
+        for (int row = 0; row < rows; row++) {
+            RowConstraints rc = new RowConstraints();
+            rc.setMinHeight(90);
+            rc.setPrefHeight(90);
+            rc.setMaxHeight(90);
+            rc.setVgrow(Priority.NEVER);
+            stratGrid.getRowConstraints().add(rc);
+        }
         strategyToggles.clear();
         Difficulty[] diffs = Difficulty.values();
         for (int i = 0; i < diffs.length; i++) {
@@ -356,8 +365,6 @@ public final class TournamentView {
         stratScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         stratScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         stratScroll.getStyleClass().add("tournament-board-scroll");
-        stratScroll.setPrefHeight(340);
-        stratScroll.setMaxHeight(340);
 
         VBox section = new VBox(10, stratHeader, stratScroll);
         section.setPadding(new Insets(20, 36, 24, 36));
@@ -467,9 +474,9 @@ public final class TournamentView {
         Label desc = new Label(d.sample().description());
         desc.getStyleClass().add("setup-card-desc");
         desc.setWrapText(true);
+        desc.setMaxHeight(50);
         VBox content = new VBox(5, name, desc);
         content.setMouseTransparent(true);
-        content.setMaxWidth(Double.MAX_VALUE);
         ToggleButton tb = new ToggleButton();
         tb.setGraphic(content);
         tb.setAlignment(Pos.TOP_LEFT);
