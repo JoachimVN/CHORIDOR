@@ -18,7 +18,7 @@ public class EconomistStrategy extends AbstractPrunedSearchStrategy {
     }
 
     @Override public String displayName() { return "Economist"; }
-    @Override public String description()   { return "Hoards its walls, spending them only when the search shows a big enough payoff"; }
+    @Override public String description()   { return "Saves its walls, spending them only when the search shows a big enough payoff"; }
 
     @Override
     protected int score(int myDist, int oppDist) {

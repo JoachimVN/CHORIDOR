@@ -28,7 +28,7 @@ public class OneStepStrategy implements Strategy {
 
     @Override public String displayName() { return "One Step"; }
     @Override public String description() {
-        return "Evaluates every legal move one step ahead and plays the best immediately — no deeper lookahead";
+        return "Evaluates every legal move only one step ahead";
     }
 
     @Override

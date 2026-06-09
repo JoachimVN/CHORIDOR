@@ -30,7 +30,7 @@ public class PathCountStrategy extends AbstractSearchStrategy {
 
     @Override public String displayName() { return "Path Count"; }
     @Override public String description() {
-        return "Counts cells on all shortest paths — maximizes its own corridor width, minimizes the opponent's";
+        return "Counts shortest paths, maximizes its own corridor width, minimizes the opponent's";
     }
 
     @Override

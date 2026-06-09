@@ -33,7 +33,7 @@ public class CopycatStrategy implements Strategy {
 
     @Override public String displayName() { return "Copycat"; }
     @Override public String description() {
-        return "Mirrors the opponent: counters wall placements with walls, pawn advances with pawn advances";
+        return "Mirrors the opponent's move type";
     }
 
     @Override

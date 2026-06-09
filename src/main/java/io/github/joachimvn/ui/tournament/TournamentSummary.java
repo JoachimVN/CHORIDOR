@@ -162,11 +162,11 @@ final class TournamentSummary {
         double mean = totalMoveSum / totalMoveCount;
         if ((mean - fastestAverage) >= (slowestAverage - mean)) {
             return statChip("Fastest finisher",
-                    fastest.sample().displayName() + "  average " + (int) Math.round(fastestAverage) + " moves per game",
+                    fastest.sample().displayName() + " average " + (int) Math.round(fastestAverage) + " moves per game",
                     "#1A2A1A", "#5ABF78");
         }
         return statChip("Slowest finisher",
-                slowest.sample().displayName() + "  average " + (int) Math.round(slowestAverage) + " moves per game",
+                slowest.sample().displayName() + " average " + (int) Math.round(slowestAverage) + " moves per game",
                 "#2A1A1A", "#C8706A");
     }
 

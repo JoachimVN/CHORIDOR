@@ -37,7 +37,7 @@ public class ThreatResponderStrategy implements Strategy {
 
     @Override public String displayName() { return "Threat Responder"; }
     @Override public String description() {
-        return "Priority rules: win now → emergency block → sprint lead → block threat → default advance";
+        return "Analyzes current position for threats and responds with priority rules";
     }
 
     @Override
