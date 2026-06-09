@@ -144,29 +144,29 @@ final class TournamentSummary {
         var moveTotals = runner.getStrategyMoveTotals();
         Difficulty fastest = null;
         Difficulty slowest = null;
-        double fastestAvg = Double.MAX_VALUE;
-        double slowestAvg = 0;
+        double fastestAverage = Double.MAX_VALUE;
+        double slowestAverage = 0;
         double totalMoveSum = 0;
         long totalMoveCount = 0;
         for (Difficulty d : tableItems) {
             long[] mt = moveTotals.get(d);
             if (mt == null || mt[1] == 0) continue;
-            double avg = (double) mt[0] / mt[1];
-            if (avg < fastestAvg) { fastestAvg = avg; fastest = d; }
-            if (avg > slowestAvg) { slowestAvg = avg; slowest = d; }
+            double average = (double) mt[0] / mt[1];
+            if (average < fastestAverage) { fastestAverage = average; fastest = d; }
+            if (average > slowestAverage) { slowestAverage = average; slowest = d; }
             totalMoveSum += mt[0];
             totalMoveCount += mt[1];
         }
         if (fastest == null || slowest == null || totalMoveCount == 0) return null;
 
         double mean = totalMoveSum / totalMoveCount;
-        if ((mean - fastestAvg) >= (slowestAvg - mean)) {
+        if ((mean - fastestAverage) >= (slowestAverage - mean)) {
             return statChip("Fastest finisher",
-                    fastest.sample().displayName() + "  avg " + (int) Math.round(fastestAvg) + " moves per game",
+                    fastest.sample().displayName() + "  average " + (int) Math.round(fastestAverage) + " moves per game",
                     "#1A2A1A", "#5ABF78");
         }
         return statChip("Slowest finisher",
-                slowest.sample().displayName() + "  avg " + (int) Math.round(slowestAvg) + " moves per game",
+                slowest.sample().displayName() + "  average " + (int) Math.round(slowestAverage) + " moves per game",
                 "#2A1A1A", "#C8706A");
     }
 
