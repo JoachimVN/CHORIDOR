@@ -108,7 +108,7 @@ public final class TournamentView {
     private Label ccValueLabel;
     private StackPane setupPane;
 
-    private static final long AVERAGE_GAME_MS  = 14_000;
+    private static final int  MOVES_PER_PLAYER = 30; // avg moves each player makes per game
     private static final int  MAX_CONCURRENT   = Runtime.getRuntime().availableProcessors();
 
     public TournamentView(Runnable onClose, GameController ctrl) {
@@ -488,12 +488,28 @@ public final class TournamentView {
     }
 
     private void updatePreview() {
-        long selCount = strategyToggles.stream().filter(ToggleButton::isSelected).count();
-        int total = (int)(selCount * (selCount - 1)) * gamesPerMatchup;
-        int recommended = computeRecommended((int) selCount);
+        Difficulty[] all = Difficulty.values();
+        List<Difficulty> selected = new ArrayList<>();
+        for (int i = 0; i < strategyToggles.size(); i++)
+            if (strategyToggles.get(i).isSelected()) selected.add(all[i]);
+
+        int selCount = selected.size();
+        int total = selCount * (selCount - 1) * gamesPerMatchup;
+        int recommended = computeRecommended(selCount);
         if (recommendedLabel  != null) recommendedLabel.setText("Recommended: " + recommended);
-        long estMs = (total <= 0 || concurrentGames <= 0) ? 0
-                   : (long)(Math.ceil((double) total / concurrentGames) * AVERAGE_GAME_MS);
+
+        long estMs = 0;
+        if (total > 0 && concurrentGames > 0) {
+            long totalWork = 0;
+            for (Difficulty d1 : selected)
+                for (Difficulty d2 : selected)
+                    if (d1 != d2)
+                        totalWork += (long) MOVES_PER_PLAYER
+                                   * (d1.msPerDecision() + d2.msPerDecision())
+                                   * gamesPerMatchup;
+            estMs = totalWork / concurrentGames;
+        }
+
         if (setupStratCount != null) setupStratCount.setText(String.valueOf(selCount));
         if (setupTotalGames != null) setupTotalGames.setText(String.valueOf(total));
         if (setupDuration   != null) setupDuration.setText(estMs <= 0 ? "—" : formatDuration(estMs));

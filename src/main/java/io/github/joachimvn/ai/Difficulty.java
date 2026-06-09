@@ -39,4 +39,17 @@ public enum Difficulty {
     /** A representative instance — source of truth for name and description. */
     public Strategy sample()                 { return sample; }
     public Strategy createStrategy(Player p) { return factory.apply(p); }
+
+    /**
+     * Estimated milliseconds this strategy spends per decision.
+     * Time-limited strategies return their actual budget; fast heuristics return a small overhead.
+     */
+    public long msPerDecision() {
+        return switch (this) {
+            case MONTE_CARLO                                          -> 950;
+            case MINIMAX, ECONOMIST, SHARP, TRAPPER, BAITER,
+                 WIKI, PATH_COUNT                                     -> 1000;
+            default                                                   -> 15;
+        };
+    }
 }
