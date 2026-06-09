@@ -120,15 +120,10 @@ public final class LandingOverlay {
         wireCarousel();
         wireAutoExpand();
 
-        // Carousel indicator as overlay below cards (fixed position, doesn't affect layout)
+        // Carousel indicator below the cards (in separate container)
         HBox indicator = buildCarouselIndicator();
-        StackPane arenaWithIndicator = new StackPane(arena);
-        VBox indicatorSpacer = new VBox(indicator);
-        indicatorSpacer.setAlignment(Pos.BOTTOM_CENTER);
-        indicatorSpacer.setPickOnBounds(false);
-        indicatorSpacer.setMouseTransparent(true);
-        StackPane.setAlignment(indicatorSpacer, Pos.BOTTOM_CENTER);
-        arenaWithIndicator.getChildren().add(indicatorSpacer);
+        VBox carouselWithIndicator = new VBox(24, arena, indicator);
+        carouselWithIndicator.setAlignment(Pos.TOP_CENTER);
 
         // Spacer above logo — proportional to viewport height so content sits
         // in a visually balanced position. Bound to scroll.height only (not page.height),
@@ -136,7 +131,7 @@ public final class LandingOverlay {
         Region topSpacer = new Region();
         topSpacer.setMinHeight(0);
 
-        VBox page = new VBox(48, topSpacer, logo, arenaWithIndicator);
+        VBox page = new VBox(48, topSpacer, logo, carouselWithIndicator);
         page.setAlignment(Pos.TOP_CENTER);
         page.setPadding(new Insets(0, 40, 64, 40));
         page.setMaxWidth(1280);
@@ -442,10 +437,13 @@ public final class LandingOverlay {
         indicatorBars = new ArrayList<>();
         HBox indicator = new HBox(8);
         indicator.setAlignment(Pos.CENTER);
+        indicator.setPrefSize(120, 20);
+        indicator.setMaxSize(120, 20);
         for (int i = 0; i < 3; i++) {
             Region bar = new Region();
             bar.setPrefSize(28, 3);
-            bar.getStyleClass().add("carousel-indicator-bar");
+            bar.setMaxSize(28, 3);
+            bar.getStyleClass().addAll("carousel-indicator-bar", "carousel-indicator-inactive");
             indicatorBars.add(bar);
             indicator.getChildren().add(bar);
         }
@@ -454,21 +452,29 @@ public final class LandingOverlay {
     }
 
     private void updateIndicator() {
-        int centerCardIdx = order[1]; // which card is in the center position
+        int centerCardIdx = order[1];
+        VBox centerCard = allCards.get(centerCardIdx);
+        String accentClass = getAccentClass(centerCard);
+
         for (int i = 0; i < 3; i++) {
             Region bar = indicatorBars.get(i);
-            if (allCards.get(i) == allCards.get(centerCardIdx)) {
-                bar.getStyleClass().removeAll("carousel-indicator-inactive");
-                if (!bar.getStyleClass().contains("carousel-indicator-active")) {
-                    bar.getStyleClass().add("carousel-indicator-active");
-                }
-            } else {
-                bar.getStyleClass().removeAll("carousel-indicator-active");
-                if (!bar.getStyleClass().contains("carousel-indicator-inactive")) {
-                    bar.getStyleClass().add("carousel-indicator-inactive");
-                }
-            }
+            boolean isCenter = (allCards.get(i) == centerCard);
+
+            // Remove old accent and state classes
+            bar.getStyleClass().removeAll("carousel-accent-play", "carousel-accent-sim", "carousel-accent-set");
+            bar.getStyleClass().removeAll("carousel-indicator-active", "carousel-indicator-inactive");
+
+            // Add new classes with smooth color transition
+            bar.getStyleClass().add(accentClass);
+            String targetState = isCenter ? "carousel-indicator-active" : "carousel-indicator-inactive";
+            bar.getStyleClass().add(targetState);
         }
+    }
+
+    private String getAccentClass(VBox card) {
+        if (card.getStyleClass().contains("landing-card-play")) return "carousel-accent-play";
+        if (card.getStyleClass().contains("landing-card-sim"))  return "carousel-accent-sim";
+        return "carousel-accent-set";
     }
 
     // ── Card factory ──────────────────────────────────────────────────────────

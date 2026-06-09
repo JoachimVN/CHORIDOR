@@ -42,8 +42,8 @@
     -fx-border-color: #1C3860 #17192A #17192A #17192A;
 }
 .landing-card-set {
-    -fx-background-color: linear-gradient(to bottom, #121424, #121523);
-    -fx-border-color: #2A2C56 #17192A #17192A #17192A;
+    -fx-background-color: linear-gradient(to bottom, #15122C, #121A35);
+    -fx-border-color: #3A2F60 #17192A #17192A #17192A;
 }
 
 /* Inline style from Java overrides these when expanded (full-accent border). */
@@ -70,7 +70,7 @@
     -fx-background-insets: 0, 0;
 }
 .landing-card-set:hover {
-    -fx-background-color: rgba(90,96,144,0.15), linear-gradient(to bottom, #141628, #131829);
+    -fx-background-color: rgba(120,100,180,0.15), linear-gradient(to bottom, #1A1530, #131E38);
     -fx-background-radius: 12, 12;
     -fx-background-insets: 0, 0;
 }
@@ -137,8 +137,8 @@
 }
 
 .landing-card-set .landing-tab-btn:selected {
-    -fx-background-color: #1F1D2E;
-    -fx-text-fill: #B0A8D8;
+    -fx-background-color: #251D3A;
+    -fx-text-fill: #C8B8E8;
 }
 
 /* ── Config labels ────────────────────────────────────────────────────────── */
@@ -178,12 +178,28 @@
     -fx-background-radius: 1.5;
 }
 
-.carousel-indicator-active {
-    -fx-background-color: #6A7090;
+.carousel-accent-play.carousel-indicator-active {
+    -fx-background-color: #C85A50;
 }
 
-.carousel-indicator-inactive {
-    -fx-background-color: #2A3048;
+.carousel-accent-play.carousel-indicator-inactive {
+    -fx-background-color: #5A3A30;
+}
+
+.carousel-accent-sim.carousel-indicator-active {
+    -fx-background-color: #5A8FD8;
+}
+
+.carousel-accent-sim.carousel-indicator-inactive {
+    -fx-background-color: #2A4570;
+}
+
+.carousel-accent-set.carousel-indicator-active {
+    -fx-background-color: #9B7FE8;
+}
+
+.carousel-accent-set.carousel-indicator-inactive {
+    -fx-background-color: #3A2860;
 }
 
 /* ── Coming soon ──────────────────────────────────────────────────────────── */
