@@ -44,7 +44,7 @@ public class WallDumperStrategy implements Strategy {
         this.aiPlayer = aiPlayer;
     }
 
-    @Override public String displayName() { return "Wall Dumper"; }
+    @Override public String displayName() { return "Fortnite"; }
     @Override public String description() {
         return "Blasts all 10 walls into a pre-planned centre formation, then runs for the goal";
     }

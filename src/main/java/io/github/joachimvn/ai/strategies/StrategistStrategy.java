@@ -23,7 +23,7 @@ public class StrategistStrategy extends AbstractPrunedSearchStrategy {
 
     public StrategistStrategy(Player aiPlayer) { super(aiPlayer); }
 
-    @Override public String displayName() { return "Strategist"; }
+    @Override public String displayName() { return "Minimax 2"; }
     @Override public String description() {
         return "Impact-sorted alpha-beta with phase-aware path-width evaluation";
     }

@@ -34,7 +34,7 @@ public class DualThreatStrategy implements Strategy {
 
     public DualThreatStrategy(Player aiPlayer) { this.aiPlayer = aiPlayer; }
 
-    @Override public String displayName() { return "Dual Threat"; }
+    @Override public String displayName() { return "Forker"; }
     @Override public String description() {
         return "Seeks fork positions with two viable attack lanes, forcing the opponent to choose which to block";
     }

@@ -8,26 +8,26 @@ import java.util.function.Function;
 public enum Difficulty {
 
     RANDOM          (p -> new RandomStrategy()),
-    GREEDY          (p -> new GreedyStrategy()),
+    SPRINTER        (p -> new GreedyStrategy()),
     MINIMAX         (p -> new MinimaxStrategy(p, 1000)),
     ECONOMIST       (EconomistStrategy::new),
     SHARP           (SharpStrategy::new),
     TRAPPER         (TrapperStrategy::new),
     COPYCAT         (CopycatStrategy::new),
-    ONE_STEP        (OneStepStrategy::new),
-    WALL_DUMPER     (WallDumperStrategy::new),
+    SHORT_SIGHTED   (OneStepStrategy::new),
+    FORTNITE        (WallDumperStrategy::new),
     MONTE_CARLO     (MonteCarloStrategy::new),
-    RACE_PLANNER    (RacePlannerStrategy::new),
+    COMEBACKER      (RacePlannerStrategy::new),
     THREAT_RESPONDER(ThreatResponderStrategy::new),
     PATH_COUNT      (PathCountStrategy::new),
     BAITER          (BaiterStrategy::new),
-    WIKI            (WikipediaStrategy::new),
+    WIKIPEDIA       (WikipediaStrategy::new),
     CORRIDOR        (CorridorStrategy::new),
-    DUAL_THREAT     (DualThreatStrategy::new),
+    FORKER          (DualThreatStrategy::new),
     GAMBLER         (GamblerStrategy::new),
     PORTFOLIO       (PortfolioStrategy::new),
     TACTICIAN       (TacticianStrategy::new),
-    STRATEGIST      (StrategistStrategy::new);
+    MINIMAX_2       (StrategistStrategy::new);
 
     private final Function<Player, Strategy> factory;
     private final Strategy sample;
@@ -49,7 +49,7 @@ public enum Difficulty {
         return switch (this) {
             case MONTE_CARLO                                               -> 950;
             case MINIMAX, ECONOMIST, SHARP, TRAPPER, BAITER,
-                 WIKI, PATH_COUNT, GAMBLER, TACTICIAN, STRATEGIST         -> 1000;
+                 WIKIPEDIA, PATH_COUNT, GAMBLER, TACTICIAN, MINIMAX_2     -> 1000;
             default                                                        -> 0;
         };
     }
@@ -61,13 +61,12 @@ public enum Difficulty {
     public int skillLevel() {
         return switch (this) {
             case RANDOM                                                    -> 1;
-            case GREEDY, ONE_STEP, WALL_DUMPER, COPYCAT                   -> 2;
-            case RACE_PLANNER, THREAT_RESPONDER, CORRIDOR                 -> 3;
-            case DUAL_THREAT                                               -> 4;
+            case SPRINTER, SHORT_SIGHTED, FORTNITE, COPYCAT               -> 2;
+            case COMEBACKER, THREAT_RESPONDER, CORRIDOR, PORTFOLIO        -> 3;
+            case FORKER                                                    -> 4;
             case MINIMAX, ECONOMIST, SHARP, TRAPPER, BAITER,
-                 PATH_COUNT, WIKI, MONTE_CARLO,
-                 GAMBLER, TACTICIAN, STRATEGIST                           -> 5;
-            case PORTFOLIO                                                 -> 3;
+                 PATH_COUNT, WIKIPEDIA, MONTE_CARLO,
+                 GAMBLER, TACTICIAN, MINIMAX_2                            -> 5;
         };
     }
 }

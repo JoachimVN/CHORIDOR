@@ -26,7 +26,7 @@ public class OneStepStrategy implements Strategy {
         this.aiPlayer = aiPlayer;
     }
 
-    @Override public String displayName() { return "One Step"; }
+    @Override public String displayName() { return "Short-Sighted"; }
     @Override public String description() {
         return "Evaluates every legal move only one step ahead";
     }
