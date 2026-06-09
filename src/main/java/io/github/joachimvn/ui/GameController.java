@@ -234,6 +234,9 @@ public class GameController {
     /** Play the selection click, e.g. for setup-screen controls. Honours the mute toggle. */
     public void playSelect() { play(selectSound); }
 
+    /** Play the jump sound, e.g. for carousel rotation. Honours the mute toggle. */
+    public void playJump() { play(jumpSound); }
+
     private void play(AudioClip clip) { if (!muted) clip.play(); }
 
     // ── Game review (look-back) ───────────────────────────────────────────────

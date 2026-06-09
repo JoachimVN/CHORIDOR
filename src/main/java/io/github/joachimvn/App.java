@@ -7,7 +7,7 @@ import io.github.joachimvn.ui.bars.ReviewBar;
 import io.github.joachimvn.ui.bars.TopBar;
 import io.github.joachimvn.ui.common.UiScale;
 import io.github.joachimvn.ui.overlays.GameOverOverlay;
-import io.github.joachimvn.ui.overlays.LandingView;
+import io.github.joachimvn.ui.overlays.LandingOverlay;
 import io.github.joachimvn.ui.tournament.TournamentView;
 
 import javafx.application.Application;
@@ -55,7 +55,7 @@ public class App extends Application {
         // Tournament overlay is created first so setup can reference it; the start
         // callback is wired after setup is ready via a one-element array (lambda capture).
         Runnable[] startTournament = {null};
-        LandingView landing = new LandingView(ctrl, board, bottomBar::setFlipSelected,
+        LandingOverlay landing = new LandingOverlay(ctrl, board, bottomBar::setFlipSelected,
             () -> { if (startTournament[0] != null) startTournament[0].run(); });
         TournamentView tournament = new TournamentView(() -> landing.getRoot().setVisible(true), ctrl);
         startTournament[0] = tournament::start;

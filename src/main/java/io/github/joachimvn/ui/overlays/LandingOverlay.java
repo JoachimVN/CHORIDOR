@@ -34,7 +34,7 @@ import java.util.function.Consumer;
  * Full-screen landing page. Three cards in a radial carousel — clicking a side card rotates it
  * to centre, where it auto-expands. Exiting to a game fades the overlay, revealing the live board.
  */
-public final class LandingView {
+public final class LandingOverlay {
 
     // ── Carousel positions ────────────────────────────────────────────────────
     private record Pos3D(double tx, double ty, double rot, double sc, double op) {}
@@ -66,6 +66,7 @@ public final class LandingView {
     // ── Mutable state ─────────────────────────────────────────────────────────
     private final StackPane root;
     private final StackPane arena = new StackPane();
+    private final GameController ctrl;
     private List<VBox> allCards;
     /** order[slot] = card index occupying that slot (0=left, 1=centre, 2=right). */
     private final int[] order = {1, 0, 2};
@@ -76,8 +77,9 @@ public final class LandingView {
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
-    public LandingView(GameController ctrl, BoardView board,
+    public LandingOverlay(GameController ctrl, BoardView board,
                        Consumer<Boolean> flipSelected, Runnable onTournament) {
+        this.ctrl = ctrl;
         root = new StackPane();
         root.getStyleClass().add("landing-root");
 
@@ -212,6 +214,7 @@ public final class LandingView {
     }
 
     private void rotate(int targetIdx) {
+        ctrl.playJump();
         // Collapse departing centre immediately (concurrent with rotation)
         if (openBody != null) collapseBody(allCards.get(order[1]), openBody);
 
@@ -480,11 +483,13 @@ public final class LandingView {
         });
 
         startHvH.setOnAction(e -> {
+            ctrl.playSelect();
             ctrl.startGame(null, null, "Player 1", "Player 2");
             board.setFlipped(false); flipSelected.accept(false);
             exitToGame(() -> {});
         });
         startAi.setOnAction(e -> {
+            ctrl.playSelect();
             Difficulty d = combo.getValue();
             boolean blue = pb.isSelected();
             ctrl.startGame(
@@ -526,6 +531,7 @@ public final class LandingView {
         });
 
         startMatch.setOnAction(e -> {
+            ctrl.playSelect();
             Difficulty d1 = s1.getValue();
             Difficulty d2 = s2.getValue();
             ctrl.startGame(d1.createStrategy(Player.ONE), d2.createStrategy(Player.TWO),
@@ -534,6 +540,7 @@ public final class LandingView {
             exitToGame(() -> {});
         });
         launchTour.setOnAction(e -> {
+            ctrl.playSelect();
             root.setVisible(false);
             if (onTournament != null) onTournament.run();
         });
