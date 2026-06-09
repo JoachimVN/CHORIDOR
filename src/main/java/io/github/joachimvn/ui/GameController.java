@@ -92,7 +92,7 @@ public class GameController {
         return prefix + " turn";
     }
 
-    public void replay() { reset(); }
+    public void replay() { play(selectSound); reset(); }
 
     public void startGame(Strategy p1Strategy, Strategy p2Strategy, String p1Name, String p2Name) {
         playerStrategies[0] = p1Strategy;
@@ -140,7 +140,6 @@ public class GameController {
     private void reset() {
         generation.incrementAndGet();
         aiThinking = false;
-        play(selectSound);
         state = new GameState();
         gameOver = false;
         wallOwners.clear();
@@ -234,8 +233,8 @@ public class GameController {
     /** Play the selection click, e.g. for setup-screen controls. Honours the mute toggle. */
     public void playSelect() { play(selectSound); }
 
-    /** Play the jump sound, e.g. for carousel rotation. Honours the mute toggle. */
-    public void playJump() { play(jumpSound); }
+    /** Play the wall sound, e.g. for carousel rotation. Honours the mute toggle. */
+    public void playWall() { play(wallSound); }
 
     private void play(AudioClip clip) { if (!muted) clip.play(); }
 

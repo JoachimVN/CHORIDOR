@@ -214,7 +214,7 @@ public final class LandingOverlay {
     }
 
     private void rotate(int targetIdx) {
-        ctrl.playJump();
+        ctrl.playWall();
         // Collapse departing centre immediately (concurrent with rotation)
         if (openBody != null) collapseBody(allCards.get(order[1]), openBody);
 
@@ -477,10 +477,18 @@ public final class LandingOverlay {
         aiPanel.setManaged(false); aiPanel.setVisible(false); aiPanel.setOpacity(0);
 
         hvhTab.setSelected(true);
+        // Tab buttons play select on switch; the selected-toggle listener handles the visual swap
+        hvhTab.setOnAction(e -> ctrl.playSelect());
+        vsAiTab.setOnAction(e -> ctrl.playSelect());
         tabs.selectedToggleProperty().addListener((o, ov, v) -> {
             if (v == hvhTab) switchTab(body, aiPanel, hvhPanel);
             else             switchTab(body, hvhPanel, aiPanel);
         });
+
+        // Difficulty combo and color picker play select on interaction
+        combo.setOnAction(e -> ctrl.playSelect());
+        pr.setOnAction(e -> ctrl.playSelect());
+        pb.setOnAction(e -> ctrl.playSelect());
 
         startHvH.setOnAction(e -> {
             ctrl.playSelect();
@@ -525,10 +533,15 @@ public final class LandingOverlay {
         tourPanel.setManaged(false); tourPanel.setVisible(false); tourPanel.setOpacity(0);
 
         oneTab.setSelected(true);
+        oneTab.setOnAction(e -> ctrl.playSelect());
+        tourTab.setOnAction(e -> ctrl.playSelect());
         tabs.selectedToggleProperty().addListener((o, ov, v) -> {
             if (v == oneTab) switchTab(body, tourPanel, onePanel);
             else             switchTab(body, onePanel, tourPanel);
         });
+
+        s1.setOnAction(e -> ctrl.playSelect());
+        s2.setOnAction(e -> ctrl.playSelect());
 
         startMatch.setOnAction(e -> {
             ctrl.playSelect();
