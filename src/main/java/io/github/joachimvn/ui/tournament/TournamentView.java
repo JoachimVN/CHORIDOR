@@ -502,16 +502,33 @@ public final class TournamentView {
             long totalWork = 0;
             for (Difficulty d1 : selected)
                 for (Difficulty d2 : selected)
-                    if (d1 != d2)
-                        totalWork += (long) estimatedMovesPerPlayer(d1, d2)
-                                   * (d1.msPerDecision() + d2.msPerDecision())
-                                   * gamesPerMatchup;
+                    if (d1 != d2) {
+                        int moves = estimatedMovesPerPlayer(d1, d2);
+                        long gameMs = (long) moves * effectiveMsPerDecision(d1, d2)
+                                    + (long) moves * effectiveMsPerDecision(d2, d1);
+                        totalWork += gameMs * gamesPerMatchup;
+                    }
             estMs = totalWork / concurrentGames;
         }
 
         if (setupStratCount != null) setupStratCount.setText(String.valueOf(selCount));
         if (setupTotalGames != null) setupTotalGames.setText(String.valueOf(total));
         if (setupDuration   != null) setupDuration.setText(estMs <= 0 ? "—" : formatDuration(estMs));
+    }
+
+    /**
+     * Effective ms a strategy spends per decision against a specific opponent.
+     * MCTS always burns its full 950ms budget. Search strategies use iterative deepening:
+     * they exit early against weak opponents (~15% of budget) but approach their full
+     * budget against equally strong ones (~85%).
+     */
+    private static long effectiveMsPerDecision(Difficulty d, Difficulty opponent) {
+        long budget = d.timeBudgetMs();
+        if (budget == 0) return 10; // fast heuristic
+        if (d == Difficulty.MONTE_CARLO) return 950; // always runs until deadline
+        // Scale 15% of budget (vs weakest) → 85% (vs strongest)
+        double fraction = 0.15 + 0.175 * (opponent.skillLevel() - 1);
+        return Math.round(budget * fraction);
     }
 
     /**

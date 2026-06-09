@@ -41,15 +41,15 @@ public enum Difficulty {
     public Strategy createStrategy(Player p) { return factory.apply(p); }
 
     /**
-     * Estimated milliseconds this strategy spends per decision.
-     * Time-limited strategies return their actual budget; fast heuristics return a small overhead.
+     * The wall-clock time budget this strategy is allowed per decision, in milliseconds.
+     * Returns 0 for fast heuristics that have no explicit budget.
      */
-    public long msPerDecision() {
+    public long timeBudgetMs() {
         return switch (this) {
-            case MONTE_CARLO                                          -> 950; // truly time-limited loop
+            case MONTE_CARLO                                               -> 950;
             case MINIMAX, ECONOMIST, SHARP, TRAPPER, BAITER,
-                 WIKI, PATH_COUNT                                     -> 150; // iterative deepening, usually exits early
-            default                                                   -> 10;
+                 WIKI, PATH_COUNT                                          -> 1000;
+            default                                                        -> 0;
         };
     }
 
