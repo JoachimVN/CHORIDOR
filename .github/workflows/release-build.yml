@@ -97,7 +97,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish release with Windows assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.tag_name }}
           body_path: release-notes.md
@@ -131,7 +131,7 @@ jobs:
         run: mvn --batch-mode package -Plinux -DskipTests
 
       - name: Upload Linux asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.build-windows.outputs.tag_name }}
           files: target/dist/CHORIDOR-${{ needs.build-windows.outputs.app_version }}-linux.zip
@@ -164,7 +164,7 @@ jobs:
         run: mv "target/dist/CHORIDOR-${{ needs.build-windows.outputs.app_version }}.dmg" "target/dist/CHORIDOR-${{ needs.build-windows.outputs.app_version }}-macos.dmg"
 
       - name: Upload macOS asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.build-windows.outputs.tag_name }}
           files: target/dist/CHORIDOR-${{ needs.build-windows.outputs.app_version }}-macos.dmg
