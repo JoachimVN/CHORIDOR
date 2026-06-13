@@ -42,6 +42,35 @@ Walls must never completely seal off a player's route, keeping every game solvab
     <em>Tournament with AI vs AI and live boards</em>
 </p>
 
+## CHORIDOR Web
+
+A web version ([JoachimVN/CHORIDOR-web](https://github.com/JoachimVN/CHORIDOR-web)) built with vanilla HTML, CSS, and Canvas API. Playable in any browser at [joavn.dev/choridor](https://joavn.dev/choridor). This desktop version trades accessibility for depth and AI features.
+
+<table>
+  <tr>
+    <th align="center" width="33%">Desktop only</th>
+    <th align="center" width="33%">Web only</th>
+  </tr>
+  <tr>
+    <td valign="top">
+      AI opponents<br>
+      Multiple AI strategies<br>
+      Human vs AI mode<br>
+      AI vs AI simulation<br>
+      Live tournament with mini-boards<br>
+      Game review mode<br>
+      Native installers (Win / Mac / Linux)<br>
+    </td>
+    <td valign="top">
+      Online multiplayer<br>
+      3-character room codes<br>
+      Invite links<br>
+      Plays in any browser — no install<br>
+      Responsive canvas<br>
+    </td>
+  </tr>
+</table>
+
 ## Why This Project
 
 A personal project built to explore:
