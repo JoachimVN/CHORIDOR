@@ -44,7 +44,7 @@ Walls must never completely seal off a player's route, keeping every game solvab
 
 ## CHORIDOR Web
 
-A web version ([JoachimVN/CHORIDOR-web](https://github.com/JoachimVN/CHORIDOR-web)) built with vanilla HTML, CSS, and Canvas API. Playable in any browser at [joavn.dev/choridor](https://joavn.dev/choridor). This desktop version trades accessibility for depth and AI features.
+A web version ([JoachimVN/CHORIDOR-web](https://github.com/JoachimVN/CHORIDOR-web)) built with vanilla HTML, CSS, and Canvas API. Playable in any browser at [joavn.dev/choridor](https://joavn.dev/choridor) or through Discord Activities [here](https://discord.com/discovery/applications/1515199692793843712). This desktop version trades accessibility for depth and AI features.
 
 <table>
   <tr>
@@ -53,9 +53,7 @@ A web version ([JoachimVN/CHORIDOR-web](https://github.com/JoachimVN/CHORIDOR-we
   </tr>
   <tr>
     <td valign="top">
-      AI opponents<br>
-      Multiple AI strategies<br>
-      Human vs AI mode<br>
+      Human vs AI mode with 16 algorithms<br>
       AI vs AI simulation<br>
       Live tournament with mini-boards<br>
       Game review mode<br>
@@ -63,10 +61,10 @@ A web version ([JoachimVN/CHORIDOR-web](https://github.com/JoachimVN/CHORIDOR-we
     </td>
     <td valign="top">
       Online multiplayer<br>
-      3-character room codes<br>
-      Invite links<br>
-      Plays in any browser — no install<br>
-      Responsive canvas<br>
+      Plays in any browser, no installation<br>
+      Discord Activity<br>
+      Spectating mode with queue system<br>
+      Animations and move/wall confirmations<br>
     </td>
   </tr>
 </table>
