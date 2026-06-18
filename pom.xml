@@ -1,7 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xsi:schemaLocation='http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd' xmlns='http://maven.apache.org/POM/4.0.0' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>io.github.joachimvn</groupId>
@@ -234,34 +233,31 @@
                 <goals><goal>run</goal></goals>
                 <configuration>
                   <target>
-                    <mkdir dir="${project.build.directory}/jpackage-input"/>
-                    <copy file="${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar"
-                          tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
-                    <exec executable="jpackage" failonerror="true">
-                      <arg value="--type"/><arg value="exe"/>
-                      <arg value="--name"/><arg value="CHORIDOR"/>
-                      <arg value="--app-version"/><arg value="${jpackage.version}"/>
-                      <arg value="--vendor"/><arg value="JoachimVN"/>
-                      <arg value="--description"/><arg value="CHORIDOR"/>
-                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/CHORIDOR_Logo_Square.ico"/>
-                      <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
-                      <arg value="--main-jar"/><arg value="app-fat.jar"/>
-                      <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
-                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods"/>
-                      <arg value="--add-modules"/><arg value="javafx.controls,javafx.media"/>
-                      <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
-                      <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
-                      <arg value="--win-dir-chooser"/>
-                      <arg value="--win-shortcut"/>
-                      <arg value="--win-menu"/>
-                      <arg value="--win-menu-group"/><arg value="CHORIDOR"/>
+                    <mkdir dir='${project.build.directory}/jpackage-input'/>
+                    <copy file='${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar' tofile='${project.build.directory}/jpackage-input/app-fat.jar'/>
+                    <exec executable='jpackage' failonerror='true'>
+                      <arg value='--type'/><arg value='exe'/>
+                      <arg value='--name'/><arg value='CHORIDOR'/>
+                      <arg value='--app-version'/><arg value='${jpackage.version}'/>
+                      <arg value='--vendor'/><arg value='JoachimVN'/>
+                      <arg value='--description'/><arg value='CHORIDOR'/>
+                      <arg value='--icon'/><arg value='${project.basedir}/src/main/resources/images/logos/CHORIDOR_Logo_Square.ico'/>
+                      <arg value='--input'/><arg value='${project.build.directory}/jpackage-input'/>
+                      <arg value='--main-jar'/><arg value='app-fat.jar'/>
+                      <arg value='--main-class'/><arg value='io.github.joachimvn.Launcher'/>
+                      <arg value='--module-path'/><arg value='${project.build.directory}/javafx-mods'/>
+                      <arg value='--add-modules'/><arg value='javafx.controls,javafx.media'/>
+                      <arg value='--java-options'/><arg value='--enable-native-access=javafx.graphics,javafx.media'/>
+                      <arg value='--dest'/><arg value='${project.build.directory}/dist'/>
+                      <arg value='--win-dir-chooser'/>
+                      <arg value='--win-shortcut'/>
+                      <arg value='--win-menu'/>
+                      <arg value='--win-menu-group'/><arg value='CHORIDOR'/>
                     </exec>
-                    <condition property="exe.rename.needed">
-                      <not><equals arg1="${jpackage.version}" arg2="${project.version}"/></not>
+                    <condition property='exe.rename.needed'>
+                      <not><equals arg1='${jpackage.version}' arg2='${project.version}'/></not>
                     </condition>
-                    <move file="${project.build.directory}/dist/CHORIDOR-${jpackage.version}.exe"
-                          tofile="${project.build.directory}/dist/CHORIDOR-${project.version}.exe"
-                          failonerror="true" xmlns:if="ant:if" if:set="exe.rename.needed"/>
+                    <move failonerror='true' file='${project.build.directory}/dist/CHORIDOR-${jpackage.version}.exe' xmlns:if='ant:if' if:set='exe.rename.needed' tofile='${project.build.directory}/dist/CHORIDOR-${project.version}.exe'/>
                   </target>
                 </configuration>
               </execution>
@@ -327,26 +323,25 @@
                 <goals><goal>run</goal></goals>
                 <configuration>
                   <target>
-                    <mkdir dir="${project.build.directory}/jpackage-input"/>
-                    <copy file="${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar"
-                          tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
-                    <exec executable="jpackage" failonerror="true">
-                      <arg value="--type"/><arg value="app-image"/>
-                      <arg value="--name"/><arg value="CHORIDOR"/>
-                      <arg value="--app-version"/><arg value="${jpackage.version}"/>
-                      <arg value="--vendor"/><arg value="JoachimVN"/>
-                      <arg value="--description"/><arg value="CHORIDOR"/>
-                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/CHORIDOR_Logo_Square.png"/>
-                      <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
-                      <arg value="--main-jar"/><arg value="app-fat.jar"/>
-                      <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
-                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods"/>
-                      <arg value="--add-modules"/><arg value="javafx.controls,javafx.media"/>
-                      <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
-                      <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
+                    <mkdir dir='${project.build.directory}/jpackage-input'/>
+                    <copy file='${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar' tofile='${project.build.directory}/jpackage-input/app-fat.jar'/>
+                    <exec executable='jpackage' failonerror='true'>
+                      <arg value='--type'/><arg value='app-image'/>
+                      <arg value='--name'/><arg value='CHORIDOR'/>
+                      <arg value='--app-version'/><arg value='${jpackage.version}'/>
+                      <arg value='--vendor'/><arg value='JoachimVN'/>
+                      <arg value='--description'/><arg value='CHORIDOR'/>
+                      <arg value='--icon'/><arg value='${project.basedir}/src/main/resources/images/logos/CHORIDOR_Logo_Square.png'/>
+                      <arg value='--input'/><arg value='${project.build.directory}/jpackage-input'/>
+                      <arg value='--main-jar'/><arg value='app-fat.jar'/>
+                      <arg value='--main-class'/><arg value='io.github.joachimvn.Launcher'/>
+                      <arg value='--module-path'/><arg value='${project.build.directory}/javafx-mods'/>
+                      <arg value='--add-modules'/><arg value='javafx.controls,javafx.media'/>
+                      <arg value='--java-options'/><arg value='--enable-native-access=javafx.graphics,javafx.media'/>
+                      <arg value='--dest'/><arg value='${project.build.directory}/dist'/>
                     </exec>
-                    <zip destfile="${project.build.directory}/dist/CHORIDOR-${project.version}-linux.zip">
-                      <zipfileset dir="${project.build.directory}/dist/CHORIDOR" prefix="CHORIDOR"/>
+                    <zip destfile='${project.build.directory}/dist/CHORIDOR-${project.version}-linux.zip'>
+                      <zipfileset dir='${project.build.directory}/dist/CHORIDOR' prefix='CHORIDOR'/>
                     </zip>
                   </target>
                 </configuration>
@@ -413,30 +408,27 @@
                 <goals><goal>run</goal></goals>
                 <configuration>
                   <target>
-                    <mkdir dir="${project.build.directory}/jpackage-input"/>
-                    <copy file="${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar"
-                          tofile="${project.build.directory}/jpackage-input/app-fat.jar"/>
-                    <exec executable="jpackage" failonerror="true">
-                      <arg value="--type"/><arg value="dmg"/>
-                      <arg value="--name"/><arg value="CHORIDOR"/>
-                      <arg value="--app-version"/><arg value="${jpackage.version}"/>
-                      <arg value="--vendor"/><arg value="JoachimVN"/>
-                      <arg value="--description"/><arg value="CHORIDOR"/>
-                      <arg value="--icon"/><arg value="${project.basedir}/src/main/resources/images/logos/CHORIDOR_Logo_Square.icns"/>
-                      <arg value="--input"/><arg value="${project.build.directory}/jpackage-input"/>
-                      <arg value="--main-jar"/><arg value="app-fat.jar"/>
-                      <arg value="--main-class"/><arg value="io.github.joachimvn.Launcher"/>
-                      <arg value="--module-path"/><arg value="${project.build.directory}/javafx-mods"/>
-                      <arg value="--add-modules"/><arg value="javafx.controls,javafx.media"/>
-                      <arg value="--java-options"/><arg value="--enable-native-access=javafx.graphics,javafx.media"/>
-                      <arg value="--dest"/><arg value="${project.build.directory}/dist"/>
+                    <mkdir dir='${project.build.directory}/jpackage-input'/>
+                    <copy file='${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar' tofile='${project.build.directory}/jpackage-input/app-fat.jar'/>
+                    <exec executable='jpackage' failonerror='true'>
+                      <arg value='--type'/><arg value='dmg'/>
+                      <arg value='--name'/><arg value='CHORIDOR'/>
+                      <arg value='--app-version'/><arg value='${jpackage.version}'/>
+                      <arg value='--vendor'/><arg value='JoachimVN'/>
+                      <arg value='--description'/><arg value='CHORIDOR'/>
+                      <arg value='--icon'/><arg value='${project.basedir}/src/main/resources/images/logos/CHORIDOR_Logo_Square.icns'/>
+                      <arg value='--input'/><arg value='${project.build.directory}/jpackage-input'/>
+                      <arg value='--main-jar'/><arg value='app-fat.jar'/>
+                      <arg value='--main-class'/><arg value='io.github.joachimvn.Launcher'/>
+                      <arg value='--module-path'/><arg value='${project.build.directory}/javafx-mods'/>
+                      <arg value='--add-modules'/><arg value='javafx.controls,javafx.media'/>
+                      <arg value='--java-options'/><arg value='--enable-native-access=javafx.graphics,javafx.media'/>
+                      <arg value='--dest'/><arg value='${project.build.directory}/dist'/>
                     </exec>
-                    <condition property="dmg.rename.needed">
-                      <not><equals arg1="${jpackage.version}" arg2="${project.version}"/></not>
+                    <condition property='dmg.rename.needed'>
+                      <not><equals arg1='${jpackage.version}' arg2='${project.version}'/></not>
                     </condition>
-                    <move file="${project.build.directory}/dist/CHORIDOR-${jpackage.version}.dmg"
-                          tofile="${project.build.directory}/dist/CHORIDOR-${project.version}.dmg"
-                          failonerror="true" xmlns:if="ant:if" if:set="dmg.rename.needed"/>
+                    <move failonerror='true' file='${project.build.directory}/dist/CHORIDOR-${jpackage.version}.dmg' xmlns:if='ant:if' if:set='dmg.rename.needed' tofile='${project.build.directory}/dist/CHORIDOR-${project.version}.dmg'/>
                   </target>
                 </configuration>
               </execution>
@@ -447,4 +439,24 @@
     </profile>
   </profiles>
 
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-controls</artifactId>
+        <version>26.0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-controls</artifactId>
+        <version>26.0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-controls</artifactId>
+        <version>26.0.1</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 </project>
