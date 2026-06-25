@@ -457,6 +457,21 @@
         <artifactId>javafx-controls</artifactId>
         <version>26.0.1</version>
       </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-media</artifactId>
+        <version>26.0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-media</artifactId>
+        <version>26.0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-media</artifactId>
+        <version>26.0.1</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 </project>
