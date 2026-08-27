@@ -225,7 +225,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
-            <version>3.1.0</version>
+            <version>3.2.0</version>
             <executions>
               <execution>
                 <id>build-exe</id>
@@ -315,7 +315,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
-            <version>3.1.0</version>
+            <version>3.2.0</version>
             <executions>
               <execution>
                 <id>build-linux</id>
@@ -400,7 +400,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
-            <version>3.1.0</version>
+            <version>3.2.0</version>
             <executions>
               <execution>
                 <id>build-mac</id>
