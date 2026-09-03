@@ -20,7 +20,7 @@
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-controls</artifactId>
-      <version>26.0.1</version>
+      <version>26.0.2</version>
     </dependency>
     <dependency>
       <groupId>org.openjfx</groupId>
@@ -445,32 +445,47 @@
       <dependency>
         <groupId>org.openjfx</groupId>
         <artifactId>javafx-controls</artifactId>
+        <version>26.0.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-controls</artifactId>
+        <version>26.0.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-controls</artifactId>
+        <version>26.0.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-media</artifactId>
+        <version>26.0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-media</artifactId>
+        <version>26.0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-media</artifactId>
         <version>26.0.1</version>
       </dependency>
       <dependency>
         <groupId>org.openjfx</groupId>
         <artifactId>javafx-controls</artifactId>
-        <version>26.0.1</version>
+        <version>26.0.2</version>
       </dependency>
       <dependency>
         <groupId>org.openjfx</groupId>
         <artifactId>javafx-controls</artifactId>
-        <version>26.0.1</version>
+        <version>26.0.2</version>
       </dependency>
       <dependency>
         <groupId>org.openjfx</groupId>
-        <artifactId>javafx-media</artifactId>
-        <version>26.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.openjfx</groupId>
-        <artifactId>javafx-media</artifactId>
-        <version>26.0.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.openjfx</groupId>
-        <artifactId>javafx-media</artifactId>
-        <version>26.0.1</version>
+        <artifactId>javafx-controls</artifactId>
+        <version>26.0.2</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
