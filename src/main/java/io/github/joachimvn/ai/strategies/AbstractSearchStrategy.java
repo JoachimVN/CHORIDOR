@@ -216,7 +216,7 @@ abstract class AbstractSearchStrategy implements Strategy {
         return min;
     }
 
-    private int evaluate(GameState state) {
+    protected int evaluate(GameState state) {
         int myDist  = pathChecker.shortestPathWithJumps(state, aiPlayer);
         int oppDist = pathChecker.shortestPathWithJumps(state, aiPlayer.opponent());
         if (myDist  == 0)                 return  WIN;
@@ -226,7 +226,7 @@ abstract class AbstractSearchStrategy implements Strategy {
         return score(state, myDist, oppDist);
     }
 
-    private GameState apply(GameState state, Move move) {
+    protected GameState apply(GameState state, Move move) {
         return switch (move) {
             case PawnMove(var t) -> state.withPawnMove(t);
             case WallMove(var w) -> state.withWallMove(w);

@@ -10,6 +10,7 @@ public enum Difficulty {
     RANDOM          (p -> new RandomStrategy()),
     SPRINTER        (p -> new GreedyStrategy()),
     MINIMAX         (p -> new MinimaxStrategy(p, 1000)),
+    MINIMAX2        (Minimax2Strategy::new),
     SHARP           (SharpStrategy::new),
     TRAPPER         (TrapperStrategy::new),
     COPYCAT         (CopycatStrategy::new),
@@ -43,7 +44,7 @@ public enum Difficulty {
     public long timeBudgetMs() {
         return switch (this) {
             case MONTE_CARLO                                               -> 950;
-            case MINIMAX, SHARP, TRAPPER, BAITER,
+            case MINIMAX, MINIMAX2, SHARP, TRAPPER, BAITER,
                  WIKIPEDIA, PATH_COUNT                                     -> 1000;
             default                                                        -> 0;
         };
@@ -59,7 +60,7 @@ public enum Difficulty {
             case SPRINTER, SHORT_SIGHTED, FORTNITE, COPYCAT               -> 2;
             case COMEBACKER, THREAT_RESPONDER, CORRIDOR                   -> 3;
             case FORKER                                                    -> 4;
-            case MINIMAX, SHARP, TRAPPER, BAITER,
+            case MINIMAX, MINIMAX2, SHARP, TRAPPER, BAITER,
                  PATH_COUNT, WIKIPEDIA, MONTE_CARLO                       -> 5;
         };
     }
